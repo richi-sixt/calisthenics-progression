@@ -7,7 +7,7 @@
         <label>&Uuml;bung</label>
             <select name="exercise1" class="form-control" form="workout">
                 {% for exercise in exercises %}
-                <option value="{{ exercise.id }}">{{ exercise.title }}</option>
+                <option value="{{ exercise.id }}">{{ exercise.title }}<small> - ({{ exercise.athlet.username }})</small></option>
                 {% endfor %}
             </select>
             <div class="form-group" id="exercise1">
@@ -27,7 +27,7 @@
 <script type="text/html" id="exercise_template"><br><br>
     <select name="exercise<%= exercise_num %>" class="form-control" form="workout">
         {% for exercise in exercises %}
-        <option value="{{ exercise.id }}">{{ exercise.title }}</option>
+        <option value="{{ exercise.id }}">{{ exercise.title }}<small> - ({{ exercise.athlet.username }})</small></option>
         {% endfor %}
     </select>
     <div class="form-group" id="exercise<%= exercise_num %>">

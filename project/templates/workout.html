@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+  <article class="media content-section">
+      <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlet.image_file) }}">
+      <div class="media-body">
+
+      <div class="article-metadata">
+        <a class="mr-2" href="{{ url_for('main.user', username=workout.athlet.username) }}">{{ workout.athlet.username }}</a>
+        <small class="text-muted">{{ workout.timestamp.strftime('%Y-%m-%d') }}</small>
+
+          {% if workout.athlet == current_user %}
+          <div>
+            <button type="button" class="btn btn-danger btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">Workout L&ouml;schen</button>
+          </div>
+          {% endif %}
+      </div>
+      <h2 class="article-title">{{ workout.title }}</h2>
+      {% set exercises = workout.exercises.all() %}
+      {% for exercise in exercises %}
+      <div class="article-title">
+          <div class="content-section">
+              <div class="row">
+                  <div class="col-sm">
+                      <p><strong>{{ exercise.exercise.title }}</strong></p>
+                      {% set sets = exercise.sets.all() %}
+                      {% for s in sets %}
+                          <p>Progression: {{ s.progression }}</p>
+                          <p>Reps: {{s.reps }}</p>
+                      {% endfor %}
+                  </div>
+              </div>
+          </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+  <!-- Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">&Uuml;bung l&ouml;schen?</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+          <form action="{{ url_for('main.delete_workout', workout_id=workout.id) }}" method="POST">
+            <input class="btn btn-danger" type="submit" value="Löschen">
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
+
+

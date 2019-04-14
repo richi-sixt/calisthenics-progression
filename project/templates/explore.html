@@ -12,7 +12,7 @@
               <a class="mr-2" href="{{ url_for('main.user', username=workout.athlet.username) }}">{{ workout.athlet.username }}</a>
               <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
             </div>
-            <h2><a class="article-title" href="{{ url_for('main.workouts', workout_id=workout.id) }}">{{ workout.title }}</a></h2>
+            <h2><a class="article-title" href="{{ url_for('main.workout', workout_id=workout.id) }}">{{ workout.title }}</a></h2>
             {% include '_workout.html' %}
           </div>
         </article>

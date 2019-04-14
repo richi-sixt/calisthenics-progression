@@ -13,7 +13,7 @@
                   <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
                 </div>
                 <h2>
-                    <a class="article-title" href="{{ url_for('main.workouts', workout_id=workout.id) }}">{{ workout.title }}</a>
+                    <a class="article-title" href="{{ url_for('main.workout', workout_id=workout.id) }}">{{ workout.title }}</a>
                     <button class="btn btn-outline-dark float-right" type="button" data-toggle="collapse" data-target="#collapseWorkout" aria-expanded="true" aria-controls="collapseWorkout">
                             &Uuml;bungen &ouml;ffnen
                         </button>

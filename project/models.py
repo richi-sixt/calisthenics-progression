@@ -57,10 +57,6 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def avatar(self, size):
-        digest = sha224(self.email.lower().encode('utf-8')).hexdigest()
-        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(digest, size)
-
     # Following methods
     def follow(self, user):
         if not self.is_following(user):
@@ -100,7 +96,7 @@ class Workout(db.Model):
     title = db.Column(db.String(80), index=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    exercises = db.relationship('Exercise', backref='workout', lazy='dynamic')
+    exercises = db.relationship('Exercise', backref='workout', cascade="all, delete-orphan", lazy='dynamic')
 
     def __repr__(self):
         return '<Workout {}>'.format(self.title)
@@ -122,7 +118,7 @@ class Exercise(db.Model):
     exercise_order = db.Column(db.Integer, primary_key=True)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), primary_key=True)
     exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'))
-    sets = db.relationship('Set', backref='exercise', lazy='dynamic')
+    sets = db.relationship('Set', backref='exercise', cascade="all, delete-orphan", lazy='dynamic')
 
 
 class Set(db.Model):

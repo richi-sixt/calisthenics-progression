@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, request, jsonify
+from flask import render_template, flash, redirect, url_for, request, jsonify, abort
 from flask_login import current_user, login_required
 from datetime import datetime
 from project import db, app
@@ -62,6 +62,26 @@ def add_workout():
         return redirect(url_for('main.index'))
     exercises = Exercises.query.all()
     return render_template('add_workout.html', exercises=exercises)
+
+@bp.route("/workout/<int:workout_id>")
+@login_required
+@check_confirmed
+def workout(workout_id):
+    workout = Workout.query.get_or_404(workout_id)
+    return render_template('workout.html', title=workout.title, workout=workout)
+
+@bp.route("/workout/<int:workout_id>/delete", methods=['POST'])
+@login_required
+@check_confirmed
+def delete_workout(workout_id):
+    workout = Workout.query.get_or_404(workout_id)
+    if workout.athlet != current_user:
+        abort(403)
+    db.session.delete(workout)
+    db.session.commit()
+    flash('Dein Workout wurde gelöscht!', 'success')
+    return render_template('workouts.html', title=workout.title, workout=workout)
+
 
 @bp.route("/add_exercise", methods=['GET', 'POST'])
 @login_required
