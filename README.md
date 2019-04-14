@@ -13,9 +13,10 @@ A Flask Application in work for learning purposes.
 ```bash
 # Mac
 $ brew install python3
+```
 # Windows
 [Python 3.6.7 ](https://www.python.org/downloads/release/python-367/)
-```
+
 
 Pip3 is installed with Python3
 
