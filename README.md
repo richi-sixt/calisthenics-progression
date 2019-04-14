@@ -14,7 +14,7 @@ A Flask Application in work for learning purposes.
 # Mac
 $ brew install python3
 ```
-# Windows
+###### Windows
 [Python 3.6.7 ](https://www.python.org/downloads/release/python-367/)
 
 
