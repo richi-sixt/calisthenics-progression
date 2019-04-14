@@ -2,8 +2,8 @@
 
 # Calisthenics Progression
 A Flask Application in work for learning purposes.
-
-# Install Envirenment
+***
+# Install environment
 ## Python3 Virtualenv Setup
 
 ##### Requirements
@@ -11,7 +11,10 @@ A Flask Application in work for learning purposes.
 * Pip 3
 
 ```bash
+# Mac
 $ brew install python3
+# Windows
+[Python 3.6.7 ](https://www.python.org/downloads/release/python-367/)
 ```
 
 Pip3 is installed with Python3
