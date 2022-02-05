@@ -1,10 +1,10 @@
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Length
 from project.models import User
 
-class EditProfileForm(Form):
+class EditProfileForm(FlaskForm):
     username = StringField(('Benutzername'), validators=[DataRequired()])
     about_me = TextAreaField(('Über mich'),
                              validators=[Length(min=0, max=280)])
@@ -21,13 +21,13 @@ class EditProfileForm(Form):
             if user is not None:
                 raise ValidationError('Dieser Benutzername ist nicht verfügbar. Bitte einen anderen Benutzernamen wählen.')
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     username = StringField('Benutzername', validators=[DataRequired()])
     password = PasswordField('Passwort', validators=[DataRequired()])
     remember_me = BooleanField('Anmeldung speichern')
     submit = SubmitField('Anmelden')
 
-class RegistrationForm(Form):
+class RegistrationForm(FlaskForm):
     username = StringField('Benutzername', validators=[DataRequired()])
     email = StringField('E-Mail', validators=[DataRequired(), Email()])
     password = PasswordField('Passwort', validators=[DataRequired()])
@@ -46,11 +46,11 @@ class RegistrationForm(Form):
         if user is not None:
             raise ValidationError('Bitte eine andere Email-Adresse wählen.')
 
-class ResetPasswordRequestForm(Form):
+class ResetPasswordRequestForm(FlaskForm):
     email = StringField('E-Mail', validators=[DataRequired(), Email()])
     submit = SubmitField('Passwort zurücksetzen')
 
-class ResetPasswordForm(Form):
+class ResetPasswordForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField(
         'Passwort wiederholen', validators=[DataRequired(), EqualTo('password')])
