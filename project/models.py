@@ -1,3 +1,5 @@
+from email.headerregistry import UniqueUnstructuredHeader
+from enum import unique
 from project import db, login
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -113,20 +115,16 @@ class Exercises(db.Model):
         return '<Exercises {}>'.format(self.title)
 
 class Exercise(db.Model):
-    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
-    # id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    # id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True)
     exercise_order = db.Column(db.Integer, primary_key=True)
     workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), primary_key=True)
-    exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'))
+    exercise2exercises_id = db.Column(db.Integer, db.ForeignKey('exercises.id'))
     sets = db.relationship('Set', backref='exercise', cascade="all, delete-orphan", lazy='dynamic')
 
 
 class Set(db.Model):
     __tablename__ = "exercise_sets"
-    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
-    # id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    # id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     set_order = db.Column(db.Integer, primary_key=True)
     progression = db.Column(db.String(80), index=True)
     reps = db.Column(db.Integer)

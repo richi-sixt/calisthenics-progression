@@ -45,7 +45,7 @@ def add_workout():
         exercise_count = int(request.form['exercise_count'])
 
         for exercise_num in range(1,exercise_count + 1):
-            exercise = Exercise(exercise_order=exercise_num, exercise_id=request.form['exercise'+str(exercise_num)], workout=workout)
+            exercise = Exercise(exercise_order=exercise_num, exercise2exercises_id=request.form['exercise'+str(exercise_num)], workout=workout)
 
             progressions = request.form.getlist('progression' + str(exercise_num))
             reps = request.form.getlist('reps' + str(exercise_num))

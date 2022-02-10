@@ -11,9 +11,9 @@ WTF_CSRF_SECRET_KEY = os.getenv('WTF_CSRF_SECRET_KEY')
 SECRET_KEY = os.getenv('SECRET_KEY')
 MYSQL_CURSORCLASS = 'DictCursor'
 WORKOUTS_PER_PAGE = 10
-# SQLALCHEMY_DATABASE_URI = os.getenv('DB_URI')
-SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or \
-        "sqlite:///" + os.path.join(basedir, "app.db")
+SQLALCHEMY_DATABASE_URI = os.getenv('DB_URI')
+# SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or \
+#         "sqlite:///" + os.path.join(basedir, "app.db")
 SQLALCHEMY_POOL_RECYCLE = 299
 SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT')
 FLASK_ENV = os.getenv('FLASK_ENV')
