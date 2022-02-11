@@ -1,7 +1,7 @@
-from flask import render_template, flash, redirect, url_for, request, jsonify, abort
+from flask import render_template, flash, redirect, url_for, request, jsonify, abort, current_app
 from flask_login import current_user, login_required
 from datetime import datetime
-from project import db, app
+from project import db
 from project.models import User, Workout, Exercises, Exercise, Set, Message, Notification
 from project.main import bp
 from project.main.forms import MessageForm, CreateExerciseForm
@@ -9,7 +9,7 @@ from project.decorators import check_confirmed
 
 
 # helper functions
-@bp.before_app_request
+@bp.before_request
 def before_request():
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
@@ -28,7 +28,7 @@ def index():
 @login_required
 def workouts():
     page = request.args.get('page', 1, type=int)
-    workouts = Workout.query.filter_by(user_id=current_user.get_id()).order_by(Workout.timestamp.desc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
+    workouts = Workout.query.filter_by(user_id=current_user.get_id()).order_by(Workout.timestamp.desc()).paginate(page, current_app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.index', page=workouts.next_num) if workouts.has_next else None
     prev_url = url_for('main.index', page=workouts.prev_num) if workouts.has_prev else None
     return render_template('workouts.html', title='Home', workouts=workouts.items, next_url=next_url, prev_url=prev_url)
@@ -109,7 +109,7 @@ def exercise(exercises_id):
 @check_confirmed
 def all_exercises():
     page = request.args.get('page', 1, type=int)
-    exercises = Exercises.query.order_by(Exercises.title.asc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
+    exercises = Exercises.query.order_by(Exercises.title.asc()).paginate(page, current_app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.index', page=exercises.next_num) if exercises.has_next else None
     prev_url = url_for('main.index', page=exercises.prev_num) if exercises.has_prev else None
     return render_template('exercises.html', title='Alle Übungen', exercises=exercises.items, next_url=next_url, prev_url=prev_url)
@@ -151,7 +151,7 @@ def delete_exercise(exercises_id):
 @check_confirmed
 def explore():
     page = request.args.get('page', 1, type=int)
-    workouts = Workout.query.filter(Workout.user_id != current_user.id).order_by(Workout.timestamp.desc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
+    workouts = Workout.query.filter(Workout.user_id != current_user.id).order_by(Workout.timestamp.desc()).paginate(page, current_app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.explore', page=workouts.next_num) if workouts.has_next else None
     prev_url = url_for('main.explore', page=workouts.prev_num) if workouts.has_prev else None
     return render_template('explore.html', title='Entdecken', workouts=workouts.items, next_url=next_url, prev_url=prev_url)
@@ -162,7 +162,7 @@ def explore():
 def user(username):
     user = User.query.filter_by(username=username) .first_or_404()
     page = request.args.get('page', 1, type=int)
-    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
+    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate(page, current_app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.user', username=user.username, page=workouts.next_num) \
         if workouts.has_next else None
     prev_url = url_for('main.user', username=user.username, page=workouts.prev_num) \
@@ -210,7 +210,7 @@ def messages():
     current_user.add_notification('unread_message_count', 0)
     db.session.commit()
     page = request.args.get('page', 1, type=int)
-    messages = current_user.messages_received.order_by(Message.timestamp.desc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
+    messages = current_user.messages_received.order_by(Message.timestamp.desc()).paginate(page, current_app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.messages', page=messages.next_num) \
         if messages.has_next else None
     prev_url = url_for('main.messages', page=messages.prev_num) \
