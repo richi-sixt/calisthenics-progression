@@ -14,4 +14,4 @@ create .env file in root directory
 
 export run settings in terminal:
 
-> `export FLASK_APP=calisthenics_progression.py`<br> > `export FLASK_ENV=development`
+> `export FLASK_APP=calisthenics_progression.py`<br> `export FLASK_ENV=development`
