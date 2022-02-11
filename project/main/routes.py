@@ -154,7 +154,7 @@ def explore():
     workouts = Workout.query.filter(Workout.user_id != current_user.id).order_by(Workout.timestamp.desc()).paginate(page, app.config['WORKOUTS_PER_PAGE'], False)
     next_url = url_for('main.explore', page=workouts.next_num) if workouts.has_next else None
     prev_url = url_for('main.explore', page=workouts.prev_num) if workouts.has_prev else None
-    return render_template('explore.html', title='Explore', workouts=workouts.items, next_url=next_url, prev_url=prev_url)
+    return render_template('explore.html', title='Entdecken', workouts=workouts.items, next_url=next_url, prev_url=prev_url)
 
 @bp.route('/user/<username>')
 @login_required
