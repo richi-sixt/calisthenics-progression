@@ -6,7 +6,7 @@
 
       <div class="article-metadata">
         <a class="mr-2" href="{{ url_for('main.user', username=workout.athlet.username) }}">{{ workout.athlet.username }}</a>
-        <small class="text-muted">{{ workout.timestamp.strftime('%Y-%m-%d') }}</small>
+        <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
 
           {% if workout.athlet == current_user %}
           <div>
@@ -21,11 +21,13 @@
           <div class="content-section">
               <div class="row">
                   <div class="col-sm">
-                      <p><strong>{{ exercise.exercise.title }}</strong></p>
+                      <p><strong>Exercise {{ exercise.exercise_order }}: {{ exercise.exercise.title }}</strong></p>
                       {% set sets = exercise.sets.all() %}
                       {% for s in sets %}
+                          <p>Set: {{ s.set_order }}</p>
                           <p>Progression: {{ s.progression }}</p>
                           <p>Reps: {{s.reps }}</p>
+                          <hr />
                       {% endfor %}
                   </div>
               </div>

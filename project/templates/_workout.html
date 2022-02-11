@@ -1,17 +1,18 @@
-{% set exercises = workout.exercises.all() %}
-    {% for exercise in exercises %}
-    <div class="content-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-sm">
-                    <p><strong>{{ exercise.exercise.title }}</strong></p>
-                    {% set sets = exercise.sets.all() %}
-                    {% for s in sets %}
-                        <p>Progression: {{ s.progression }}</p>
-                        <p>Reps: {{s.reps }}</p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+{% set exercises = workout.exercises.all() %} {% for exercise in exercises %}
+<div class="content-section">
+  <div class="container">
+    <div class="row">
+      <div class="col-sm">
+        <p><strong>Exercise {{ exercise.exercise_order }}: {{ exercise.exercise.title }}</strong></p>
+        {% set sets = exercise.sets.all() %} 
+        {% for s in sets %}
+          <p>Set: {{ s.set_order }}</p>
+          <p>Progression: {{ s.progression }}</p>
+          <p>Reps: {{s.reps }}</p>
+          <hr />
+        {% endfor %}
+      </div>
     </div>
-    {% endfor %}
+  </div>
+</div>
+{% endfor %}
