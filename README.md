@@ -6,13 +6,13 @@ A Flask Application in work for learning purposes.
 
 ## run (local)
 
-Python 3.9.4
+Python 3.9.10
 
 Install requirements.txt in virtual environement
 
 > `pip install -r requirements.txt`
 
-create .env file in root directory (will be invoked in \_config.py):
+create .env file in root directory (will be invoked in \config.py):
 
 ```python
 WTF_CSRF_SECRET_KEY="your-secret-key"
