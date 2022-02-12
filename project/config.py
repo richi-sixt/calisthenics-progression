@@ -10,7 +10,7 @@ class Config(object):
     WTF_CSRF_SECRET_KEY = os.environ.get('WTF_CSRF_SECRET_KEY')
     SECRET_KEY = os.environ.get('SECRET_KEY')
     WORKOUTS_PER_PAGE = 10
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_POOL_RECYCLE = 299
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT')
