@@ -3,7 +3,6 @@ logs
 .vscode
 __pycache__
 .env
-migrations
 .venv
 .DS_Store
 
