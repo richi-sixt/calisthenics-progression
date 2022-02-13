@@ -1,6 +1,15 @@
 # Calisthenics Progression
 
-A Flask Application in work for learning purposes.
+A Python Flask Application in work for learning purposes.
+
+## Features
+
+A simple calisthenics workout tracker
+
+- Create exercises
+- Create workouts with multiple exercises, sets, progressions and reps
+- Explore workouts from other athlets
+- follow and send private messages to other athlets
 
 ---
 
@@ -8,16 +17,16 @@ A Flask Application in work for learning purposes.
 
 Python 3.9.10
 
-Install requirements.txt in virtual environement
+### 1. Install requirements.txt in virtual environement
 
 > `pip install -r requirements.txt`
 
-create .env file in root directory (will be invoked in \config.py):
+### 2. create .env file in root directory (will be invoked in \config.py):
 
 ```python
 WTF_CSRF_SECRET_KEY="your-secret-key"
 SECRET_KEY="an-other-secret-key-which-is-hard-to-guess"
-DB_URI="db-url-for-example-postgresql://localhost/db"
+DATABASE_URL="db-url-for-example-postgresql://localhost/<your-db>"
 SECURITY_PASSWORD_SALT="another-salt-for-the-password"
 FLASK_ENV="development"
 
@@ -29,8 +38,31 @@ MAIL_PASSWORD="password"
 MAIL_DEFAULT_SENDER="email-for-the-sender"
 ```
 
-export run settings in terminal:
+### 3. export local run settings in terminal:
+
+`set` instead of `export` if you're using windows
 
 > `export FLASK_APP=calisthenics_progression.py`<br> `export FLASK_ENV=development`
 
-## Features
+### 4. create db
+
+> for SQLite: Add config var in `project/config.py`.
+
+```python
+#...
+SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or \
+    "sqlite:///" + os.path.join(basedir, "app.db")
+#...
+```
+
+> for Postgresql: Create DB in [PostgreSQL Client](https://www.postgresql.org/) and add config var in `project/config.py`.
+
+```python
+#...
+SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+#...
+```
+
+Run the app with `flask run`
+
+---
