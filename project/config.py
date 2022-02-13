@@ -16,6 +16,8 @@ class Config(object):
     SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT')
     FLASK_ENV = os.environ.get('FLASK_ENV')
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT')
+    ADMINS = os.environ.get('ADMINS')
+
 
 
     #Mail authentification
