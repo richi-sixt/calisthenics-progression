@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+
+
 {% block content %}
   <article class="media content-section">
       <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlet.image_file) }}">
@@ -11,6 +13,8 @@
           {% if workout.athlet == current_user %}
           <div>
             <button type="button" class="btn btn-danger btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">Workout L&ouml;schen</button>
+            <p><a href="{{ url_for('main.workouts') }}" class="btn btn-secondary btn-sm m-1 float-right" role="button">Zur&uuml;ck</a></p>
+
           </div>
           {% endif %}
       </div>
@@ -27,7 +31,7 @@
                           <p>Set: {{ s.set_order }}</p>
                           <p>Progression: {{ s.progression }}</p>
                           <p>Reps: {{s.reps }}</p>
-                          <hr />
+                          <hr style="border: 5px solid #007bff; border-radius: 5px;" />
                       {% endfor %}
                   </div>
               </div>

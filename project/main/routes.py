@@ -80,7 +80,7 @@ def delete_workout(workout_id):
     db.session.delete(workout)
     db.session.commit()
     flash('Dein Workout wurde gelöscht!', 'success')
-    return render_template('workouts.html', title=workout.title, workout=workout)
+    return redirect(url_for('main.workouts'))
 
 
 @bp.route("/add_exercise", methods=['GET', 'POST'])
@@ -144,7 +144,7 @@ def delete_exercise(exercises_id):
     db.session.delete(exercise)
     db.session.commit()
     flash('Deine Übung wurde gelöscht!', 'success')
-    return render_template('exercises.html', title=exercise.title, exercise=exercise)
+    return redirect(url_for('main.all_exercises'))
 
 @bp.route('/explore')
 @login_required

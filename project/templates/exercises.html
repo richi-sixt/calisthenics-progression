@@ -10,7 +10,7 @@
                 <small class="text-muted">{{ exercises.date_created.strftime('%d-%m-%Y') }}</small>
             </div>
             <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h2>
-<!--            <p class="article-content">{{ exercises.description }}</p>-->
+            <!-- <p class="article-content">{{ exercises.description }}</p> -->
           </div>
         </article>
     {% endfor %}
