@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% import 'bootstrap/wtf.html' as wtf %}
 {% block content %}
+    <h2>&Uuml;bungen</h2>
+    <hr>
+    <p><a href="{{ url_for('main.add_exercise') }}" class="btn btn-primary" role="button">&Uuml;bung hinzuf&uuml;gen</a></p>
     {% for exercises in exercises %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercises.athlet.image_file) }}">

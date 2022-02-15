@@ -2,8 +2,17 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block content %}
-    <p><a href="{{ url_for('main.add_workout') }}" class="btn btn-primary" role="button">Workout hinzuf&uuml;gen</a></p>
     <h2>Meine Workouts</h2>
+    <hr>
+    <p><a href="{{ url_for('main.add_workout') }}" class="btn btn-primary" role="button">Workout hinzuf&uuml;gen</a></p>
+    <button class="btn btn-outline-dark btn-sm m-1 float-top" 
+            type="button" 
+            data-toggle="collapse" 
+            data-target="#collapseWorkout" 
+            aria-expanded="true" 
+            aria-controls="collapseWorkout">
+            &Uuml;bungen anzeigen
+    </button>
     {% for workout in workouts %}
         <article class="media content-section">
               <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlet.image_file) }}">
@@ -14,10 +23,7 @@
                 </div>
                 <h2>
                     <a class="article-title" href="{{ url_for('main.workout', workout_id=workout.id) }}">{{ workout.title }}</a>
-                    <button class="btn btn-outline-dark float-right" type="button" data-toggle="collapse" data-target="#collapseWorkout" aria-expanded="true" aria-controls="collapseWorkout">
-                            &Uuml;bungen &ouml;ffnen
-                        </button>
-                </h2> 
+                </h2>
                 <div class="collapse" id="collapseWorkout">
                     {% include '_workout.html' %}
                 </div>
