@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="content-section">
-    <form method="POST" action="{{ url_for('main.add_workout') }}" id="workout">
+    <form class="needs-validation" method="POST" action="{{ url_for('main.add_workout') }}" id="workout" novalidate>
         <label>Workout</label>
-        <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel">
+        <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80" required>
+        <div class="invalid-feedback">
+            Dieses Feld ist zwingend.
+        </div>        
         <label>&Uuml;bung</label>
             <select name="exercise1" class="form-control" form="workout">
                 {% for exercise in exercises %}
@@ -14,7 +17,10 @@
                 <label>Progression</label>
                 <input type="text" class="form-control" name="progression1" placeholder="Progression">
                 <label>Reps</label>
-                <input type="text" class="form-control" name="reps1" placeholder="Reps">       
+                <input type="text" class="form-control" name="reps1" placeholder="Reps" required>
+                <div class="invalid-feedback">
+                    Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
+                </div>     
             </div>
                 <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>           
                 <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
@@ -40,6 +46,30 @@
     <label>Progression</label>
     <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
     <label>Reps</label>
-    <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps">
+    <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps" required>
+    <div class="invalid-feedback">
+        Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
+    </div>  
+</script>
+
+<script>
+// Example starter JavaScript for disabling form submissions if there are invalid fields
+(function() {
+  'use strict';
+  window.addEventListener('load', function() {
+    // Fetch all the forms we want to apply custom Bootstrap validation styles to
+    var forms = document.getElementsByClassName('needs-validation');
+    // Loop over them and prevent submission
+    var validation = Array.prototype.filter.call(forms, function(form) {
+      form.addEventListener('submit', function(event) {
+        if (form.checkValidity() === false) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+})();
 </script>
 {% endblock %}
