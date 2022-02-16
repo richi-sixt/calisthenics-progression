@@ -2,7 +2,7 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 {% block content %}
     <div class="content-section">
-        <form method="POST" action="">
+        <form class="needs-validation" method="POST" action="" novalidate>
             {{ form.hidden_tag() }}
             <fieldset class="form-group">
                 <legend class="border-bottom mb-4">Nachricht an {{ recipient }} senden</legend>

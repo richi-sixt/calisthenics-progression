@@ -2,7 +2,7 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 {% block content %}
     <div class="content-section">
-        <form method="POST" action="">
+        <form class="needs-validation" method="POST" action="" novalidate>
             {{ form.hidden_tag() }}
             <fieldset class="form-group">
                 <legend class="border-bottom mb-4">Passwort zurücksetzen</legend>
@@ -25,7 +25,7 @@
                             {{ form.password2(class="form-control form-control-lg is-invalid") }}
                             <div class="invalid-feedback">
                                 {% for error in form.password2.errors %}
-                                    <span>{{ error }}</span>
+                                    <span>Das Passwort stimmt nicht &uuml;berein.</span>
                                 {% endfor %}
                             </div>
                         {% else %}
