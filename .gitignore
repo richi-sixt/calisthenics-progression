@@ -1,12 +1,10 @@
 logs
-.vscode
 __pycache__
 .env
 .venv
 .DS_Store
-todo.md
-cp-erd.pgerd
-
+instance
+migrations
 
 
 
