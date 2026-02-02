@@ -12,8 +12,8 @@
               <a class="mr-2" href="{{ url_for('main.user', username=exercises.athlet.username) }}">{{ exercises.athlet.username }}</a>
                 <small class="text-muted">{{ exercises.date_created.strftime('%d-%m-%Y') }}</small>
             </div>
-            <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h2>
-            <!-- <p class="article-content">{{ exercises.description }}</p> -->
+            <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises_definition.title }}</a></h2>
+            <!-- <p class="article-content">{{ exercises_definition.description }}</p> -->
           </div>
         </article>
     {% endfor %}

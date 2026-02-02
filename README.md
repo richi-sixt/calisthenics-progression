@@ -8,8 +8,8 @@ A simple calisthenics workout tracker
 
 - Create exercises
 - Create workouts with multiple exercises, sets, progressions and reps
-- Explore workouts from other athlets
-- follow and send private messages to other athlets
+- Explore workouts from other athletes
+- follow and send private messages to other athletes
 
 ---
 
@@ -21,7 +21,7 @@ Python 3.9.10
 
 > `pip install -r requirements.txt`
 
-### 2. create .env file in root directory (will be invoked in \config.py):
+### 2. create .env file in root directory (will be invoked in \config.py)
 
 ```python
 WTF_CSRF_SECRET_KEY="your-secret-key"
@@ -38,7 +38,7 @@ MAIL_PASSWORD="password"
 MAIL_DEFAULT_SENDER="email-for-the-sender"
 ```
 
-### 3. export local run settings in terminal:
+### 3. export local run settings in terminal
 
 `set` instead of `export` if you're using windows
 
@@ -63,8 +63,10 @@ SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 #...
 ```
 
+> `flask db init`<br>
+> `flask db migrate -m "Migration messages"`<br>
+> `flask db upgrade`
+
 Run the app with `flask run`
 
 ---
-
-Test Rename
