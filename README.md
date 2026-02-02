@@ -15,7 +15,7 @@ A simple calisthenics workout tracker
 
 ## run (local)
 
-Python 3.9.10
+Python 3.14.2
 
 ### 1. Install requirements.txt in virtual environement
 
@@ -40,13 +40,11 @@ MAIL_DEFAULT_SENDER="email-for-the-sender"
 
 ### 3. export local run settings in terminal
 
-`set` instead of `export` if you're using windows
-
-> `export FLASK_APP=calisthenics_progression.py`<br> `export FLASK_ENV=development`
+> `export FLASK_APP=calisthenics_progression.py`<br>`export FLASK_ENV=development`
 
 ### 4. create db
 
-> for SQLite: Add config var in `project/config.py`.
+> For SQLite: Add config var in `project/config.py`.
 
 ```python
 #...
