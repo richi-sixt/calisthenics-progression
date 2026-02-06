@@ -3,25 +3,51 @@ $(document).ready(function() {
     exercise_template = _.template($("#exercise_template").html());
     set_template = _.template($("#set_template").html());
 
-    // Toggle filter for exercises
+    // Store original options for each select to restore later
+    function storeOriginalOptions(select) {
+        if (!select.data("originalOtherOptions")) {
+            var otherOptions = select.find("optgroup.other-exercises option").clone(true);
+            select.data("originalOtherOptions", otherOptions);
+        }
+    }
+
+    // Initialize all existing selects
+    $(".exercise-select").each(function() {
+        storeOriginalOptions($(this));
+    });
+
+    // Toggle filter for exercises - remove/restore options
     function applyExerciseFilter() {
         var showOnlyMine = $("#showOnlyMine").is(":checked");
+
         $(".exercise-select").each(function() {
             var select = $(this);
             var otherOptgroup = select.find("optgroup.other-exercises");
 
+            // Store original options if not already stored
+            storeOriginalOptions(select);
+
             if (showOnlyMine) {
-                otherOptgroup.hide();
-                // If currently selected option is from "other", switch to first "mine" option
+                // Check if currently selected option is from "other"
                 var selectedOption = select.find("option:selected");
-                if (selectedOption.data("owner") === "other") {
+                var needsSwitch = selectedOption.data("owner") === "other";
+
+                // Remove other athletes' options
+                otherOptgroup.empty();
+
+                // Switch to first "mine" option if needed
+                if (needsSwitch) {
                     var firstMine = select.find("optgroup.my-exercises option:first");
                     if (firstMine.length) {
                         select.val(firstMine.val());
                     }
                 }
             } else {
-                otherOptgroup.show();
+                // Restore other athletes' options
+                var originalOptions = select.data("originalOtherOptions");
+                if (originalOptions && otherOptgroup.children().length === 0) {
+                    otherOptgroup.append(originalOptions.clone(true));
+                }
             }
 
             updateCopyButton(select);
@@ -58,7 +84,6 @@ $(document).ready(function() {
         var btn = $(this);
         var select = btn.closest(".exercise-select-wrapper").find(".exercise-select");
         var exerciseId = select.val();
-        var selectedOption = select.find("option:selected");
 
         btn.prop("disabled", true).text("Kopiere...");
 
@@ -100,7 +125,9 @@ $(document).ready(function() {
         $("#addExercise").before(exercise_compiled);
         $("#exercise" + exercise_num).append(set_compiled);
 
-        // Apply filter to newly added exercise select
+        // Store options and apply filter to newly added exercise select
+        var newSelect = $("[name='exercise" + exercise_num + "']");
+        storeOriginalOptions(newSelect);
         applyExerciseFilter();
     });
 
