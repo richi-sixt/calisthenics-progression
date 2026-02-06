@@ -6,36 +6,62 @@
         <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80" required>
         <div class="invalid-feedback">
             Dieses Feld ist zwingend.
-        </div>        
+        </div>
+
+        <div class="form-check mt-3 mb-2">
+            <input type="checkbox" class="form-check-input" id="showOnlyMine" checked>
+            <label class="form-check-label" for="showOnlyMine">Nur meine &Uuml;bungen anzeigen</label>
+        </div>
+
         <label>&Uuml;bung</label>
-            <select name="exercise1" class="form-control" form="workout">
-                {% for exercise in exercises %}
-                <option value="{{ exercise.id }}">{{ exercise.title }}<small> - ({{ exercise.athlet.username }})</small></option>
-                {% endfor %}
+        <div class="exercise-select-wrapper">
+            <select name="exercise1" class="form-control exercise-select" form="workout">
+                <optgroup label="Meine &Uuml;bungen" class="my-exercises">
+                    {% for exercise in my_exercises %}
+                    <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Andere Athleten" class="other-exercises">
+                    {% for exercise in other_exercises %}
+                    <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlet.username }}">{{ exercise.title }} - ({{ exercise.athlet.username }})</option>
+                    {% endfor %}
+                </optgroup>
             </select>
-            <div class="form-group" id="exercise1">
-                <label>Progression</label>
-                <input type="text" class="form-control" name="progression1" placeholder="Progression">
-                <label>Reps</label>
-                <input type="text" class="form-control" name="reps1" placeholder="Reps" required>
-                <div class="invalid-feedback">
-                    Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
-                </div>     
+            <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ml-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
+        </div>
+        <div class="form-group" id="exercise1">
+            <label>Progression</label>
+            <input type="text" class="form-control" name="progression1" placeholder="Progression">
+            <label>Reps</label>
+            <input type="text" class="form-control" name="reps1" placeholder="Reps" required>
+            <div class="invalid-feedback">
+                Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
             </div>
-                <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>           
-                <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
-                <input type="hidden" name="exercise_count" value="1">
-                <br><br>
-                <button type="submit" class="btn btn-primary btn-block">Workout hinzuf&uuml;gen</button>
+        </div>
+        <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>
+        <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
+        <input type="hidden" name="exercise_count" value="1">
+        <br><br>
+        <button type="submit" class="btn btn-primary btn-block">Workout hinzuf&uuml;gen</button>
     </form>
 </div>
-    
+
 <script type="text/html" id="exercise_template"><br><br>
-    <select name="exercise<%= exercise_num %>" class="form-control" form="workout">
-        {% for exercise in exercises %}
-        <option value="{{ exercise.id }}">{{ exercise.title }}<small> - ({{ exercise.athlet.username }})</small></option>
-        {% endfor %}
-    </select>
+    <div class="exercise-select-wrapper">
+        <select name="exercise<%= exercise_num %>" class="form-control exercise-select" form="workout">
+            <optgroup label="Meine &Uuml;bungen" class="my-exercises">
+                {% for exercise in my_exercises %}
+                <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
+                {% endfor %}
+            </optgroup>
+            <optgroup label="Andere Athleten" class="other-exercises">
+                {% for exercise in other_exercises %}
+                <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlet.username }}">{{ exercise.title }} - ({{ exercise.athlet.username }})</option>
+                {% endfor %}
+            </optgroup>
+        </select>
+        <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ml-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
+    </div>
     <div class="form-group" id="exercise<%= exercise_num %>">
     </div>
     <button type="button" class="btn btn-info addSet" exercise="<%= exercise_num %>">Set hinzuf&uuml;gen</button>
@@ -49,6 +75,21 @@
     <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps" required>
     <div class="invalid-feedback">
         Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
-    </div>  
+    </div>
 </script>
+
+<style>
+.exercise-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.exercise-select-wrapper .form-control {
+    flex: 1;
+}
+.copy-exercise-btn {
+    white-space: nowrap;
+}
+</style>
 {% endblock content %}
