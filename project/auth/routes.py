@@ -1,6 +1,6 @@
 import secrets
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from PIL import Image
 from flask import render_template, flash, redirect, url_for, request, current_app
 from flask_login import current_user, login_user, logout_user, login_required
@@ -122,7 +122,7 @@ def confirm_email(token):
     user = User.query.filter_by(email=current_user.email).first_or_404()
     if user.email == email:
         user.confirmed = True
-        user.confirmed_on = datetime.utcnow()
+        user.confirmed_on = datetime.now(timezone.utc)
         db.session.add(user)
         db.session.commit()
         flash("Du hast dein Konto bestätigt. Vielen Dank!", "success")

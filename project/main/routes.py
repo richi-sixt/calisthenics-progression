@@ -10,8 +10,9 @@ from flask import (
     current_app,
 )
 from flask_login import current_user, login_required
-from datetime import datetime
+from datetime import datetime, timezone
 
+from sqlalchemy.util import update_copy
 from sqlalchemy.util.compat import FullArgSpec
 from project import db
 from project.models import (
@@ -32,7 +33,7 @@ from project.decorators import check_confirmed
 @bp.before_request
 def before_request():
     if current_user.is_authenticated:
-        current_user.last_seen = datetime.utcnow()
+        current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
 
 
@@ -80,7 +81,7 @@ def add_workout():
     if request.method == "POST":
         user = current_user
         workout = Workout(
-            timestamp=datetime.utcnow(), user_id=user.id, title=request.form["wtitle"]
+            timestamp=datetime.now(timezone.utc), user_id=user.id, title=request.form["wtitle"]
         )
         db.session.add(workout)
         db.session.flush()
@@ -362,7 +363,7 @@ def unfollow(username):
 @login_required
 @check_confirmed
 def messages():
-    current_user.last_message_read_time = datetime.utcnow()
+    current_user.last_message_read_time = datetime.now(timezone.utc)
     current_user.add_notification("unread_message_count", 0)
     db.session.commit()
     page = request.args.get("page", 1, type=int)
