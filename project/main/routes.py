@@ -114,8 +114,47 @@ def add_workout():
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    exercises = Exercises.query.all()
-    return render_template("add_workout.html", exercises=exercises)
+    my_exercises = Exercises.query.filter_by(user_id=current_user.id).order_by(Exercises.title.asc()).all()
+    other_exercises = Exercises.query.filter(Exercises.user_id != current_user.id).order_by(Exercises.title.asc()).all()
+    return render_template(
+        "add_workout.html",
+        my_exercises=my_exercises,
+        other_exercises=other_exercises
+    )
+
+
+@bp.route("/copy_exercise/<int:exercises_id>", methods=["POST"])
+@login_required
+@check_confirmed
+def copy_exercise(exercises_id):
+    original = Exercises.query.get_or_404(exercises_id)
+    if original.user_id == current_user.id:
+        return jsonify({"error": "Du kannst deine eigenen Übungen nicht kopieren."}), 400
+
+    existing = Exercises.query.filter_by(
+        title=original.title,
+        user_id=current_user.id
+    ).first()
+    if existing:
+        return jsonify({
+            "error": "Du hast bereits eine Übung mit diesem Namen.",
+            "existing_id": existing.id
+        }), 400
+
+    copied = Exercises(
+        title=original.title,
+        description=original.description,
+        athlet=current_user,
+    )
+    db.session.add(copied)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "id": copied.id,
+        "title": copied.title,
+        "username": current_user.username
+    })
 
 
 @bp.route("/workout/<int:workout_id>")
