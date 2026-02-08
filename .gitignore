@@ -6,6 +6,7 @@ __pycache__
 instance
 migrations
 avante.md
+.coverage
 
 
 
