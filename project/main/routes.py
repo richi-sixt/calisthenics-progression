@@ -1,5 +1,4 @@
 from flask import (
-    config,
     render_template,
     flash,
     redirect,
@@ -12,8 +11,6 @@ from flask import (
 from flask_login import current_user, login_required
 from datetime import datetime, timezone
 
-from sqlalchemy.util import update_copy
-from sqlalchemy.util.compat import FullArgSpec
 from project import db
 from project.models import (
     User,
@@ -145,7 +142,7 @@ def copy_exercise(exercises_id):
     copied = Exercises(
         title=original.title,
         description=original.description,
-        athlet=current_user,
+        athlete=current_user,
     )
     db.session.add(copied)
     db.session.commit()
@@ -171,7 +168,7 @@ def workout(workout_id):
 @check_confirmed
 def delete_workout(workout_id):
     workout = Workout.query.get_or_404(workout_id)
-    if workout.athlet != current_user:
+    if workout.athlete != current_user:
         abort(403)
     db.session.delete(workout)
     db.session.commit()
@@ -188,7 +185,7 @@ def add_exercise():
         exercise = Exercises(
             title=form.title.data,
             description=form.description.data,
-            athlet=current_user,
+            athlete=current_user,
         )
         db.session.add(exercise)
         db.session.commit()
@@ -235,7 +232,7 @@ def all_exercises():
 @check_confirmed
 def update_exercise(exercises_id):
     exercise = Exercises.query.get_or_404(exercises_id)
-    if exercise.athlet != current_user:
+    if exercise.athlete != current_user:
         abort(403)
     form = CreateExerciseForm()
     if form.validate_on_submit():
@@ -257,7 +254,7 @@ def update_exercise(exercises_id):
 @check_confirmed
 def delete_exercise(exercises_id):
     exercise = Exercises.query.get_or_404(exercises_id)
-    if exercise.athlet != current_user:
+    if exercise.athlete != current_user:
         abort(403)
     db.session.delete(exercise)
     db.session.commit()
@@ -392,7 +389,7 @@ def send_message(recipient):
     user = User.query.filter_by(username=recipient).first_or_404()
     form = MessageForm()
     if form.validate_on_submit():
-        msg = Message(athlet=current_user, recipient=user,
+        msg = Message(athlete=current_user, recipient=user,
                       body=form.message.data)
         db.session.add(msg)
         user.add_notification("unread_message_count", user.new_messages())

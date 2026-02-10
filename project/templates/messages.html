@@ -5,10 +5,10 @@
     <h2>Nachrichten</h2>
     {% for message in messages %}
         <article class="media content-section">
-            <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + message.athlet.image_file) }}">
+            <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + message.athlete.image_file) }}">
             <div class="media-body">
                 <div class="article-metadata">
-                    <a class="mr-2" href="{{ url_for('main.user', username=message.athlet.username) }}">{{ message.athlet.username }}</a>
+                    <a class="mr-2" href="{{ url_for('main.user', username=message.athlete.username) }}">{{ message.athlete.username }}</a>
                     <small class="text-muted">hat am {{ message.timestamp.strftime('%d.%m.%Y') }} geschrieben</small>
                 </div>
                 {% include '_messages.html' %}
