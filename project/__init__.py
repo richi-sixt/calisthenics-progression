@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler, SMTPHandler
 from typing import Type
 
 from flask import Flask
-from flask_bootstrap import Bootstrap
+from flask_bootstrap import Bootstrap5
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -18,7 +18,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
 mail = Mail()
-bootstrap = Bootstrap()
+bootstrap = Bootstrap5()
 moment = Moment()
 
 
@@ -68,7 +68,7 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     app.logger.info('Calisthenics-Progression startup')
 
     # Import models for Flask-Migrate
-    from project import models # noqa: F401
+    from project import models  # noqa: F401
 
 
     return app
