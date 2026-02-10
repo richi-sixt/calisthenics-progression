@@ -2,14 +2,14 @@
 
 {% block content %}
   <article class="media content-section">
-      <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlet.image_file) }}">
+      <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlete.image_file) }}">
       <div class="media-body">
 
       <div class="article-metadata">
-        <a class="mr-2" href="{{ url_for('main.user', username=workout.athlet.username) }}">{{ workout.athlet.username }}</a>
+        <a class="mr-2" href="{{ url_for('main.user', username=workout.athlete.username) }}">{{ workout.athlete.username }}</a>
         <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
 
-          {% if workout.athlet == current_user %}
+          {% if workout.athlete == current_user %}
           <div>
             <button type="button" class="btn btn-danger btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">Workout L&ouml;schen</button>
           </div>

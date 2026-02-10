@@ -21,9 +21,9 @@
                     <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
                     {% endfor %}
                 </optgroup>
-                <optgroup label="Andere Athleten" class="other-exercises">
+                <optgroup label="Andere athleten" class="other-exercises">
                     {% for exercise in other_exercises %}
-                    <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlet.username }}">{{ exercise.title }} - ({{ exercise.athlet.username }})</option>
+                    <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
                     {% endfor %}
                 </optgroup>
             </select>
@@ -54,9 +54,9 @@
                 <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
                 {% endfor %}
             </optgroup>
-            <optgroup label="Andere Athleten" class="other-exercises">
+            <optgroup label="Andere athleten" class="other-exercises">
                 {% for exercise in other_exercises %}
-                <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlet.username }}">{{ exercise.title }} - ({{ exercise.athlet.username }})</option>
+                <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
                 {% endfor %}
             </optgroup>
         </select>

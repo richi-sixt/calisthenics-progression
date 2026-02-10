@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
   <article class="media content-section">
-      <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercise.athlet.image_file) }}">
+      <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercise.athlete.image_file) }}">
       <div class="media-body">
 
       <div class="article-metadata">
-        <a class="mr-2" href="{{ url_for('main.user', username=exercise.athlet.username) }}">{{ exercise.athlet.username }}</a>
+        <a class="mr-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
         <small class="text-muted">{{ exercise.date_created.strftime('%Y-%m-%d') }}</small>
 
-          {% if exercise.athlet == current_user %}
+          {% if exercise.athlete == current_user %}
           <div>
             <button type="button" class="btn btn-danger btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">L&ouml;schen</button>
             <a class="btn btn-secondary btn-sm m-1 float-right" href="{{ url_for('main.update_exercise', exercises_id=exercise.id) }}">Aktualisieren</a>

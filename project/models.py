@@ -61,12 +61,12 @@ class User(UserMixin, db.Model):
     # Relationships - User content
     workouts = db.relationship(
         "Workout",
-        backref="athlet",
+        backref="athlete",
         lazy="dynamic"
     )
     exercises = db.relationship(
         "Exercises",
-        backref="athlet",
+        backref="athlete",
         lazy="dynamic"
     )
 
@@ -74,7 +74,7 @@ class User(UserMixin, db.Model):
     messages_sent = db.relationship(
         "Message",
         foreign_keys="Message.sender_id",
-        backref="athlet",
+        backref="athlete",
         lazy="dynamic"
     )
     messages_received = db.relationship(

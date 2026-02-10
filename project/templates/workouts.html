@@ -14,10 +14,10 @@
     </button>
     {% for workout in workouts %}
         <article class="media content-section">
-              <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlet.image_file) }}">
+              <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlete.image_file) }}">
               <div class="media-body">
                 <div class="article-metadata">
-                  <a class="mr-2" href="{{ url_for('main.user', username=workout.athlet.username) }}">{{ workout.athlet.username }}</a>
+                  <a class="mr-2" href="{{ url_for('main.user', username=workout.athlete.username) }}">{{ workout.athlete.username }}</a>
                   <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
                 </div>
                 <h2>
