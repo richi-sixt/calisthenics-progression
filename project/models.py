@@ -65,7 +65,7 @@ class User(UserMixin, db.Model):
         lazy="dynamic"
     )
     exercises = db.relationship(
-        "Exercises",
+        "ExerciseDefinition",
         backref="athlete",
         lazy="dynamic"
     )
@@ -172,7 +172,7 @@ class User(UserMixin, db.Model):
 @login.user_loader
 def load_user(id):
     """Load user for Flask-Login session management."""
-    return User.query.get(int(id))
+    return db.session.get(User, int(id))
 
 
 class Workout(db.Model):
@@ -200,8 +200,10 @@ class Workout(db.Model):
         return f"<Workout {self.title}>"
 
 
-class Exercises(db.Model):
+class ExerciseDefinition(db.Model):
     """Exercise definition model (exercise library/templates)."""
+
+    __tablename__ = "exercises"
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True, unique=True)
@@ -226,7 +228,7 @@ class Exercises(db.Model):
 
     def __repr__(self):
         """String representation of Exercise definition."""
-        return f"<Exercises {self.title}>"
+        return f"<ExerciseDefinition {self.title}>"
 
 
 class Exercise(db.Model):
@@ -241,7 +243,7 @@ class Exercise(db.Model):
         db.ForeignKey("workout.id"),
         nullable=False
     )
-    exercise2exercises_id = db.Column(
+    exercise_definition_id = db.Column(
         db.Integer,
         db.ForeignKey("exercises.id")
     )
@@ -327,5 +329,4 @@ class Notification(db.Model):
 
     def __repr__(self):
         """String representation of Notification."""
-
         return f"<Notification {self.name}>"

@@ -9,7 +9,7 @@ from project.models import (
     User,
     Workout,
     Exercise,
-    Exercises,
+    ExerciseDefinition,
     Set,
     Message,
     Notification,
@@ -183,8 +183,8 @@ class TestExercisesModel:
     def test_exercises_repr(self, app, exercise_definition):
         """Test Exercises string representation."""
         with app.app_context():
-            ex = Exercises.query.filter_by(title="Push-ups").first()
-            assert repr(ex) == "<Exercises Push-ups>"
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            assert repr(ex) == "<ExerciseDefinition Push-ups>"
 
 
 class TestExerciseModel:
@@ -262,3 +262,13 @@ class TestNotificationModel:
 
             retrieved = notification.get_data()
             assert retrieved == data
+
+    def test_notification_with_explicit_timestamp(self, app, user):
+        """Test creating a Notification with an explicit timestamp."""
+        with app.app_context():
+            user = User.query.filter_by(username="testuser").first()
+            n = Notification(name="timed", user=user, timestamp=123.456)
+            db.session.add(n)
+            db.session.commit()
+
+            assert n.timestamp == 123.456

@@ -334,3 +334,50 @@ class TestEditProfileRoute:
             )
             assert response.status_code == 302
             assert "unconfirmed" in response.location
+
+    def test_edit_profile_with_picture_upload(self, auth_client, app):
+        """Test updating profile with a picture upload."""
+        import io
+
+        with app.app_context():
+            # Create a minimal valid PNG image (1x1 pixel)
+            from PIL import Image
+            img = Image.new("RGB", (200, 200), color="red")
+            img_bytes = io.BytesIO()
+            img.save(img_bytes, format="PNG")
+            img_bytes.seek(0)
+
+            response = auth_client.post(
+                url_for("auth.edit_profile"),
+                data={
+                    "username": "testuser",
+                    "about_me": "Bio with pic",
+                    "picture": (img_bytes, "test_pic.png"),
+                },
+                content_type="multipart/form-data",
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            user = User.query.filter_by(username="testuser").first()
+            assert user.image_file != "default.jpg"
+
+
+class TestForgotNewTokenUsed:
+    """Tests for forgot_new when token was already consumed."""
+
+    def test_forgot_new_token_already_used(self, client, user, app):
+        """Test password reset when token has already been used (None)."""
+        with app.app_context():
+            token = generate_confirmation_token(user.email)
+            # Don't set password_reset_token → it stays None
+            user_obj = User.query.filter_by(email="test@example.com").first()
+            user_obj.password_reset_token = None
+            db.session.commit()
+
+            response = client.get(
+                url_for("auth.forgot_new", token=token),
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "nicht zur\u00fcckgesetzt" in response.get_data(as_text=True)

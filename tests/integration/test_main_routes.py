@@ -5,7 +5,7 @@ import pytest
 from flask import url_for
 
 from project import db
-from project.models import User, Workout, Exercises, Exercise, Set, Message
+from project.models import User, Workout, ExerciseDefinition, Exercise, Set, Message
 
 
 class TestIndexRoute:
@@ -70,7 +70,7 @@ class TestWorkoutsRoute:
     def test_add_workout_creates_workout(self, auth_client, app, exercise_definition):
         """Test creating a new workout."""
         with app.app_context():
-            exercise_def = Exercises.query.first()
+            exercise_def = ExerciseDefinition.query.first()
             response = auth_client.post(
                 url_for("main.add_workout"),
                 data={
@@ -116,6 +116,62 @@ class TestWorkoutsRoute:
             )
             assert response.status_code == 403
 
+    def test_add_workout_invalid_exercise_count(self, auth_client, app):
+        """Test add_workout with non-numeric exercise_count."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={"exercise_count": "abc", "wtitle": "Bad Workout"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "Ung\u00fcltige Formulardaten" in response.get_data(as_text=True)
+
+    def test_add_workout_zero_exercises(self, auth_client, app):
+        """Test add_workout with exercise_count < 1."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={"exercise_count": "0", "wtitle": "Empty Workout"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "Mindestens eine" in response.get_data(as_text=True)
+
+    def test_add_workout_missing_exercise_data(self, auth_client, app):
+        """Test add_workout when exercise field is missing from form."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={"exercise_count": "1", "wtitle": "Missing Ex"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "Fehlende" in response.get_data(as_text=True)
+
+    def test_add_workout_exercise_not_found(self, auth_client, app):
+        """Test add_workout with non-existent exercise definition ID."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "exercise_count": "1",
+                    "wtitle": "Bad Ex",
+                    "exercise1": "99999",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "nicht gefunden" in response.get_data(as_text=True)
+
+    def test_delete_workout_not_found(self, auth_client, app):
+        """Test deleting a non-existent workout returns 404."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.delete_workout", workout_id=99999)
+            )
+            assert response.status_code == 404
+
 
 class TestExercisesRoute:
     """Tests for exercise routes."""
@@ -146,14 +202,14 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was created
-            exercise = Exercises.query.filter_by(title="Pull-ups").first()
+            exercise = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
             assert exercise is not None
             assert exercise.description == "Standard pull-up exercise for back."
 
     def test_exercise_detail_page(self, auth_client, exercise_definition, app):
         """Test exercise detail page renders."""
         with app.app_context():
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = auth_client.get(
                 url_for("main.exercise", exercises_id=exercise.id)
             )
@@ -163,7 +219,7 @@ class TestExercisesRoute:
     def test_update_exercise_page_renders(self, auth_client, exercise_definition, app):
         """Test update exercise page renders."""
         with app.app_context():
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = auth_client.get(
                 url_for("main.update_exercise", exercises_id=exercise.id)
             )
@@ -172,7 +228,7 @@ class TestExercisesRoute:
     def test_update_exercise(self, auth_client, exercise_definition, app):
         """Test updating an exercise."""
         with app.app_context():
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = auth_client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -184,7 +240,7 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was updated
-            exercise = Exercises.query.filter_by(title="Updated Push-ups").first()
+            exercise = ExerciseDefinition.query.filter_by(title="Updated Push-ups").first()
             assert exercise is not None
 
     def test_update_exercise_others_forbidden(
@@ -196,7 +252,7 @@ class TestExercisesRoute:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -209,7 +265,7 @@ class TestExercisesRoute:
     def test_delete_exercise_own(self, auth_client, exercise_definition, app):
         """Test user can delete their own exercise."""
         with app.app_context():
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             exercise_id = exercise.id
             response = auth_client.post(
                 url_for("main.delete_exercise", exercises_id=exercise_id),
@@ -218,7 +274,7 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was deleted
-            assert Exercises.query.filter_by(id=exercise_id).first() is None
+            assert ExerciseDefinition.query.filter_by(id=exercise_id).first() is None
 
     def test_delete_exercise_others_forbidden(
         self, client, exercise_definition, second_user, app
@@ -229,11 +285,66 @@ class TestExercisesRoute:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = client.post(
                 url_for("main.delete_exercise", exercises_id=exercise.id),
             )
             assert response.status_code == 403
+
+    def test_copy_exercise(self, auth_client, second_user, app):
+        """Test copying another user's exercise definition."""
+        with app.app_context():
+            # Create exercise owned by second_user
+            ex = ExerciseDefinition(
+                title="Squats",
+                description="Bodyweight squats",
+                user_id=second_user.id,
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data["success"] is True
+            assert "Kopie" in data["title"]
+
+    def test_copy_exercise_not_found(self, auth_client, app):
+        """Test copying a non-existent exercise returns 404."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=99999)
+            )
+            assert response.status_code == 404
+
+    def test_copy_own_exercise_fails(self, auth_client, exercise_definition, app):
+        """Test copying own exercise returns 400 error."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.first()
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 400
+            data = response.get_json()
+            assert "error" in data
+
+    def test_update_exercise_not_found(self, auth_client, app):
+        """Test updating a non-existent exercise returns 404."""
+        with app.app_context():
+            response = auth_client.get(
+                url_for("main.update_exercise", exercises_id=99999)
+            )
+            assert response.status_code == 404
+
+    def test_delete_exercise_not_found(self, auth_client, app):
+        """Test deleting a non-existent exercise returns 404."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.delete_exercise", exercises_id=99999)
+            )
+            assert response.status_code == 404
 
 
 class TestFollowRoutes:
@@ -294,6 +405,26 @@ class TestFollowRoutes:
             assert response.status_code == 200
             # Should show not found message
             assert "nicht gefunden" in response.get_data(as_text=True)
+
+    def test_unfollow_nonexistent_user(self, auth_client, app):
+        """Test unfollowing a non-existent user."""
+        with app.app_context():
+            response = auth_client.get(
+                url_for("main.unfollow", username="nonexistent"),
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "nicht gefunden" in response.get_data(as_text=True)
+
+    def test_unfollow_self_fails(self, auth_client, app):
+        """Test user cannot unfollow themselves."""
+        with app.app_context():
+            response = auth_client.get(
+                url_for("main.unfollow", username="testuser"),
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "selber" in response.get_data(as_text=True)
 
 
 class TestUserProfileRoute:
