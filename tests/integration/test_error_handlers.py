@@ -15,8 +15,8 @@ class TestErrorHandlers:
         with app.app_context():
             response = client.get("/nonexistent-page-that-does-not-exist")
             assert response.status_code == 404
-            # Should render 404 template
-            assert b"404" in response.data or b"nicht gefunden" in response.data.lower()
+            html = response.get_data(as_text=True)
+            assert "nichts zu sehen" in html or "404" in html
 
     def test_404_for_nonexistent_workout(self, auth_client, app):
         """Test 404 for non-existent workout."""
@@ -59,13 +59,13 @@ class TestErrorHandlers:
     ):
         """Test 403 when trying to delete another user's exercise."""
         with app.app_context():
-            from project.models import Exercises
+            from project.models import ExerciseDefinition
 
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = client.post(
                 url_for("main.delete_exercise", exercises_id=exercise.id)
             )
@@ -76,13 +76,13 @@ class TestErrorHandlers:
     ):
         """Test 403 when trying to update another user's exercise."""
         with app.app_context():
-            from project.models import Exercises
+            from project.models import ExerciseDefinition
 
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = Exercises.query.first()
+            exercise = ExerciseDefinition.query.first()
             response = client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -99,12 +99,10 @@ class TestErrorHandlerContent:
     def test_404_page_for_known_route_pattern(self, auth_client, app):
         """Test 404 page for non-existent resource in known route."""
         with app.app_context():
-            # Use a route pattern that goes through blueprints
             response = auth_client.get(url_for("main.workout", workout_id=99999))
             assert response.status_code == 404
             html = response.get_data(as_text=True)
-            # Should render custom 404 template
-            assert "404" in html
+            assert "nichts zu sehen" in html or "404" in html
 
     def test_error_pages_are_html(self, client, app):
         """Test error pages return HTML content type."""
@@ -112,3 +110,17 @@ class TestErrorHandlerContent:
             response = client.get("/nonexistent")
             assert response.status_code == 404
             assert "text/html" in response.content_type
+
+    def test_500_error_page(self, app):
+        """Test 500 error page renders correctly."""
+        @app.route("/trigger-500")
+        def trigger_500():
+            raise Exception("Test internal server error")
+
+        app.config["TESTING"] = False
+        app.config["PROPAGATE_EXCEPTIONS"] = False
+        app.config["TRAP_HTTP_EXCEPTIONS"] = False
+
+        with app.test_client() as client:
+            response = client.get("/trigger-500")
+            assert response.status_code == 500

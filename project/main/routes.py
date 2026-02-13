@@ -1,4 +1,5 @@
 from flask import (
+    Response,
     render_template,
     flash,
     redirect,
@@ -11,11 +12,12 @@ from flask import (
 from flask_login import current_user, login_required
 from datetime import datetime, timezone
 
+
 from project import db
 from project.models import (
     User,
     Workout,
-    Exercises,
+    ExerciseDefinition,
     Exercise,
     Set,
     Message,
@@ -35,7 +37,6 @@ def before_request():
 
 
 # routes
-
 
 @bp.route("/", methods=["GET", "POST"])
 @bp.route("/index", methods=["GET", "POST"])
@@ -74,21 +75,41 @@ def workouts():
 @bp.route("/add_workout", methods=["POST", "GET"])
 @login_required
 @check_confirmed
-def add_workout():
+def add_workout() -> str | Response:
     if request.method == "POST":
+        try:
+            exercise_count = int(request.form.get("exercise_count", 0))
+        except (ValueError, TypeError):
+            flash("Ungültige Formulardaten.", "danger")
+            return redirect(url_for("main.add_workout"))
+
+        if exercise_count < 1:
+            flash("Mindestens eine Übung ist erforderlich.", "danger")
+            return redirect(url_for("main.add_workout"))
+
         user = current_user
         workout = Workout(
-            timestamp=datetime.now(timezone.utc), user_id=user.id, title=request.form["wtitle"]
+            timestamp=datetime.now(timezone.utc), user_id=user.id, title=request.form.get("wtitle", "")
         )
         db.session.add(workout)
         db.session.flush()
 
-        exercise_count = int(request.form["exercise_count"])
         for exercise_num in range(1, exercise_count + 1):
+            exercise_def_id = request.form.get("exercise" + str(exercise_num))
+            if not exercise_def_id:
+                db.session.rollback()
+                flash("Fehlende Übungsdaten.", "danger")
+                return redirect(url_for("main.add_workout"))
+
+            exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
+            if exercise_def is None:
+                db.session.rollback()
+                flash("Übung nicht gefunden.", "danger")
+                return redirect(url_for("main.add_workout"))
+
             exercise = Exercise(
                 exercise_order=exercise_num,
-                exercise2exercises_id=request.form["exercise" +
-                                                   str(exercise_num)],
+                exercise_definition_id=exercise_def_id,
                 workout=workout,
             )
             db.session.add(exercise)  # Add exercise to session
@@ -112,8 +133,8 @@ def add_workout():
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises = Exercises.query.filter_by(user_id=current_user.id).order_by(Exercises.title.asc()).all()
-    other_exercises = Exercises.query.filter(Exercises.user_id != current_user.id).order_by(Exercises.title.asc()).all()
+    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id).order_by(ExerciseDefinition.title.asc()).all()
+    other_exercises = ExerciseDefinition.query.filter(ExerciseDefinition.user_id != current_user.id).order_by(ExerciseDefinition.title.asc()).all()
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
@@ -124,23 +145,23 @@ def add_workout():
 @bp.route("/copy_exercise/<int:exercises_id>", methods=["POST"])
 @login_required
 @check_confirmed
-def copy_exercise(exercises_id):
-    original = Exercises.query.get_or_404(exercises_id)
+def copy_exercise(exercises_id: int) -> Response:
+    original = db.session.get(ExerciseDefinition, exercises_id)
+    if original is None:
+        abort(404)
     if original.user_id == current_user.id:
         return jsonify({"error": "Du kannst deine eigenen Übungen nicht kopieren."}), 400
 
-    existing = Exercises.query.filter_by(
-        title=original.title,
-        user_id=current_user.id
-    ).first()
-    if existing:
-        return jsonify({
-            "error": "Du hast bereits eine Übung mit diesem Namen.",
-            "existing_id": existing.id
-        }), 400
+    # Generate a unique title by appending "(Kopie)" "(Kopie 2)" etc.
+    base_title = original.title
+    new_title = f"{base_title} (Kopie)"
+    counter = 2
+    while ExerciseDefinition.query.filter_by(title=new_title).first() is not None:
+        new_title = f"{base_title} (Kopie {counter})"
+        counter += 1
 
-    copied = Exercises(
-        title=original.title,
+    copied = ExerciseDefinition(
+        title=new_title,
         description=original.description,
         athlete=current_user,
     )
@@ -158,8 +179,10 @@ def copy_exercise(exercises_id):
 @bp.route("/workout/<int:workout_id>")
 @login_required
 @check_confirmed
-def workout(workout_id):
-    workout = Workout.query.get_or_404(workout_id)
+def workout(workout_id: int) -> str:
+    workout = db.session.get(Workout, workout_id)
+    if workout is None:
+        abort(404)
     return render_template("workout.html", title=workout.title, workout=workout)
 
 
@@ -167,7 +190,9 @@ def workout(workout_id):
 @login_required
 @check_confirmed
 def delete_workout(workout_id):
-    workout = Workout.query.get_or_404(workout_id)
+    workout = db.session.get(Workout, workout_id)
+    if workout is None:
+        abort(404)
     if workout.athlete != current_user:
         abort(403)
     db.session.delete(workout)
@@ -179,10 +204,10 @@ def delete_workout(workout_id):
 @bp.route("/add_exercise", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def add_exercise():
+def add_exercise() -> str | Response:
     form = CreateExerciseForm()
     if form.validate_on_submit():
-        exercise = Exercises(
+        exercise = ExerciseDefinition(
             title=form.title.data,
             description=form.description.data,
             athlete=current_user,
@@ -200,16 +225,18 @@ def add_exercise():
 @login_required
 @check_confirmed
 def exercise(exercises_id):
-    exercise = Exercises.query.get_or_404(exercises_id)
+    exercise = db.session.get(ExerciseDefinition, exercises_id)
+    if exercise is None:
+        abort(404)
     return render_template("exercise.html", title=exercise.title, exercise=exercise)
 
 
 @bp.route("/exercises", methods=["GET"])
 @login_required
 @check_confirmed
-def all_exercises():
+def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
-    exercises = Exercises.query.order_by(Exercises.title.asc()).paginate(
+    exercises = ExerciseDefinition.query.order_by(ExerciseDefinition.title.asc()).paginate(
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
@@ -230,8 +257,10 @@ def all_exercises():
 @bp.route("/exercise/<int:exercises_id>/update", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def update_exercise(exercises_id):
-    exercise = Exercises.query.get_or_404(exercises_id)
+def update_exercise(exercises_id: int) -> str | Response:
+    exercise = db.session.get(ExerciseDefinition, exercises_id)
+    if exercise is None:
+        abort(404)
     if exercise.athlete != current_user:
         abort(403)
     form = CreateExerciseForm()
@@ -252,8 +281,10 @@ def update_exercise(exercises_id):
 @bp.route("/exercise/<int:exercises_id>/delete", methods=["POST"])
 @login_required
 @check_confirmed
-def delete_exercise(exercises_id):
-    exercise = Exercises.query.get_or_404(exercises_id)
+def delete_exercise(exercises_id: int) -> Response:
+    exercise = db.session.get(ExerciseDefinition, exercises_id)
+    if exercise is None:
+        abort(404)
     if exercise.athlete != current_user:
         abort(403)
     db.session.delete(exercise)
@@ -265,7 +296,7 @@ def delete_exercise(exercises_id):
 @bp.route("/explore")
 @login_required
 @check_confirmed
-def explore():
+def explore() -> str:
     page = request.args.get("page", 1, type=int)
     workouts = (
         Workout.query.filter(Workout.user_id != current_user.id)

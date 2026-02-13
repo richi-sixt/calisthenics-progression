@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from project import create_app, db
-from project.models import User, Workout, Exercise, Exercises, Set, Message
+from project.models import User, Workout, Exercise, ExerciseDefinition, Set, Message
 from tests.test_config import TestConfig
 
 
@@ -115,7 +115,7 @@ def unconfirmed_auth_client(client, unconfirmed_user, app):
 def exercise_definition(app, user):
     """Create an exercise definition (Exercises model)."""
     with app.app_context():
-        exercise_def = Exercises(
+        exercise_def = ExerciseDefinition(
             title="Push-ups",
             description="Standard push-up exercise",
             user_id=user.id,
@@ -123,7 +123,7 @@ def exercise_definition(app, user):
         db.session.add(exercise_def)
         db.session.commit()
 
-        exercise_def = Exercises.query.filter_by(title="Push-ups").first()
+        exercise_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
         yield exercise_def
 
 
@@ -141,7 +141,7 @@ def workout(app, user, exercise_definition):
         exercise = Exercise(
             exercise_order=1,
             workout_id=workout.id,
-            exercise2exercises_id=exercise_definition.id,
+            exercise_definition_id=exercise_definition.id,
         )
         db.session.add(exercise)
         db.session.flush()
