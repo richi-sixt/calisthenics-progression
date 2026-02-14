@@ -263,7 +263,7 @@ class TestExercisesRoute:
             assert response.status_code == 403
 
     def test_delete_exercise_own(self, auth_client, exercise_definition, app):
-        """Test user can delete their own exercise."""
+        """Test user can archive their own exercise."""
         with app.app_context():
             exercise = ExerciseDefinition.query.first()
             exercise_id = exercise.id
@@ -273,8 +273,10 @@ class TestExercisesRoute:
             )
             assert response.status_code == 200
 
-            # Verify exercise was deleted
-            assert ExerciseDefinition.query.filter_by(id=exercise_id).first() is None
+            # Verify exercise was archived, not deleted
+            exercise = ExerciseDefinition.query.filter_by(id=exercise_id).first()
+            assert exercise is not None
+            assert exercise.archived is True
 
     def test_delete_exercise_others_forbidden(
         self, client, exercise_definition, second_user, app
@@ -290,6 +292,44 @@ class TestExercisesRoute:
                 url_for("main.delete_exercise", exercises_id=exercise.id),
             )
             assert response.status_code == 403
+
+    def test_archived_exercise_not_in_add_workout(self, auth_client, exercise_definition, app):
+        """Test archived exercises don't appear in add_workout dropdown."""
+        with app.app_context():
+            exercise = ExerciseDefinition.query.first()
+            exercise.archived = True
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.add_workout"))
+            assert response.status_code == 200
+            assert exercise.title.encode() not in response.data
+
+    def test_archived_exercise_not_in_exercises_list(self, auth_client, exercise_definition, app):
+        """Test archived exercises don't appear in exercises list."""
+        with app.app_context():
+            exercise = ExerciseDefinition.query.first()
+            exercise.archived = True
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.all_exercises"))
+            assert response.status_code == 200
+            assert exercise.title.encode() not in response.data
+
+    def test_archived_exercise_keeps_workout_reference(self, auth_client, workout, app):
+        """Test archiving an exercise definition preserves workout references."""
+        with app.app_context():
+            exercise_def = ExerciseDefinition.query.first()
+            exercise_instance = Exercise.query.first()
+            assert exercise_instance.exercise_definition_id == exercise_def.id
+
+            # Archive the definition
+            exercise_def.archived = True
+            db.session.commit()
+
+            # Exercise instance still references the definition
+            exercise_instance = Exercise.query.first()
+            assert exercise_instance is not None
+            assert exercise_instance.exercise_definition_id == exercise_def.id
 
     def test_copy_exercise(self, auth_client, second_user, app):
         """Test copying another user's exercise definition."""
