@@ -311,6 +311,34 @@ class TestExercisesRoute:
             assert data["success"] is True
             assert "Kopie" in data["title"]
 
+    def test_copy_exercise_duplicate_title(self, auth_client, second_user, app):
+        """Test copying exercise when '(Kopie)' title already exists."""
+        with app.app_context():
+            # Create exercise owned by second_user
+            ex = ExerciseDefinition(
+                title="Dips",
+                description="Parallel bar dips",
+                user_id=second_user.id,
+            )
+            db.session.add(ex)
+            # Create existing copy with "(Kopie)" title owned by current user
+            user = User.query.filter_by(username="testuser").first()
+            existing_copy = ExerciseDefinition(
+                title="Dips (Kopie)",
+                description="Parallel bar dips",
+                user_id=user.id,
+            )
+            db.session.add(existing_copy)
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data["success"] is True
+            assert "Kopie 2" in data["title"]
+
     def test_copy_exercise_not_found(self, auth_client, app):
         """Test copying a non-existent exercise returns 404."""
         with app.app_context():

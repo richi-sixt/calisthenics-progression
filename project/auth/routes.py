@@ -156,17 +156,18 @@ def forgot():
     form = ResetPasswordRequestForm(request.form)
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        token = generate_confirmation_token(user.email)
+        if user is not None:
+            token = generate_confirmation_token(user.email)
 
-        user.password_reset_token = token
-        db.session.commit()
+            user.password_reset_token = token
+            db.session.commit()
 
-        reset_url = url_for("auth.forgot_new", token=token, _external=True)
-        html = render_template(
-            "auth/reset.html", username=user.email, reset_url=reset_url
-        )
-        subject = "Passwort zurücksetzen"
-        send_email(user.email, subject, html)
+            reset_url = url_for("auth.forgot_new", token=token, _external=True)
+            html = render_template(
+                "auth/reset.html", username=user.email, reset_url=reset_url
+            )
+            subject = "Passwort zurücksetzen"
+            send_email(user.email, subject, html)
 
         flash("Eine Email zum zurücksetzen des Passwortes wurde versendet.", "success")
         return redirect(url_for("main.index"))

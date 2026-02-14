@@ -75,7 +75,7 @@ def workouts():
 @bp.route("/add_workout", methods=["POST", "GET"])
 @login_required
 @check_confirmed
-def add_workout() -> str | ResponseReturnValue:
+def add_workout() -> ResponseReturnValue:
     if request.method == "POST":
         try:
             exercise_count = int(request.form.get("exercise_count", 0))
@@ -109,7 +109,7 @@ def add_workout() -> str | ResponseReturnValue:
 
             exercise = Exercise(
                 exercise_order=exercise_num,
-                exercise_definition_id=exercise_def_id,
+                exercise_definition_id=int(exercise_def_id),
                 workout_id=workout.id,
             )
             db.session.add(exercise)  # Add exercise to session
@@ -125,7 +125,7 @@ def add_workout() -> str | ResponseReturnValue:
                     set_order=set_order,
                     exercise_id=exercise.id,
                     progression=progression,
-                    reps=rep,
+                    reps=int(rep),
                 )
                 set_order += 1
                 db.session.add(work_set)
@@ -257,11 +257,11 @@ def all_exercises() -> str:
 @bp.route("/exercise/<int:exercises_id>/update", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def update_exercise(exercises_id: int) -> str | ResponseReturnValue:
+def update_exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
-    if exercise.athlete != current_user:
+    if exercise.user_id != current_user:
         abort(403)
     form = CreateExerciseForm()
     if form.validate_on_submit():

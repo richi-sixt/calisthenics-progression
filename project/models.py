@@ -179,9 +179,9 @@ def load_user(id):
 class Workout(db.Model):
     """Workout model representing a training session."""
 
-    id: int = db.Column(db.Integer, primary_key=True)
-    title: str = db.Column(db.String(80), index=True)
-    timestamp: datetime = db.Column(
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(80), index=True)
+    timestamp = db.Column(
         db.DateTime,
         index=True,
         default=lambda: datetime.now(timezone.utc)
@@ -231,15 +231,15 @@ class ExerciseDefinition(db.Model):
 
     __tablename__ = "exercises"
 
-    id: int = db.Column(db.Integer, primary_key=True)
-    title: str = db.Column(db.String(80), index=True, unique=True)
-    description: str = db.Column(db.Text, nullable=False)
-    date_created: datetime = db.Column(
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(80), index=True, unique=True)
+    description = db.Column(db.Text, nullable=False)
+    date_created = db.Column(
         db.DateTime,
         nullable=False,
         default=lambda: datetime.now(timezone.utc)
     )
-    user_id: int = db.Column(
+    user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),
         nullable=False
@@ -254,9 +254,9 @@ class ExerciseDefinition(db.Model):
 
     def __init__(
         self,
-        title: str,
-        description: str,
-        user_id: int,
+        title: str | None = None,
+        description: str | None = None,
+        user_id: int | None = None,
         date_created: datetime | None = None,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
@@ -378,7 +378,7 @@ class Message(db.Model):
         self,
         sender_id: int,
         recipient_id: int,
-        body: str,
+        body: str | None = None,
         timestamp: datetime | None = None,
     ) -> None:
         """Initialize a message between users."""
