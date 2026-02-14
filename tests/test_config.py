@@ -1,7 +1,9 @@
 """Test configuration for the Flask application."""
 
 
-class TestConfig:
+from project.config import Config
+
+class TestConfig(Config):
     """Configuration for testing environment."""
 
     TESTING = True

@@ -1,5 +1,4 @@
 from flask import (
-    Response,
     render_template,
     flash,
     redirect,
@@ -9,6 +8,7 @@ from flask import (
     abort,
     current_app,
 )
+from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from datetime import datetime, timezone
 
@@ -75,7 +75,7 @@ def workouts():
 @bp.route("/add_workout", methods=["POST", "GET"])
 @login_required
 @check_confirmed
-def add_workout() -> str | Response:
+def add_workout() -> str | ResponseReturnValue:
     if request.method == "POST":
         try:
             exercise_count = int(request.form.get("exercise_count", 0))
@@ -110,7 +110,7 @@ def add_workout() -> str | Response:
             exercise = Exercise(
                 exercise_order=exercise_num,
                 exercise_definition_id=exercise_def_id,
-                workout=workout,
+                workout_id=workout.id,
             )
             db.session.add(exercise)  # Add exercise to session
             db.session.flush()  # flush() to generate the ID
@@ -123,7 +123,7 @@ def add_workout() -> str | Response:
             for progression, rep in zip(progressions, reps):
                 work_set = Set(
                     set_order=set_order,
-                    exercise=exercise,
+                    exercise_id=exercise.id,
                     progression=progression,
                     reps=rep,
                 )
@@ -145,7 +145,7 @@ def add_workout() -> str | Response:
 @bp.route("/copy_exercise/<int:exercises_id>", methods=["POST"])
 @login_required
 @check_confirmed
-def copy_exercise(exercises_id: int) -> Response:
+def copy_exercise(exercises_id: int) -> ResponseReturnValue:
     original = db.session.get(ExerciseDefinition, exercises_id)
     if original is None:
         abort(404)
@@ -163,7 +163,7 @@ def copy_exercise(exercises_id: int) -> Response:
     copied = ExerciseDefinition(
         title=new_title,
         description=original.description,
-        athlete=current_user,
+        user_id=current_user.id,
     )
     db.session.add(copied)
     db.session.commit()
@@ -204,13 +204,13 @@ def delete_workout(workout_id):
 @bp.route("/add_exercise", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def add_exercise() -> str | Response:
+def add_exercise() -> str | ResponseReturnValue:
     form = CreateExerciseForm()
     if form.validate_on_submit():
         exercise = ExerciseDefinition(
             title=form.title.data,
             description=form.description.data,
-            athlete=current_user,
+            user_id=current_user.id,
         )
         db.session.add(exercise)
         db.session.commit()
@@ -257,7 +257,7 @@ def all_exercises() -> str:
 @bp.route("/exercise/<int:exercises_id>/update", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def update_exercise(exercises_id: int) -> str | Response:
+def update_exercise(exercises_id: int) -> str | ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
@@ -281,11 +281,11 @@ def update_exercise(exercises_id: int) -> str | Response:
 @bp.route("/exercise/<int:exercises_id>/delete", methods=["POST"])
 @login_required
 @check_confirmed
-def delete_exercise(exercises_id: int) -> Response:
+def delete_exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
-    if exercise.athlete != current_user:
+    if exercise.user_id != current_user:
         abort(403)
     db.session.delete(exercise)
     db.session.commit()
@@ -420,7 +420,7 @@ def send_message(recipient):
     user = User.query.filter_by(username=recipient).first_or_404()
     form = MessageForm()
     if form.validate_on_submit():
-        msg = Message(athlete=current_user, recipient=user,
+        msg = Message(sender_id=current_user.id, recipient_id=user.id,
                       body=form.message.data)
         db.session.add(msg)
         user.add_notification("unread_message_count", user.new_messages())
