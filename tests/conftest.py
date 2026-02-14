@@ -3,6 +3,8 @@
 from datetime import datetime, timezone
 
 import pytest
+import glob
+import os
 
 from project import create_app, db
 from project.models import User, Workout, Exercise, ExerciseDefinition, Set, Message
@@ -166,3 +168,14 @@ def mail_outbox(app):
 
     with mail.record_messages() as outbox:
         yield outbox
+
+
+@pytest.fixture(autouse=True)
+def cleanup_profile_pics(app):
+    """Remove any profile pictures created during a test."""
+    pics_dir = os.path.join(app.root_path, "static", "profile_pics")
+    before = set(glob.glob(os.path.join(pics_dir, "*")))
+    yield
+    after = set(glob.glob(os.path.join(pics_dir, "*")))
+    for new_file in after - before:
+        os.remove(new_file)
