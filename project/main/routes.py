@@ -193,7 +193,7 @@ def delete_workout(workout_id):
     workout = db.session.get(Workout, workout_id)
     if workout is None:
         abort(404)
-    if workout.athlete != current_user:
+    if workout.user_id != current_user.id:
         abort(403)
     db.session.delete(workout)
     db.session.commit()
@@ -261,7 +261,7 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
-    if exercise.user_id != current_user:
+    if exercise.user_id != current_user.id:
         abort(403)
     form = CreateExerciseForm()
     if form.validate_on_submit():
@@ -285,7 +285,7 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
-    if exercise.user_id != current_user:
+    if exercise.user_id != current_user.id:
         abort(403)
     db.session.delete(exercise)
     db.session.commit()
