@@ -186,6 +186,20 @@ class TestExercisesModel:
             ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
             assert repr(ex) == "<ExerciseDefinition Push-ups>"
 
+    def test_exercise_definition_with_explicit_date(self, app, user):
+        """Test creating ExerciseDefinition with explicit date_created."""
+        with app.app_context():
+            custom_date = datetime(2024, 1, 15)
+            ex = ExerciseDefinition(
+                title="Planche",
+                description="A planche hold",
+                user_id=user.id,
+                date_created=custom_date,
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            assert ex.date_created == custom_date
 
 class TestExerciseModel:
     """Tests for the Exercise model."""
@@ -238,6 +252,25 @@ class TestMessageModel:
             db.session.commit()
 
             assert repr(msg) == "<Message Test message>"
+
+
+    def test_message_with_explicit_timestamp(self, app, user, second_user):
+        """Test creating Message with explicit timestamp."""
+        with app.app_context():
+            user1 = User.query.filter_by(username="testuser").first()
+            user2 = User.query.filter_by(username="seconduser").first()
+            custom_time = datetime(2024, 6, 1, 12, 0, 0)
+
+            msg = Message(
+                sender_id=user1.id,
+                recipient_id=user2.id,
+                body="Timed message",
+                timestamp=custom_time,
+            )
+            db.session.add(msg)
+            db.session.commit()
+
+            assert msg.timestamp == custom_time
 
 
 class TestNotificationModel:

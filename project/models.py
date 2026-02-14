@@ -1,8 +1,9 @@
 """Database models for calisthenics-progression."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from time import time
 import json
+from typing import Optional
 
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -194,14 +195,39 @@ class Workout(db.Model):
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
-
+    def __init__(
+        self,
+        title: str,
+        user_id: int,
+        timestamp: datetime | None = None,
+        
+    ) -> None:
+        """Initialize a workout session."""
+        self.title = title
+        self.user_id = user_id
+        if timestamp is not None: # has a default
+            self.timestamp = timestamp
+  
     def __repr__(self):
         """String representation of Workout."""
         return f"<Workout {self.title}>"
 
 
 class ExerciseDefinition(db.Model):
-    """Exercise definition model (exercise library/templates)."""
+    """Exercise definition model (exercise library/templates).
+
+    Represents a definition for an exercise. 
+    Each definition can be instantiated multiple times
+    as actual exercise instances.
+    
+    Attributes:
+        id: Primary key identifier.
+        title: Unique name/title of the exercise.
+        description: Detailed description of how to perform the exercise.
+        date_created: Timestamp when the exercise definition was created.
+        user_id: Foreign key reference to the user who created this definition.
+        exercise: Relationship to actual exercise instances based on this definition.
+    """
 
     __tablename__ = "exercises"
 
@@ -225,6 +251,37 @@ class ExerciseDefinition(db.Model):
         backref="exercise_definition",
         lazy="dynamic"
     )
+
+    def __init__(
+        self,
+        title: str | None = None,
+        description: str | None = None,
+        user_id: int | None = None,
+        date_created: datetime | None = None,
+    ) -> None:
+        """Initialize an ExerciseDefinition instance.
+        
+        Args:
+            title: Unique name/title of the exercise (max 80 characters).
+            description: Detailed description of the exercise.
+            user_id: ID of the user creating this exercise definition.
+            date_created: Timestamp when the exercise definition was created.
+            **kwargs: Additional keyword arguments passed to the parent Model class.
+        
+        Example:
+            >>> exercise_def = ExerciseDefinition(
+            ...     title="Push-ups",
+            ...     description="Standard push-up exercise",
+            ...     user_id=1
+            ... )
+        """       
+        
+        """Initialize ExerciseDefinition."""
+        self.title = title
+        self.description = description
+        self.user_id = user_id
+        if date_created is not None:
+            self.date_created = date_created
 
     def __repr__(self):
         """String representation of Exercise definition."""
@@ -256,6 +313,17 @@ class Exercise(db.Model):
         lazy="dynamic"
     )
 
+    def __init__(
+        self,
+        exercise_order: int,
+        workout_id: int,
+        exercise_definition_id: int | None = None,
+    ) -> None:
+        """Initialize an exercise instance within a workout."""
+        self.exercise_order = exercise_order
+        self.workout_id = workout_id
+        self.exercise_definition_id =  exercise_definition_id
+
     def __repr__(self):
         """String representation of Exercise instance."""
         return f"<Exercise {self.id}: Order {self.exercise_order}>"
@@ -276,6 +344,19 @@ class Set(db.Model):
         nullable=False
     )
 
+    def __init__(
+        self,
+        set_order: int,
+        exercise_id: int,
+        progression: str | None = None,
+        reps: int | None = None,
+    ) -> None:
+        """Initialize a set with an exercise."""
+        self.set_order = set_order
+        self.exercise_id = exercise_id
+        self.progression = progression
+        self.reps = reps
+
     def __repr__(self):
         """String representation of Set."""
         return f"<Set {self.id}: {self.reps} reps>"
@@ -293,6 +374,19 @@ class Message(db.Model):
         index=True,
         default=lambda: datetime.now(timezone.utc)
     )
+    def __init__(
+        self,
+        sender_id: int,
+        recipient_id: int,
+        body: str | None = None,
+        timestamp: datetime | None = None,
+    ) -> None:
+        """Initialize a message between users."""
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.body = body
+        if timestamp is not None:
+            self.timestamp = timestamp
 
     def __repr__(self):
         """String representation of Message."""

@@ -6,6 +6,9 @@ pytest-flask>=1.3.0
 # Pre-commit hooks
 pre-commit>=3.6.0
 
+# Type checking
+mypy>=1.8.0
+
 # Code quality
 black>=24.0.0
 isort>=5.13.0
