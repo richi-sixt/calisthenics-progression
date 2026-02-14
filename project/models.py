@@ -6,6 +6,7 @@ import json
 from typing import Optional
 
 from flask_login import UserMixin
+from sqlalchemy import Nullable
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from project import db, login
@@ -244,6 +245,11 @@ class ExerciseDefinition(db.Model):
         db.ForeignKey("user.id"),
         nullable=False
     )
+    archived = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
@@ -258,6 +264,7 @@ class ExerciseDefinition(db.Model):
         description: str | None = None,
         user_id: int | None = None,
         date_created: datetime | None = None,
+        archived: bool = False,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
         
@@ -280,6 +287,7 @@ class ExerciseDefinition(db.Model):
         self.title = title
         self.description = description
         self.user_id = user_id
+        self.archived = archived
         if date_created is not None:
             self.date_created = date_created
 

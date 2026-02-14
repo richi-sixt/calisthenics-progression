@@ -133,8 +133,11 @@ def add_workout() -> ResponseReturnValue:
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id).order_by(ExerciseDefinition.title.asc()).all()
-    other_exercises = ExerciseDefinition.query.filter(ExerciseDefinition.user_id != current_user.id).order_by(ExerciseDefinition.title.asc()).all()
+    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all()
+    other_exercises = ExerciseDefinition.query.filter(
+        ExerciseDefinition.user_id != current_user.id,
+        ExerciseDefinition.archived == False,  # noqa: E712
+    ).order_by(ExerciseDefinition.title.asc()).all()
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
@@ -236,7 +239,7 @@ def exercise(exercises_id):
 @check_confirmed
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
-    exercises = ExerciseDefinition.query.order_by(ExerciseDefinition.title.asc()).paginate(
+    exercises = ExerciseDefinition.query.filter_by(archived=False).order_by(ExerciseDefinition.title.asc()).paginate(
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
@@ -287,9 +290,9 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
         abort(404)
     if exercise.user_id != current_user.id:
         abort(403)
-    db.session.delete(exercise)
+    exercise.archived = True
     db.session.commit()
-    flash("Deine Übung wurde gelöscht!", "success")
+    flash("Deine Übung wurde archiviert!", "success")
     return redirect(url_for("main.all_exercises"))
 
 
