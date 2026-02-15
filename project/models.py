@@ -207,9 +207,13 @@ class ExerciseDefinition(db.Model):
     """
 
     __tablename__ = "exercises"
+    __table_args__ = (
+        db.UniqueConstraint("title", "user_id", name="uq_exercise_title_user"),
+        {},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), index=True, unique=True)
+    title = db.Column(db.String(80), index=True)
     description = db.Column(db.Text, nullable=False)
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
@@ -221,6 +225,7 @@ class ExerciseDefinition(db.Model):
     exercise = db.relationship(
         "Exercise", backref="exercise_definition", lazy="dynamic"
     )
+
 
     def __init__(
         self,

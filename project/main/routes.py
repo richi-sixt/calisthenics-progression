@@ -159,7 +159,7 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
     base_title = original.title
     new_title = f"{base_title} (Kopie)"
     counter = 2
-    while ExerciseDefinition.query.filter_by(title=new_title).first() is not None:
+    while ExerciseDefinition.query.filter_by(title=new_title, user_id=current_user.id).first() is not None:
         new_title = f"{base_title} (Kopie {counter})"
         counter += 1
 
@@ -210,15 +210,22 @@ def delete_workout(workout_id: int) -> ResponseReturnValue:
 def add_exercise() -> str | ResponseReturnValue:
     form = CreateExerciseForm()
     if form.validate_on_submit():
-        exercise = ExerciseDefinition(
-            title=form.title.data,
-            description=form.description.data,
-            user_id=current_user.id,
-        )
-        db.session.add(exercise)
-        db.session.commit()
-        flash("Deie Übung wurde erstellt!", "success")
-        return redirect(url_for("main.all_exercises"))
+        # check for duplicates (user scope)
+        existing = ExerciseDefinition.query.filter_by(
+            title=form.title.data, user_id=current_user.id
+        ).first()
+        if existing:
+            flash("Du hast bereits eine Übung mit diesem Namen.", "warning")
+        else:
+            exercise = ExerciseDefinition(
+                title=form.title.data,
+                description=form.description.data,
+                user_id=current_user.id,
+            )
+            db.session.add(exercise)
+            db.session.commit()
+            flash("Deine Übung wurde erstellt!", "success")
+            return redirect(url_for("main.all_exercises"))
     return render_template(
         "add_exercise.html", title="Neue Übung", form=form, legend="Neue Übung"
     )
@@ -268,11 +275,18 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
         abort(403)
     form = CreateExerciseForm()
     if form.validate_on_submit():
-        exercise.title = form.title.data
-        exercise.description = form.description.data
-        db.session.commit()
-        flash("Deine Übung wurde geändert", "success")
-        return redirect(url_for("main.exercise", exercises_id=exercise.id))
+        # Add a duplicate check before commiting
+        existing = ExerciseDefinition.query.filter_by(
+            title=form.title.data, user_id=current_user.id
+        ).first()
+        if existing and existing.id != exercise.id:
+            flash("Du hast bereits eine Übung mit diesem Namen", "warning")
+        else:
+            exercise.title = form.title.data
+            exercise.description = form.description.data
+            db.session.commit()
+            flash("Deine Übung wurde geändert", "success")
+            return redirect(url_for("main.exercise", exercises_id=exercise.id))
     elif request.method == "GET":
         form.title.data = exercise.title
         form.description.data = exercise.description
