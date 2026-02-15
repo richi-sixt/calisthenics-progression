@@ -30,7 +30,7 @@ from project.decorators import check_confirmed
 
 # helper functions
 @bp.before_request
-def before_request():
+def before_request() -> None:
     if current_user.is_authenticated:
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
@@ -40,7 +40,7 @@ def before_request():
 
 @bp.route("/", methods=["GET", "POST"])
 @bp.route("/index", methods=["GET", "POST"])
-def index():
+def index() -> ResponseReturnValue:
     if current_user.is_authenticated:
         return redirect(url_for("main.workouts"))
     return render_template("index.html", title="Home")
@@ -48,7 +48,7 @@ def index():
 
 @bp.route("/workouts", methods=["GET", "POST"])
 @login_required
-def workouts():
+def workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = (
         Workout.query.filter_by(user_id=current_user.get_id())
@@ -182,7 +182,7 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
 @bp.route("/workout/<int:workout_id>")
 @login_required
 @check_confirmed
-def workout(workout_id: int) -> str:
+def workout(workout_id: int) -> ResponseReturnValue:
     workout = db.session.get(Workout, workout_id)
     if workout is None:
         abort(404)
@@ -192,7 +192,7 @@ def workout(workout_id: int) -> str:
 @bp.route("/workout/<int:workout_id>/delete", methods=["POST"])
 @login_required
 @check_confirmed
-def delete_workout(workout_id):
+def delete_workout(workout_id: int) -> ResponseReturnValue:
     workout = db.session.get(Workout, workout_id)
     if workout is None:
         abort(404)
@@ -227,7 +227,7 @@ def add_exercise() -> str | ResponseReturnValue:
 @bp.route("/exercises/<int:exercises_id>")
 @login_required
 @check_confirmed
-def exercise(exercises_id):
+def exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
     if exercise is None:
         abort(404)
@@ -299,7 +299,7 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
 @bp.route("/explore")
 @login_required
 @check_confirmed
-def explore() -> str:
+def explore() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = (
         Workout.query.filter(Workout.user_id != current_user.id)
@@ -329,7 +329,7 @@ def explore() -> str:
 @bp.route("/user/<username>")
 @login_required
 @check_confirmed
-def user(username):
+def user(username: str) -> ResponseReturnValue:
     user = User.query.filter_by(username=username).first_or_404()
     page = request.args.get("page", 1, type=int)
     workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate(
@@ -359,7 +359,7 @@ def user(username):
 @bp.route("/follow/<username>")
 @login_required
 @check_confirmed
-def follow(username):
+def follow(username: str) -> ResponseReturnValue:
     user = User.query.filter_by(username=username).first()
     if user is None:
         flash("Benutzer {} konnte nicht gefunden werden.".format(username))
@@ -376,7 +376,7 @@ def follow(username):
 @bp.route("/unfollow/<username>")
 @login_required
 @check_confirmed
-def unfollow(username):
+def unfollow(username: str) -> ResponseReturnValue:
     user = User.query.filter_by(username=username).first()
     if user is None:
         flash("Benutzer {} konnte nicht gefunden werden.".format(username))
@@ -393,7 +393,7 @@ def unfollow(username):
 @bp.route("/messages")
 @login_required
 @check_confirmed
-def messages():
+def messages() -> ResponseReturnValue:
     current_user.last_message_read_time = datetime.now(timezone.utc)
     current_user.add_notification("unread_message_count", 0)
     db.session.commit()
@@ -419,7 +419,7 @@ def messages():
 @bp.route("/send_message/<recipient>", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def send_message(recipient):
+def send_message(recipient: str) -> ResponseReturnValue:
     user = User.query.filter_by(username=recipient).first_or_404()
     form = MessageForm()
     if form.validate_on_submit():
@@ -438,7 +438,7 @@ def send_message(recipient):
 @bp.route("/notifications")
 @login_required
 @check_confirmed
-def notifications():
+def notifications() -> ResponseReturnValue:
     since = request.args.get("since", 0.0, type=float)
     notifications = current_user.notifications.filter(
         Notification.timestamp > since

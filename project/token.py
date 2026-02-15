@@ -6,7 +6,7 @@ from itsdangerous import (
 from flask import current_app
 
 
-def generate_confirmation_token(email):
+def generate_confirmation_token(email: str) -> str:
     """Generate a confirmation token for the given email."""
     serializer = URLSafeTimedSerializer(
         current_app.config["SECRET_KEY"]
@@ -17,7 +17,7 @@ def generate_confirmation_token(email):
     )
 
 
-def confirm_token(token, expiration=3600):
+def confirm_token(token: str, expiration: int = 3600) -> str | bool:
     """Confirm a token and return the email if valid."""
     serializer = URLSafeTimedSerializer(
         current_app.config["SECRET_KEY"]

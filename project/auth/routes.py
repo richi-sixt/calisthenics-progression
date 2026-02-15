@@ -3,10 +3,11 @@ import os
 from datetime import datetime, timezone
 from PIL import Image
 from flask import render_template, flash, redirect, url_for, request, current_app
+from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
 
-# from werkzeug.urls import url_parse
+from werkzeug.datastructures import FileStorage
 from project import db
 from project.auth import bp
 from project.auth.forms import (
@@ -23,7 +24,7 @@ from project.decorators import check_confirmed
 
 
 @bp.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> ResponseReturnValue:
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
     form = LoginForm()
@@ -43,7 +44,7 @@ def login():
 @bp.route("/edit_profile", methods=["GET", "POST"])
 @login_required
 @check_confirmed
-def edit_profile():
+def edit_profile() -> ResponseReturnValue:
     form = EditProfileForm(current_user.username)
     if form.validate_on_submit():
         if form.picture.data:
@@ -63,7 +64,7 @@ def edit_profile():
     )
 
 
-def save_picture(form_picture):
+def save_picture(form_picture: FileStorage) -> str:
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
@@ -80,13 +81,13 @@ def save_picture(form_picture):
 
 
 @bp.route("/logout")
-def logout():
+def logout() -> ResponseReturnValue:
     logout_user()
     return redirect(url_for("main.index"))
 
 
 @bp.route("/register", methods=["GET", "POST"])
-def register():
+def register() -> ResponseReturnValue:
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
     form = RegistrationForm()
@@ -114,7 +115,7 @@ def register():
 
 @bp.route("/confirm/<token>")
 @login_required
-def confirm_email(token):
+def confirm_email(token: str) -> ResponseReturnValue:
     if current_user.confirmed:
         flash("Das Konto wurde bereits bestätigt. Bitte anmelden.", "success")
         return redirect(url_for("main.index"))
@@ -133,7 +134,7 @@ def confirm_email(token):
 
 @bp.route("/unconfirmed")
 @login_required
-def unconfirmed():
+def unconfirmed() -> ResponseReturnValue:
     if current_user.confirmed:
         return redirect(url_for("main.index"))
     return render_template("auth/unconfirmed.html")
@@ -141,7 +142,7 @@ def unconfirmed():
 
 @bp.route("/resend")
 @login_required
-def resend_confirmation():
+def resend_confirmation() -> ResponseReturnValue:
     token = generate_confirmation_token(current_user.email)
     confirm_url = url_for("auth.confirm_email", token=token, _external=True)
     html = render_template("email/activate.html", confirm_url=confirm_url)
@@ -152,7 +153,7 @@ def resend_confirmation():
 
 
 @bp.route("/forgot", methods=["GET", "POST"])
-def forgot():
+def forgot() -> ResponseReturnValue:
     form = ResetPasswordRequestForm(request.form)
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
@@ -176,7 +177,7 @@ def forgot():
 
 
 @bp.route("/forgot/new/<token>", methods=["GET", "POST"])
-def forgot_new(token):
+def forgot_new(token: str) -> ResponseReturnValue:
     email = confirm_token(token)
     user = User.query.filter_by(email=email).first_or_404()
 

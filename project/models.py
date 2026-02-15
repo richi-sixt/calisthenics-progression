@@ -3,10 +3,10 @@
 from datetime import date, datetime, timezone
 from time import time
 import json
-from typing import Optional
+from typing import Any
 
 from flask_login import UserMixin
-from sqlalchemy import Nullable
+from sqlalchemy.orm import Query
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from project import db, login
@@ -111,34 +111,34 @@ class User(UserMixin, db.Model):
         self.confirmed_on = confirmed_on
         self.password_reset_token = password_reset_token
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of User."""
         return f"<User {self.username}>"
 
-    def set_password(self, password):
+    def set_password(self, password: str) -> None:
         """Hash and set the user's password."""
         self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
+    def check_password(self, password: str) -> bool:
         """Verify the user's password."""
         return check_password_hash(self.password_hash, password)
 
     # Following methods
-    def follow(self, user):
+    def follow(self, user: "User") -> None:
         """Follow another user if not already following."""
         if not self.is_following(user):
             self.followed.append(user)
 
-    def unfollow(self, user):
+    def unfollow(self, user: "User") -> None:
         """Unfollow a user if currently following."""
         if self.is_following(user):
             self.followed.remove(user)
 
-    def is_following(self, user):
+    def is_following(self, user: "User") -> bool:
         """Check if this user is following another user."""
         return self.followed.filter(followers.c.followed_id == user.id).count() > 0
 
-    def followed_workouts(self):
+    def followed_workouts(self) -> Query:
         """Get workouts from followed users and own workouts."""
         followed = Workout.query.join(
             followers,
@@ -149,19 +149,19 @@ class User(UserMixin, db.Model):
 
         return followed.union(own).order_by(Workout.timestamp.desc())
 
-    def new_messages(self):
+    def new_messages(self) -> int:
         """Count unread messages since last read time."""
         last_read_time = (
                 self.last_message_read_time
                 or datetime(1900, 1, 1, tzinfo=timezone.utc)
         )
         return (
-            Message.query.filter_by(recipient=self)
+            Message.query.filter_by(recipient_id=self.id)
             .filter(Message.timestamp > last_read_time)
             .count()
         )
 
-    def add_notification(self, name, data):
+    def add_notification(self, name: str, data: dict) -> Notification:
         """Add or update a notification for this user."""
         self.notifications.filter_by(name=name).delete()
         n = Notification(name=name, user=self)
@@ -172,7 +172,7 @@ class User(UserMixin, db.Model):
 
 # Load user for session
 @login.user_loader
-def load_user(id):
+def load_user(id: str) -> User | None:
     """Load user for Flask-Login session management."""
     return db.session.get(User, int(id))
 
@@ -209,7 +209,7 @@ class Workout(db.Model):
         if timestamp is not None: # has a default
             self.timestamp = timestamp
   
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Workout."""
         return f"<Workout {self.title}>"
 
@@ -291,7 +291,7 @@ class ExerciseDefinition(db.Model):
         if date_created is not None:
             self.date_created = date_created
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Exercise definition."""
         return f"<ExerciseDefinition {self.title}>"
 
@@ -332,7 +332,7 @@ class Exercise(db.Model):
         self.workout_id = workout_id
         self.exercise_definition_id =  exercise_definition_id
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Exercise instance."""
         return f"<Exercise {self.id}: Order {self.exercise_order}>"
 
@@ -365,7 +365,7 @@ class Set(db.Model):
         self.progression = progression
         self.reps = reps
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Set."""
         return f"<Set {self.id}: {self.reps} reps>"
 
@@ -396,7 +396,7 @@ class Message(db.Model):
         if timestamp is not None:
             self.timestamp = timestamp
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Message."""
         return f"<Message {self.body}>"
 
@@ -407,7 +407,7 @@ class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    timestamp = db.Column(db.Float, index=True, default=time)
+    timestamp = db.Column(db.Float, index=True, default=lambda: time())
     payload_json = db.Column(db.Text)
 
     # Constructo for add_notification
@@ -424,11 +424,11 @@ class Notification(db.Model):
         if timestamp is not None:
             self.timestamp = timestamp
 
-    def get_data(self):
+    def get_data(self) -> dict[str, Any]:
         """Parse and return the JSON payload."""
         return json.loads(str(self.payload_json))
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """String representation of Notification."""
         return f"<Notification {self.name}>"

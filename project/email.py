@@ -31,7 +31,7 @@ def send_email(
     msg.body = text_body
     msg.html = html_body
 
-    app = current_app # type: ignore[assignment]
+    app = current_app
     Thread(
         target=send_async_email,
         args=(app, msg),
