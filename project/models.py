@@ -1,6 +1,8 @@
 """Database models for calisthenics-progression."""
 
-from datetime import date, datetime, timezone
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from time import time
 import json
 from typing import Any
@@ -36,17 +38,10 @@ class User(UserMixin, db.Model):
 
     # Profile fields
     about_me = db.Column(db.String(280))
-    image_file = db.Column(
-        db.String(20), 
-        nullable=False,
-        default="default.jpg"
-    )
+    image_file = db.Column(db.String(20), nullable=False, default="default.jpg")
 
     # Timestamp fields - using timezone-aware UTC
-    last_seen = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    last_seen = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     registered_on = db.Column(db.DateTime, nullable=False)
     last_message_read_time = db.Column(db.DateTime)
 
@@ -61,23 +56,12 @@ class User(UserMixin, db.Model):
     )
 
     # Relationships - User content
-    workouts = db.relationship(
-        "Workout",
-        backref="athlete",
-        lazy="dynamic"
-    )
-    exercises = db.relationship(
-        "ExerciseDefinition",
-        backref="athlete",
-        lazy="dynamic"
-    )
+    workouts = db.relationship("Workout", backref="athlete", lazy="dynamic")
+    exercises = db.relationship("ExerciseDefinition", backref="athlete", lazy="dynamic")
 
     # Relationships Messaging
     messages_sent = db.relationship(
-        "Message",
-        foreign_keys="Message.sender_id",
-        backref="athlete",
-        lazy="dynamic"
+        "Message", foreign_keys="Message.sender_id", backref="athlete", lazy="dynamic"
     )
     messages_received = db.relationship(
         "Message",
@@ -87,11 +71,7 @@ class User(UserMixin, db.Model):
     )
 
     # Relationships - Notifications
-    notifications = db.relationship(
-        "Notification",
-        backref="user",
-        lazy="dynamic"
-    )
+    notifications = db.relationship("Notification", backref="user", lazy="dynamic")
 
     def __init__(
         self,
@@ -141,23 +121,24 @@ class User(UserMixin, db.Model):
     def followed_workouts(self) -> Query:
         """Get workouts from followed users and own workouts."""
         followed = Workout.query.join(
-            followers,
-            (followers.c.followed_id == Workout.user_id)
+            followers, (followers.c.followed_id == Workout.user_id)
         ).filter(followers.c.follower_id == self.id)
 
         own = Workout.query.filter_by(user_id=self.id)
 
-        return followed.union(own).order_by(Workout.timestamp.desc())
+        return followed.union(own).order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
 
     def new_messages(self) -> int:
         """Count unread messages since last read time."""
-        last_read_time = (
-                self.last_message_read_time
-                or datetime(1900, 1, 1, tzinfo=timezone.utc)
+        last_read_time = self.last_message_read_time or datetime(
+            1900, 1, 1, tzinfo=timezone.utc
         )
         return (
             Message.query.filter_by(recipient_id=self.id)
-            .filter(Message.timestamp > last_read_time)
+            # SQLAlchemy's __eq__, __gt__, __ne__ operators
+            # return ColumnElement[bool] at runtime,
+            # but pyright sees them as plain bool.
+            .filter(Message.timestamp > last_read_time)  # type: ignore[arg-type]
             .count()
         )
 
@@ -183,32 +164,27 @@ class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
     timestamp = db.Column(
-        db.DateTime,
-        index=True,
-        default=lambda: datetime.now(timezone.utc)
+        db.DateTime, index=True, default=lambda: datetime.now(timezone.utc)
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
-        "Exercise",
-        backref="workout",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
+        "Exercise", backref="workout", cascade="all, delete-orphan", lazy="dynamic"
     )
+
     def __init__(
         self,
         title: str,
         user_id: int,
         timestamp: datetime | None = None,
-        
     ) -> None:
         """Initialize a workout session."""
         self.title = title
         self.user_id = user_id
-        if timestamp is not None: # has a default
+        if timestamp is not None:  # has a default
             self.timestamp = timestamp
-  
+
     def __repr__(self) -> str:
         """String representation of Workout."""
         return f"<Workout {self.title}>"
@@ -217,10 +193,10 @@ class Workout(db.Model):
 class ExerciseDefinition(db.Model):
     """Exercise definition model (exercise library/templates).
 
-    Represents a definition for an exercise. 
+    Represents a definition for an exercise.
     Each definition can be instantiated multiple times
     as actual exercise instances.
-    
+
     Attributes:
         id: Primary key identifier.
         title: Unique name/title of the exercise.
@@ -236,26 +212,14 @@ class ExerciseDefinition(db.Model):
     title = db.Column(db.String(80), index=True, unique=True)
     description = db.Column(db.Text, nullable=False)
     date_created = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=lambda: datetime.now(timezone.utc)
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.id"),
-        nullable=False
-    )
-    archived = db.Column(
-        db.Boolean,
-        nullable=False,
-        default=False
-    )
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    archived = db.Column(db.Boolean, nullable=False, default=False)
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
-        "Exercise",
-        backref="exercise_definition",
-        lazy="dynamic"
+        "Exercise", backref="exercise_definition", lazy="dynamic"
     )
 
     def __init__(
@@ -267,22 +231,22 @@ class ExerciseDefinition(db.Model):
         archived: bool = False,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
-        
+
         Args:
             title: Unique name/title of the exercise (max 80 characters).
             description: Detailed description of the exercise.
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
             **kwargs: Additional keyword arguments passed to the parent Model class.
-        
+
         Example:
             >>> exercise_def = ExerciseDefinition(
             ...     title="Push-ups",
             ...     description="Standard push-up exercise",
             ...     user_id=1
             ... )
-        """       
-        
+        """
+
         """Initialize ExerciseDefinition."""
         self.title = title
         self.description = description
@@ -303,22 +267,12 @@ class Exercise(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     exercise_order = db.Column(db.Integer, nullable=False)
-    workout_id = db.Column(
-        db.Integer,
-        db.ForeignKey("workout.id"),
-        nullable=False
-    )
-    exercise_definition_id = db.Column(
-        db.Integer,
-        db.ForeignKey("exercises.id")
-    )
+    workout_id = db.Column(db.Integer, db.ForeignKey("workout.id"), nullable=False)
+    exercise_definition_id = db.Column(db.Integer, db.ForeignKey("exercises.id"))
 
     # Relationship to sets in this exercise
     sets = db.relationship(
-        "Set",
-        backref="exercise",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
+        "Set", backref="exercise", cascade="all, delete-orphan", lazy="dynamic"
     )
 
     def __init__(
@@ -330,7 +284,7 @@ class Exercise(db.Model):
         """Initialize an exercise instance within a workout."""
         self.exercise_order = exercise_order
         self.workout_id = workout_id
-        self.exercise_definition_id =  exercise_definition_id
+        self.exercise_definition_id = exercise_definition_id
 
     def __repr__(self) -> str:
         """String representation of Exercise instance."""
@@ -346,11 +300,7 @@ class Set(db.Model):
     set_order = db.Column(db.Integer, nullable=False)
     progression = db.Column(db.String(80), index=True)
     reps = db.Column(db.Integer)
-    exercise_id = db.Column(
-        db.Integer,
-        db.ForeignKey("exercise.id"),
-        nullable=False
-    )
+    exercise_id = db.Column(db.Integer, db.ForeignKey("exercise.id"), nullable=False)
 
     def __init__(
         self,
@@ -378,10 +328,9 @@ class Message(db.Model):
     recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     body = db.Column(db.String(140))
     timestamp = db.Column(
-        db.DateTime,
-        index=True,
-        default=lambda: datetime.now(timezone.utc)
+        db.DateTime, index=True, default=lambda: datetime.now(timezone.utc)
     )
+
     def __init__(
         self,
         sender_id: int,
@@ -427,7 +376,6 @@ class Notification(db.Model):
     def get_data(self) -> dict[str, Any]:
         """Parse and return the JSON payload."""
         return json.loads(str(self.payload_json))
-
 
     def __repr__(self) -> str:
         """String representation of Notification."""

@@ -66,6 +66,7 @@ def edit_profile() -> ResponseReturnValue:
 
 def save_picture(form_picture: FileStorage) -> str:
     random_hex = secrets.token_hex(8)
+    assert form_picture.filename is not None
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(
@@ -73,7 +74,7 @@ def save_picture(form_picture: FileStorage) -> str:
     )
 
     output_size = (125, 125)
-    i = Image.open(form_picture)
+    i = Image.open(form_picture) # type: ignore[arg-type]
     i.thumbnail(output_size)
     i.save(picture_path)
 
@@ -98,9 +99,12 @@ def register() -> ResponseReturnValue:
             confirmed=False,
             admin=False,
         )
+        assert form.password.data is not None
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+
+        assert user.email is not None
         token = generate_confirmation_token(user.email)
         confirm_url = url_for("auth.confirm_email", token=token, _external=True)
         html = render_template("email/activate.html", confirm_url=confirm_url)

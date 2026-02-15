@@ -68,7 +68,7 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     app.logger.info('Calisthenics-Progression startup')
 
     # Import models for Flask-Migrate
-    from project import models  # noqa: F401
+    from project import models # noqa: F401 # type: ignore[import]
 
 
     return app

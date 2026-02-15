@@ -52,7 +52,7 @@ def workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = (
         Workout.query.filter_by(user_id=current_user.get_id())
-        .order_by(Workout.timestamp.desc())
+        .order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
         .paginate(
             page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
         )
@@ -133,11 +133,11 @@ def add_workout() -> ResponseReturnValue:
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all()
+    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
     other_exercises = ExerciseDefinition.query.filter(
         ExerciseDefinition.user_id != current_user.id,
-        ExerciseDefinition.archived == False,  # noqa: E712
-    ).order_by(ExerciseDefinition.title.asc()).all()
+        ExerciseDefinition.archived == False,  # noqa: E712 # type: ignore[arg-type]
+    ).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
@@ -239,7 +239,7 @@ def exercise(exercises_id: int) -> ResponseReturnValue:
 @check_confirmed
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
-    exercises = ExerciseDefinition.query.filter_by(archived=False).order_by(ExerciseDefinition.title.asc()).paginate(
+    exercises = ExerciseDefinition.query.filter_by(archived=False).order_by(ExerciseDefinition.title.asc()).paginate( # type: ignore[umion-attr]
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
@@ -303,7 +303,7 @@ def explore() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = (
         Workout.query.filter(Workout.user_id != current_user.id)
-        .order_by(Workout.timestamp.desc())
+        .order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
         .paginate(
             page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
         )
@@ -332,7 +332,7 @@ def explore() -> ResponseReturnValue:
 def user(username: str) -> ResponseReturnValue:
     user = User.query.filter_by(username=username).first_or_404()
     page = request.args.get("page", 1, type=int)
-    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate(
+    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate( #type: ignore[union-attr]
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
@@ -399,7 +399,7 @@ def messages() -> ResponseReturnValue:
     db.session.commit()
     page = request.args.get("page", 1, type=int)
     messages = current_user.messages_received.order_by(
-        Message.timestamp.desc()
+        Message.timestamp.desc() # type: ignore[union-attr]
     ).paginate(
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
@@ -442,7 +442,7 @@ def notifications() -> ResponseReturnValue:
     since = request.args.get("since", 0.0, type=float)
     notifications = current_user.notifications.filter(
         Notification.timestamp > since
-    ).order_by(Notification.timestamp.asc())
+        ).order_by(Notification.timestamp.asc()) # type: ignore[arg-type]
     return jsonify(
         [
             {"name": n.name, "data": n.get_data(), "timestamp": n.timestamp}
