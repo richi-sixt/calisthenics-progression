@@ -1,7 +1,22 @@
 $(document).ready(function() {
 
     exercise_template = _.template($("#exercise_template").html());
-    set_template = _.template($("#set_template").html());
+    set_reps_template = _.template($("#set_reps_template").html());
+    set_duration_template = _.template($("#set_duration_template").html());
+
+    // Get the counting type for an exercise select
+    function getCountingType(select) {
+        var selectedOption = select.find("option:selected");
+        return selectedOption.data("counting-type") || "reps";
+    }
+
+    // Get the correct set template based on counting type
+    function getSetTemplate(countingType, exerciseNum) {
+        if (countingType === "duration") {
+            return set_duration_template({exercise_num: exerciseNum});
+        }
+        return set_reps_template({exercise_num: exerciseNum});
+    }
 
     // Store original options for each select to restore later
     function storeOriginalOptions(select) {
@@ -66,8 +81,26 @@ $(document).ready(function() {
         }
     }
 
+     // Rebuild sets when exercise selection changes
+    function rebuildSetsForExercise(select) {
+        var exerciseName = select.attr("name");
+        var exerciseNum = exerciseName.replace("exercise", "");
+        var setsContainer = $("#exercise" + exerciseNum);
+        var countingType = getCountingType(select);
+
+        // Clear existing sets and re-add one
+        setsContainer.empty();
+        setsContainer.append(getSetTemplate(countingType, exerciseNum));
+    } 
+
     // Initial filter application
     applyExerciseFilter();
+
+    // Add initial set for exercise 1
+    var firstSelect = $("[name='exercise1']");
+    if (firstSelect.length && $("#exercise1").children().length === 0) {
+        rebuildSetsForExercise(firstSelect);
+    }
 
     // Toggle change handler
     $("#showOnlyMine").on("change", function() {
@@ -77,6 +110,7 @@ $(document).ready(function() {
     // Exercise selection change handler
     $(document).on("change", ".exercise-select", function() {
         updateCopyButton($(this));
+        rebuildSetsForExercise($(this));
     });
 
     // Copy exercise handler
@@ -92,7 +126,7 @@ $(document).ready(function() {
             method: "POST",
             success: function(response) {
                 // Add new option to all "my exercises" optgroups
-                var newOption = '<option value="' + response.id + '" data-owner="mine">' + response.title + '</option>';
+                var newOption = '<option value="' + response.id + '" data-owner="mine" data-counting-type="' + response.counting_type + '">' + response.title + '</option>';
                 $(".exercise-select optgroup.my-exercises").each(function() {
                     $(this).append(newOption);
                 });
@@ -100,6 +134,7 @@ $(document).ready(function() {
                 // Select the new exercise in this dropdown
                 select.val(response.id);
                 updateCopyButton(select);
+                rebuildSetsForExercise(select);
 
                 btn.text("Kopiert!");
                 setTimeout(function() {
@@ -120,22 +155,24 @@ $(document).ready(function() {
         $("[name=exercise_count]").val(exercise_num);
 
         exercise_compiled = exercise_template({exercise_num : exercise_num});
-        set_compiled = set_template({exercise_num : exercise_num});
 
         $("#addExercise").before(exercise_compiled);
-        $("#exercise" + exercise_num).append(set_compiled);
 
         // Store options and apply filter to newly added exercise select
         var newSelect = $("[name='exercise" + exercise_num + "']");
         storeOriginalOptions(newSelect);
         applyExerciseFilter();
+
+    // Add initial set with correct type
+        rebuildSetsForExercise(newSelect);
     });
 
     // Add set handler
     $(document).on("click", ".addSet", function() {
         exercise_num = Number($(this).attr("exercise"));
-        set_compiled = set_template({exercise_num : exercise_num});
-        $("#exercise" + exercise_num).append(set_compiled);
-    });
+        var select = $("[name='exercise" + exercise_num + "']");
+        var countingType = getCountingType(select);
+        var set_compiled = getSetTemplate(countingType, exercise_num);
+        $("#exercise" + exercise_num).append(set_compiled);    });
 
 });

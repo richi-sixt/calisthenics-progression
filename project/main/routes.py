@@ -117,18 +117,32 @@ def add_workout() -> ResponseReturnValue:
 
             progressions = request.form.getlist(
                 "progression" + str(exercise_num))
-            reps = request.form.getlist("reps" + str(exercise_num))
 
             set_order = 1
-            for progression, rep in zip(progressions, reps):
-                work_set = Set(
-                    set_order=set_order,
-                    exercise_id=exercise.id,
-                    progression=progression,
-                    reps=int(rep),
-                )
-                set_order += 1
-                db.session.add(work_set)
+            if exercise_def.counting_type == "duration":
+                durations = request.form.getlist("duration" + str(exercise_num))
+                for progression, dur in zip(progressions, durations):
+                    parts = dur.split(":")
+                    total_seconds = int(parts[0]) * 60 + int(parts[1]) if len(parts) == 2 else int(dur)
+                    work_set = Set(
+                        set_order=set_order,
+                        exercise_id=exercise.id,
+                        progression=progression,
+                        duration=total_seconds,
+                    )
+                    set_order += 1
+                    db.session.add(work_set)
+            else:
+                reps = request.form.getlist("reps" + str(exercise_num))
+                for progression, rep in zip(progressions, reps):
+                    work_set = Set(
+                        set_order=set_order,
+                        exercise_id=exercise.id,
+                        progression=progression,
+                        reps=int(rep),
+                    )
+                    set_order += 1
+                    db.session.add(work_set)
 
         db.session.commit()
         return redirect(url_for("main.index"))
@@ -167,6 +181,7 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
         title=new_title,
         description=original.description,
         user_id=current_user.id,
+        counting_type=original.counting_type,
     )
     db.session.add(copied)
     db.session.commit()
@@ -175,9 +190,9 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
         "success": True,
         "id": copied.id,
         "title": copied.title,
-        "username": current_user.username
+        "username": current_user.username,
+        "counting_type": copied.counting_type,
     })
-
 
 @bp.route("/workout/<int:workout_id>")
 @login_required
@@ -221,6 +236,7 @@ def add_exercise() -> str | ResponseReturnValue:
                 title=form.title.data,
                 description=form.description.data,
                 user_id=current_user.id,
+                counting_type=form.counting_type.data,
             )
             db.session.add(exercise)
             db.session.commit()
@@ -284,12 +300,14 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
         else:
             exercise.title = form.title.data
             exercise.description = form.description.data
+            exercise.counting_type = form.counting_type.data
             db.session.commit()
             flash("Deine Übung wurde geändert", "success")
             return redirect(url_for("main.exercise", exercises_id=exercise.id))
     elif request.method == "GET":
         form.title.data = exercise.title
         form.description.data = exercise.description
+        form.counting_type.data = exercise.counting_type
     return render_template(
         "add_exercise.html", title="Ändere Übung", form=form, legend="Ändere Übung"
     )
