@@ -318,3 +318,53 @@ class TestCreateExerciseForm:
             )
             assert form.validate() is False
             assert "description" in form.errors
+
+    def test_create_exercise_form_with_reps_counting_type(self, app):
+        """Test create exercise form with reps counting type."""
+        with app.app_context():
+            form = CreateExerciseForm(
+                data={
+                    "title": "Push-ups",
+                    "description": "Standard push-ups",
+                    "counting_type": "reps",
+                }
+            )
+            assert form.validate() is True
+            assert form.counting_type.data == "reps"
+
+    def test_create_exercise_form_with_duration_counting_type(self, app):
+        """Test create exercise form with duration counting type."""
+        with app.app_context():
+            form = CreateExerciseForm(
+                data={
+                    "title": "Plank",
+                    "description": "Hold a plank",
+                    "counting_type": "duration",
+                }
+            )
+            assert form.validate() is True
+            assert form.counting_type.data == "duration"
+
+    def test_create_exercise_form_invalid_counting_type(self, app):
+        """Test create exercise form rejects invalid counting type."""
+        with app.app_context():
+            form = CreateExerciseForm(
+                data={
+                    "title": "Exercise",
+                    "description": "Description",
+                    "counting_type": "invalid",
+                }
+            )
+            assert form.validate() is False
+            assert "counting_type" in form.errors
+
+    def test_create_exercise_form_defaults_to_reps(self, app):
+        """Test create exercise form defaults counting_type to reps."""
+        with app.app_context():
+            form = CreateExerciseForm(
+                data={
+                    "title": "Push-ups",
+                    "description": "Standard push-ups",
+                }
+            )
+            assert form.counting_type.data == "reps"
