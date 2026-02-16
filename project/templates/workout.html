@@ -32,7 +32,11 @@
                       {% for s in sets %}
                           <p>Set: {{ s.set_order }}</p>
                           <p>Progression: {{ s.progression }}</p>
-                          <p>Reps: {{s.reps }}</p>
+                          {% if exercise.exercise_definition.counting_type == 'duration' %}
+                          <p>Dauer: {{ s.duration_formatted }}</p>
+                          {% else %}
+                          <p>Reps: {{ s.reps }}</p>
+                          {% endif %}
                           <hr style="border: 5px solid #007bff; border-radius: 5px;" />
                       {% endfor %}
                   </div>

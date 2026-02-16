@@ -215,6 +215,7 @@ class ExerciseDefinition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
     description = db.Column(db.Text, nullable=False)
+    counting_type = db.Column(db.String(10), nullable=False, default="reps")
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
@@ -234,6 +235,7 @@ class ExerciseDefinition(db.Model):
         user_id: int | None = None,
         date_created: datetime | None = None,
         archived: bool = False,
+        counting_type: str = "reps",
     ) -> None:
         """Initialize an ExerciseDefinition instance.
 
@@ -242,7 +244,7 @@ class ExerciseDefinition(db.Model):
             description: Detailed description of the exercise.
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
-            **kwargs: Additional keyword arguments passed to the parent Model class.
+            counting_type: How sets are counted - "reps" or "duration".
 
         Example:
             >>> exercise_def = ExerciseDefinition(
@@ -251,12 +253,11 @@ class ExerciseDefinition(db.Model):
             ...     user_id=1
             ... )
         """
-
-        """Initialize ExerciseDefinition."""
         self.title = title
         self.description = description
         self.user_id = user_id
         self.archived = archived
+        self.counting_type = counting_type
         if date_created is not None:
             self.date_created = date_created
 
@@ -305,6 +306,7 @@ class Set(db.Model):
     set_order = db.Column(db.Integer, nullable=False)
     progression = db.Column(db.String(80), index=True)
     reps = db.Column(db.Integer)
+    duration = db.Column(db.Integer)
     exercise_id = db.Column(db.Integer, db.ForeignKey("exercise.id"), nullable=False)
 
     def __init__(
@@ -313,12 +315,23 @@ class Set(db.Model):
         exercise_id: int,
         progression: str | None = None,
         reps: int | None = None,
+        duration: int | None = None,
     ) -> None:
         """Initialize a set with an exercise."""
         self.set_order = set_order
         self.exercise_id = exercise_id
         self.progression = progression
         self.reps = reps
+        self.duration = duration
+
+    @property
+    def duration_formatted(self) -> str:
+        """Format duration in seconds as mm:ss."""
+        if self.duration is None:
+            return "00:00"
+        minutes = self.duration // 60
+        seconds = self.duration % 60
+        return f"{minutes:02d}:{seconds:02d}"
 
     def __repr__(self) -> str:
         """String representation of Set."""

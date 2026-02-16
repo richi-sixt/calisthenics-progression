@@ -20,25 +20,18 @@
             <select name="exercise1" class="form-control exercise-select" form="workout">
                 <optgroup label="Meine &Uuml;bungen" class="my-exercises">
                     {% for exercise in my_exercises %}
-                    <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
+                    <option value="{{ exercise.id }}" data-owner="mine" data-counting-type="{{ exercise.counting_type }}">{{ exercise.title }}</option>
                     {% endfor %}
                 </optgroup>
                 <optgroup label="Andere athleten" class="other-exercises">
                     {% for exercise in other_exercises %}
-                    <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
+                    <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}" data-counting-type="{{ exercise.counting_type }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
                     {% endfor %}
                 </optgroup>
             </select>
             <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ml-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
         </div>
         <div class="form-group" id="exercise1">
-            <label>Progression</label>
-            <input type="text" class="form-control" name="progression1" placeholder="Progression">
-            <label>Reps</label>
-            <input type="text" class="form-control" name="reps1" placeholder="Reps" required>
-            <div class="invalid-feedback">
-                Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
-            </div>
         </div>
         <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>
         <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
@@ -53,12 +46,12 @@
         <select name="exercise<%= exercise_num %>" class="form-control exercise-select" form="workout">
             <optgroup label="Meine &Uuml;bungen" class="my-exercises">
                 {% for exercise in my_exercises %}
-                <option value="{{ exercise.id }}" data-owner="mine">{{ exercise.title }}</option>
+                <option value="{{ exercise.id }}" data-owner="mine" data-counting-type="{{ exercise.counting_type }}">{{ exercise.title }}</option>
                 {% endfor %}
             </optgroup>
             <optgroup label="Andere athleten" class="other-exercises">
                 {% for exercise in other_exercises %}
-                <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
+                <option value="{{ exercise.id }}" data-owner="other" data-username="{{ exercise.athlete.username }}" data-counting-type="{{ exercise.counting_type }}">{{ exercise.title }} - ({{ exercise.athlete.username }})</option>
                 {% endfor %}
             </optgroup>
         </select>
@@ -69,7 +62,7 @@
     <button type="button" class="btn btn-info addSet" exercise="<%= exercise_num %>">Set hinzuf&uuml;gen</button>
 </script>
 
-<script type="text/html" id="set_template">
+<script type="text/html" id="set_reps_template">
     <br><br>
     <label>Progression</label>
     <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
@@ -77,6 +70,17 @@
     <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps" required>
     <div class="invalid-feedback">
         Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
+    </div>
+</script>
+
+<script type="text/html" id="set_duration_template">
+    <br><br>
+    <label>Progression</label>
+    <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
+    <label>Dauer (mm:ss)</label>
+    <input type="text" class="form-control" name="duration<%= exercise_num %>" placeholder="00:00" pattern="[0-9]{1,2}:[0-9]{2}" required>
+    <div class="invalid-feedback">
+        Dieses Feld ist zwingend. Bitte im Format mm:ss eingeben.
     </div>
 </script>
 
