@@ -414,6 +414,240 @@ class TestExercisesRoute:
             )
             assert response.status_code == 404
 
+    def test_add_exercise_with_reps_counting_type(self, auth_client, app):
+        """Test creating exercise with reps counting type."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "Pull-ups",
+                    "description": "Standard pull-ups",
+                    "counting_type": "reps",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            exercise = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
+            assert exercise is not None
+            assert exercise.counting_type == "reps"
+
+    def test_add_exercise_with_duration_counting_type(self, auth_client, app):
+        """Test creating exercise with duration counting type."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "Plank",
+                    "description": "Hold a plank position",
+                    "counting_type": "duration",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            exercise = ExerciseDefinition.query.filter_by(title="Plank").first()
+            assert exercise is not None
+            assert exercise.counting_type == "duration"
+
+    def test_update_exercise_counting_type(self, auth_client, exercise_definition, app):
+        """Test updating exercise counting_type from reps to duration."""
+        with app.app_context():
+            exercise = ExerciseDefinition.query.first()
+            assert exercise.counting_type == "reps"
+
+            response = auth_client.post(
+                url_for("main.update_exercise", exercises_id=exercise.id),
+                data={
+                    "title": exercise.title,
+                    "description": exercise.description,
+                    "counting_type": "duration",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            exercise = ExerciseDefinition.query.first()
+            assert exercise.counting_type == "duration"
+
+    def test_update_exercise_preserves_counting_type_on_get(
+        self, auth_client, app, user
+    ):
+        """Test that update exercise form pre-fills counting_type on GET."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="L-Sit",
+                description="L-Sit hold",
+                user_id=user.id,
+                counting_type="duration",
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            response = auth_client.get(
+                url_for("main.update_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            # The duration radio button should be checked
+            html = response.get_data(as_text=True)
+            assert 'checked' in html
+            assert 'value="duration"' in html
+
+    def test_copy_exercise_preserves_counting_type(self, auth_client, second_user, app):
+        """Test copying exercise preserves counting_type in response."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="Plank",
+                description="Hold a plank",
+                user_id=second_user.id,
+                counting_type="duration",
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data["success"] is True
+            assert data["counting_type"] == "duration"
+
+            # Verify the copied exercise has duration counting_type
+            user = User.query.filter_by(username="testuser").first()
+            copied = ExerciseDefinition.query.filter_by(
+                user_id=user.id, counting_type="duration"
+            ).first()
+            assert copied is not None
+
+    def test_add_exercise_form_shows_counting_type(self, auth_client, app):
+        """Test add exercise page shows counting_type radio buttons."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_exercise"))
+            assert response.status_code == 200
+            assert b"counting_type" in response.data
+            assert b"reps" in response.data
+            assert b"duration" in response.data
+
+
+class TestWorkoutWithDuration:
+    """Tests for workout creation and display with duration exercises."""
+
+    def test_add_workout_with_duration_exercise(
+        self, auth_client, app, duration_exercise_definition
+    ):
+        """Test creating a workout with a duration-based exercise."""
+        with app.app_context():
+            exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "wtitle": "Duration Test Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(exercise_def.id),
+                    "progression1": ["Standard"],
+                    "duration1": ["01:30"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            workout = Workout.query.filter_by(title="Duration Test Workout").first()
+            assert workout is not None
+
+            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
+            work_set = Set.query.filter_by(exercise_id=exercise.id).first()
+            assert work_set.duration == 90
+            assert work_set.reps is None
+
+    def test_add_workout_with_reps_exercise(
+        self, auth_client, app, exercise_definition
+    ):
+        """Test creating a workout with a reps-based exercise still works."""
+        with app.app_context():
+            exercise_def = ExerciseDefinition.query.first()
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "wtitle": "Reps Test Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(exercise_def.id),
+                    "progression1": ["Beginner"],
+                    "reps1": ["12"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            workout = Workout.query.filter_by(title="Reps Test Workout").first()
+            assert workout is not None
+
+            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
+            work_set = Set.query.filter_by(exercise_id=exercise.id).first()
+            assert work_set.reps == 12
+            assert work_set.duration is None
+
+    def test_add_workout_duration_multiple_sets(
+        self, auth_client, app, duration_exercise_definition
+    ):
+        """Test creating a workout with multiple duration sets."""
+        with app.app_context():
+            exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "wtitle": "Multi Set Duration",
+                    "exercise_count": "1",
+                    "exercise1": str(exercise_def.id),
+                    "progression1": ["Easy", "Hard"],
+                    "duration1": ["00:30", "01:00"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            workout = Workout.query.filter_by(title="Multi Set Duration").first()
+            assert workout is not None
+
+            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
+            sets = Set.query.filter_by(exercise_id=exercise.id).order_by(Set.set_order).all()
+            assert len(sets) == 2
+            assert sets[0].duration == 30
+            assert sets[1].duration == 60
+
+    def test_workout_detail_shows_duration(self, auth_client, duration_workout, app):
+        """Test workout detail page displays duration instead of reps."""
+        with app.app_context():
+            workout = Workout.query.filter_by(title="Duration Workout").first()
+            response = auth_client.get(
+                url_for("main.workout", workout_id=workout.id)
+            )
+            assert response.status_code == 200
+            assert b"Dauer:" in response.data
+            assert b"01:30" in response.data
+            # Should NOT show "Reps:" for a duration exercise
+            assert b"Reps:" not in response.data
+
+    def test_workout_detail_shows_reps(self, auth_client, workout, app):
+        """Test workout detail page displays reps for reps-based exercises."""
+        with app.app_context():
+            workout = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.get(
+                url_for("main.workout", workout_id=workout.id)
+            )
+            assert response.status_code == 200
+            assert b"Reps:" in response.data
+            # Should NOT show "Dauer:" for a reps exercise
+            assert b"Dauer:" not in response.data
+
+    def test_add_workout_page_shows_counting_type_data(
+        self, auth_client, app, duration_exercise_definition
+    ):
+        """Test add workout page includes counting-type data attribute on options."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_workout"))
+            assert response.status_code == 200
+            assert b"data-counting-type" in response.data
 
 class TestFollowRoutes:
     """Tests for follow/unfollow routes."""

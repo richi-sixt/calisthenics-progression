@@ -201,6 +201,34 @@ class TestExercisesModel:
 
             assert ex.date_created == custom_date
 
+
+    def test_counting_type_defaults_to_reps(self, app, exercise_definition):
+        """Test counting_type defaults to 'reps'."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            assert ex.counting_type == "reps"
+
+    def test_counting_type_duration(self, app, duration_exercise_definition):
+        """Test creating exercise definition with duration counting_type."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Plank").first()
+            assert ex.counting_type == "duration"
+
+    def test_counting_type_persists(self, app, user):
+        """Test counting_type value is persisted to database."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="L-Sit",
+                description="L-Sit hold",
+                user_id=user.id,
+                counting_type="duration",
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            fetched = ExerciseDefinition.query.filter_by(title="L-Sit").first()
+            assert fetched.counting_type == "duration"
+
 class TestExerciseModel:
     """Tests for the Exercise model."""
 
@@ -232,6 +260,78 @@ class TestSetModel:
         with app.app_context():
             work_set = Set.query.first()
             assert "10 reps" in repr(work_set)
+
+
+    def test_set_with_duration(self, app, duration_workout):
+        """Test creating a set with duration instead of reps."""
+        with app.app_context():
+            work_set = Set.query.first()
+            assert work_set.duration == 90
+            assert work_set.reps is None
+
+    def test_duration_formatted_minutes_and_seconds(self, app, user):
+        """Test duration_formatted returns mm:ss format."""
+        with app.app_context():
+            w = Workout(title="Test", user_id=user.id)
+            db.session.add(w)
+            db.session.flush()
+            ex = Exercise(exercise_order=1, workout_id=w.id)
+            db.session.add(ex)
+            db.session.flush()
+
+            work_set = Set(set_order=1, exercise_id=ex.id, duration=90)
+            db.session.add(work_set)
+            db.session.commit()
+
+            assert work_set.duration_formatted == "01:30"
+
+    def test_duration_formatted_zero(self, app, user):
+        """Test duration_formatted with zero seconds."""
+        with app.app_context():
+            w = Workout(title="Test", user_id=user.id)
+            db.session.add(w)
+            db.session.flush()
+            ex = Exercise(exercise_order=1, workout_id=w.id)
+            db.session.add(ex)
+            db.session.flush()
+
+            work_set = Set(set_order=1, exercise_id=ex.id, duration=0)
+            db.session.add(work_set)
+            db.session.commit()
+
+            assert work_set.duration_formatted == "00:00"
+
+    def test_duration_formatted_none(self, app, user):
+        """Test duration_formatted returns 00:00 when duration is None."""
+        with app.app_context():
+            w = Workout(title="Test", user_id=user.id)
+            db.session.add(w)
+            db.session.flush()
+            ex = Exercise(exercise_order=1, workout_id=w.id)
+            db.session.add(ex)
+            db.session.flush()
+
+            work_set = Set(set_order=1, exercise_id=ex.id)
+            db.session.add(work_set)
+            db.session.commit()
+
+            assert work_set.duration_formatted == "00:00"
+
+    def test_duration_formatted_seconds_only(self, app, user):
+        """Test duration_formatted with less than a minute."""
+        with app.app_context():
+            w = Workout(title="Test", user_id=user.id)
+            db.session.add(w)
+            db.session.flush()
+            ex = Exercise(exercise_order=1, workout_id=w.id)
+            db.session.add(ex)
+            db.session.flush()
+
+            work_set = Set(set_order=1, exercise_id=ex.id, duration=45)
+            db.session.add(work_set)
+            db.session.commit()
+
+            assert work_set.duration_formatted == "00:45"
 
 
 class TestMessageModel:
