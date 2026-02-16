@@ -8,6 +8,7 @@ migrations
 avante.md
 .coverage
 pyrightconfig.json
+*.db
 
 
 
