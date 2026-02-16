@@ -162,6 +162,55 @@ def workout(app, user, exercise_definition):
 
 
 @pytest.fixture
+def duration_exercise_definition(app, user):
+    """Create a duration-based exercise definition."""
+    with app.app_context():
+        exercise_def = ExerciseDefinition(
+            title="Plank",
+            description="Hold a plank position",
+            user_id=user.id,
+            counting_type="duration",
+        )
+        db.session.add(exercise_def)
+        db.session.commit()
+
+        exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+        yield exercise_def
+
+
+@pytest.fixture
+def duration_workout(app, user, duration_exercise_definition):
+    """Create a workout with a duration-based exercise and sets."""
+    with app.app_context():
+        w = Workout(
+            title="Duration Workout",
+            user_id=user.id,
+        )
+        db.session.add(w)
+        db.session.flush()
+
+        exercise = Exercise(
+            exercise_order=1,
+            workout_id=w.id,
+            exercise_definition_id=duration_exercise_definition.id,
+        )
+        db.session.add(exercise)
+        db.session.flush()
+
+        work_set = Set(
+            set_order=1,
+            exercise_id=exercise.id,
+            progression="Standard",
+            duration=90,
+        )
+        db.session.add(work_set)
+        db.session.commit()
+
+        w = Workout.query.filter_by(title="Duration Workout").first()
+        yield w
+
+
+@pytest.fixture
 def mail_outbox(app):
     """Fixture to capture sent emails."""
     from project import mail

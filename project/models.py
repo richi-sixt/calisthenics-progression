@@ -215,7 +215,7 @@ class ExerciseDefinition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
     description = db.Column(db.Text, nullable=False)
-    counting_type = db.Column(db.String(10), nullable=False, default="reps")
+    counting_type = db.Column(db.String(10), nullable=False, default="reps", server_default="reps")
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
