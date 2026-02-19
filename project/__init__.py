@@ -34,6 +34,7 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     """   
     app = Flask(__name__)
     app.config.from_object(config_class)
+    app.secret_key = app.config['SECRET_KEY']
 
     # Initialize extensions with app context
     db.init_app(app)

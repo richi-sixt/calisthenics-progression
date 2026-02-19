@@ -2,15 +2,18 @@ import os
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, ".env"))
-
+# Load .env ONLY if no cPanel-ENV exists (Production fallback)
+if not os.environ.get('SECRET_KEY'):
+    load_dotenv(os.path.join(basedir, ".env"))
 
 # main config
 class Config(object):
-    WTF_CSRF_SECRET_KEY = os.environ.get("WTF_CSRF_SECRET_KEY")
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    WTF_CSRF_ENABLED = True
+
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-fallback-key'
+    WTF_CSRF_SECRET_KEY = os.environ.get('WTF_CSRF_SECRET_KEY') or SECRET_KEY
+
     WORKOUTS_PER_PAGE = 10
-    # replace for heroku-version of postgresql
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "app.db")
