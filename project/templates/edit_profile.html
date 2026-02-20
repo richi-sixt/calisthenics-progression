@@ -55,5 +55,12 @@
                   {{ form.submit(class="btn btn-outline-info") }}
               </div>
           </form>
+        <div class="border-top mt-4 pt-3">
+            <h5 class="text-danger">Gefahrenzone</h5>
+            <p class="text-muted">Konto dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            <a href="{{ url_for('auth.delete_account') }}" class="btn btn-outline-danger btn-sm">
+                Konto löschen
+            </a>
+        </div>
 </div>
 {% endblock %}

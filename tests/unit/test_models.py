@@ -13,6 +13,7 @@ from project.models import (
     Set,
     Message,
     Notification,
+    followers,
 )
 
 
@@ -405,3 +406,65 @@ class TestNotificationModel:
             db.session.commit()
 
             assert n.timestamp == 123.456
+
+
+class TestUserAccountDeletion:
+    """Unit tests for user account deletion data integrity."""
+
+    def test_delete_user_with_workouts_cascade(self, app, user, workout):
+        """Test that ORM-deleting workouts cascades to exercises and sets, then user can be deleted."""
+        with app.app_context():
+            u = User.query.filter_by(username="testuser").first()
+            user_id = u.id
+
+            for w in u.workouts.all():
+                db.session.delete(w)
+            db.session.flush()
+
+            ExerciseDefinition.query.filter_by(user_id=user_id).delete()
+            db.session.delete(u)
+            db.session.commit()
+
+            assert db.session.get(User, user_id) is None
+            assert Workout.query.filter_by(user_id=user_id).count() == 0
+            assert Exercise.query.count() == 0
+            assert Set.query.count() == 0
+
+    def test_exercise_definition_deleted_after_workouts(self, app, user, workout):
+        """Test that ExerciseDefinitions can be deleted after workouts (removes FK references via Exercise)."""
+        with app.app_context():
+            u = User.query.filter_by(username="testuser").first()
+            for w in u.workouts.all():
+                db.session.delete(w)
+            db.session.flush()
+
+            count = ExerciseDefinition.query.filter_by(user_id=u.id).delete()
+            db.session.commit()
+            assert count >= 1
+            assert ExerciseDefinition.query.filter_by(user_id=u.id).count() == 0
+
+    def test_follow_relationships_deleted_via_sql(self, app, user, second_user):
+        """Test that follow relationships can be deleted via direct SQL on the association table."""
+        with app.app_context():
+            u1 = User.query.filter_by(username="testuser").first()
+            u2 = User.query.filter_by(username="seconduser").first()
+            u1.follow(u2)
+            u2.follow(u1)
+            db.session.commit()
+            user_id = u1.id
+
+            db.session.execute(
+                followers.delete().where(
+                    (followers.c.follower_id == user_id)
+                    | (followers.c.followed_id == user_id)
+                )
+            )
+            db.session.commit()
+
+            result = db.session.execute(
+                db.select(followers).where(
+                    (followers.c.follower_id == user_id)
+                    | (followers.c.followed_id == user_id)
+                )
+            ).fetchall()
+            assert len(result) == 0

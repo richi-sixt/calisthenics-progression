@@ -109,3 +109,11 @@ class ResetPasswordForm(FlaskForm):
     )
     submit: SubmitField = SubmitField("Passwort ändern")
 
+
+class DeleteAccountForm(FlaskForm):
+    """Form for confirming account deletion with password."""
+
+    password: PasswordField = PasswordField(
+        "Passwort bestätigen", validators=[DataRequired()]
+    )
+    submit: SubmitField = SubmitField("Konto löschen")

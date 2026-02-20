@@ -7,7 +7,16 @@ import pytest
 from flask import url_for
 
 from project import db
-from project.models import User
+from project.models import (
+        User,
+        Message,
+        Notification,
+        ExerciseDefinition,
+        Exercise,
+        Set,
+        Workout,
+        followers,
+)
 from project.token import generate_confirmation_token
 
 
@@ -381,3 +390,151 @@ class TestForgotNewTokenUsed:
             )
             assert response.status_code == 200
             assert "nicht zur\u00fcckgesetzt" in response.get_data(as_text=True)
+
+
+class TestDeleteAccountRoute:
+    """Tests for the delete account route."""
+
+    def test_delete_account_page_renders(self, auth_client, app):
+        """Test that delete account page renders for authenticated confirmed users."""
+        with app.app_context():
+            response = auth_client.get(url_for("auth.delete_account"))
+            assert response.status_code == 200
+            assert "Konto l\u00f6schen" in response.get_data(as_text=True)
+
+    def test_delete_account_requires_login(self, client, app):
+        """Test that delete account page requires authentication."""
+        with app.app_context():
+            response = client.get(
+                url_for("auth.delete_account"),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "login" in response.location
+
+    def test_delete_account_requires_confirmation(self, unconfirmed_auth_client, app):
+        """Test that unconfirmed users cannot access delete account page."""
+        with app.app_context():
+            response = unconfirmed_auth_client.get(
+                url_for("auth.delete_account"),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "unconfirmed" in response.location
+
+    def test_delete_account_wrong_password(self, auth_client, user, app):
+        """Test that wrong password prevents account deletion."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "wrongpassword"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            existing_user = User.query.filter_by(username="testuser").first()
+            assert existing_user is not None
+            assert "Falsches Passwort" in response.get_data(as_text=True)
+
+    def test_delete_account_success(self, auth_client, user, app):
+        """Test successful account deletion removes user and redirects."""
+        with app.app_context():
+            user_id = user.id
+            response = auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert db.session.get(User, user_id) is None
+            assert "gel\u00f6scht" in response.get_data(as_text=True)
+
+    def test_delete_account_removes_workouts(self, auth_client, user, workout, app):
+        """Test that account deletion removes all associated workouts, exercises, and sets."""
+        with app.app_context():
+            user_id = user.id
+            auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            assert Workout.query.filter_by(user_id=user_id).count() == 0
+            assert Exercise.query.count() == 0
+            assert Set.query.count() == 0
+
+    def test_delete_account_removes_exercise_definitions(
+        self, auth_client, user, exercise_definition, app
+    ):
+        """Test that account deletion removes all exercise definitions."""
+        with app.app_context():
+            user_id = user.id
+            auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            assert ExerciseDefinition.query.filter_by(user_id=user_id).count() == 0
+
+    def test_delete_account_removes_messages(
+        self, auth_client, user, second_user, app
+    ):
+        """Test that account deletion removes sent and received messages."""
+        with app.app_context():
+            u = User.query.filter_by(username="testuser").first()
+            u2 = User.query.filter_by(username="seconduser").first()
+            msg1 = Message(sender_id=u.id, recipient_id=u2.id, body="sent")
+            msg2 = Message(sender_id=u2.id, recipient_id=u.id, body="received")
+            db.session.add_all([msg1, msg2])
+            db.session.commit()
+            user_id = u.id
+
+            auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            assert (
+                Message.query.filter(
+                    (Message.sender_id == user_id) | (Message.recipient_id == user_id)
+                ).count()
+                == 0
+            )
+
+    def test_delete_account_removes_follow_relationships(
+        self, auth_client, user, second_user, app
+    ):
+        """Test that account deletion removes all follow relationships."""
+        with app.app_context():
+            u1 = User.query.filter_by(username="testuser").first()
+            u2 = User.query.filter_by(username="seconduser").first()
+            u1.follow(u2)
+            u2.follow(u1)
+            db.session.commit()
+            user_id = u1.id
+
+            auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            result = db.session.execute(
+                db.select(followers).where(
+                    (followers.c.follower_id == user_id)
+                    | (followers.c.followed_id == user_id)
+                )
+            ).fetchall()
+            assert len(result) == 0
+
+    def test_delete_account_removes_notifications(self, auth_client, user, app):
+        """Test that account deletion removes all notifications."""
+        with app.app_context():
+            u = User.query.filter_by(username="testuser").first()
+            u.add_notification("unread_message_count", 3)
+            db.session.commit()
+            user_id = u.id
+
+            auth_client.post(
+                url_for("auth.delete_account"),
+                data={"password": "password123"},
+                follow_redirects=True,
+            )
+            assert Notification.query.filter_by(user_id=user_id).count() == 0
