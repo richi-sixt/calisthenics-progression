@@ -16,9 +16,10 @@ from project.auth.forms import (
     ResetPasswordRequestForm,
     ResetPasswordForm,
     EditProfileForm,
+    DeleteAccountForm,
 )
 from project.auth.email import send_email
-from project.models import User
+from project.models import User, Message, Notification, ExerciseDefinition, followers
 from project.token import generate_confirmation_token, confirm_token
 from project.decorators import check_confirmed
 
@@ -63,6 +64,59 @@ def edit_profile() -> ResponseReturnValue:
         "edit_profile.html", title="Profil bearbeiten", image_file=image_file, form=form
     )
 
+
+
+@bp.route("/delete_account", methods=["GET", "POST"])
+@login_required
+@check_confirmed
+def delete_account() -> ResponseReturnValue:
+    form = DeleteAccountForm()
+    if form.validate_on_submit():
+        if not current_user.check_password(form.password.data):
+            flash("Falsches Passwort. Konto wurde nicht gelöscht.", "danger")
+            return redirect(url_for("auth.delete_account"))
+ 
+        user = db.session.get(User, current_user.id)
+
+        # 1. Remove follow relationships from association table
+        db.session.execute(
+            followers.delete().where(
+                (followers.c.follower_id == user.id)
+                | (followers.c.followed_id == user.id)
+            )
+        )
+
+        # 2. Delete notifications (bulk, no children)
+        Notification.query.filter_by(user_id=user.id).delete()
+
+        # 3. Delete messages (bulk, no children)
+        Message.query.filter(
+            (Message.sender_id == user.id) | (Message.recipient_id == user.id)
+        ).delete()
+
+        # 4. Delete workouts via ORM to trigger cascade → Exercise → Set
+        for workout in user.workouts.all():
+            db.session.delete(workout)
+
+        # 5. Flush so Exercise rows are gone before deleting ExerciseDefinitions
+        db.session.flush()   
+
+        # 6. Delete exercise definitions
+        ExerciseDefinition.query.filter_by(user_id=user.id).delete()
+
+        # 7. Delete user and commit
+        db.session.delete(user)
+        db.session.commit()
+     
+        logout_user()
+        flash("Dein Konto wurde erfolgreich gelöscht.", "success")
+        return redirect(url_for("main.index"))
+             
+    return render_template(
+        "auth/delete_account.html",
+            title="Konto löschen",
+            form=form,
+    )
 
 def save_picture(form_picture: FileStorage) -> str:
     random_hex = secrets.token_hex(8)
