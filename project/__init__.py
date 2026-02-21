@@ -120,7 +120,8 @@ def _configure_logging(app: Flask) -> None:
         file_handler = RotatingFileHandler(
             "logs/calisthenics-progression.log",
             maxBytes=10240,
-            backupCount=10
+            backupCount=10,
+            encoding="utf-8",
         )
         file_handler.setFormatter(
             logging.Formatter(
