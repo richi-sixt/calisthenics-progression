@@ -313,6 +313,7 @@ class TestEditProfileRoute:
                 url_for("auth.edit_profile"),
                 data={
                     "username": "updateduser",
+                    "email": "test@example.com",
                     "about_me": "Updated bio",
                 },
                 follow_redirects=True,
@@ -360,6 +361,7 @@ class TestEditProfileRoute:
                 url_for("auth.edit_profile"),
                 data={
                     "username": "testuser",
+                    "email": "test@example.com",
                     "about_me": "Bio with pic",
                     "picture": (img_bytes, "test_pic.png"),
                 },
@@ -538,3 +540,207 @@ class TestDeleteAccountRoute:
                 follow_redirects=True,
             )
             assert Notification.query.filter_by(user_id=user_id).count() == 0
+
+class TestEmailChangeInProfile:
+    """Tests for changing email via the edit profile route."""
+
+    def test_email_change_updates_email_and_unconfirms(self, auth_client, app, mail_outbox):
+        """Test that changing email updates it and sets confirmed to False."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.edit_profile"),
+                data={
+                    "username": "testuser",
+                    "email": "newemail@example.com",
+                    "about_me": "",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            user = User.query.filter_by(username="testuser").first()
+            assert user.email == "newemail@example.com"
+            assert user.confirmed is False
+
+    def test_email_change_sends_confirmation_email(self, auth_client, app, mail_outbox):
+        """Test that changing email sends a confirmation email to the new address."""
+        with app.app_context():
+            auth_client.post(
+                url_for("auth.edit_profile"),
+                data={
+                    "username": "testuser",
+                    "email": "newemail@example.com",
+                    "about_me": "",
+                },
+                follow_redirects=True,
+            )
+            # At least one email was sent
+            assert len(mail_outbox) >= 1
+
+    def test_email_change_duplicate_rejected(self, auth_client, second_user, app):
+        """Test that changing to an already-taken email shows a form error."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.edit_profile"),
+                data={
+                    "username": "testuser",
+                    "email": "second@example.com",  # belongs to second_user
+                    "about_me": "",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "bereits verwendet" in response.get_data(as_text=True)
+
+            # Email must not have changed
+            user = User.query.filter_by(username="testuser").first()
+            assert user.email == "test@example.com"
+
+    def test_same_email_does_not_trigger_reconfirmation(self, auth_client, app, mail_outbox):
+        """Test that submitting the same email does not change confirmed status."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.edit_profile"),
+                data={
+                    "username": "testuser",
+                    "email": "test@example.com",  # unchanged
+                    "about_me": "",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            user = User.query.filter_by(username="testuser").first()
+            assert user.confirmed is True
+            assert len(mail_outbox) == 0
+
+
+class TestChangePasswordRoute:
+    """Tests for the change_password route."""
+
+    def test_change_password_success(self, auth_client, app):
+        """Test successful password change."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.change_password"),
+                data={
+                    "pwd-current_password": "password123",
+                    "pwd-new_password": "newpassword456",
+                    "pwd-confirm_password": "newpassword456",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "erfolgreich ge\u00e4ndert" in response.get_data(as_text=True)
+
+            user = User.query.filter_by(username="testuser").first()
+            assert user.check_password("newpassword456") is True
+
+    def test_change_password_wrong_current_password(self, auth_client, app):
+        """Test that wrong current password is rejected."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.change_password"),
+                data={
+                    "pwd-current_password": "wrongpassword",
+                    "pwd-new_password": "newpassword456",
+                    "pwd-confirm_password": "newpassword456",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "falsch" in response.get_data(as_text=True)
+
+            # Password must not have changed
+            user = User.query.filter_by(username="testuser").first()
+            assert user.check_password("password123") is True
+
+    def test_change_password_mismatched_new_passwords(self, auth_client, app):
+        """Test that mismatched new passwords are rejected."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("auth.change_password"),
+                data={
+                    "pwd-current_password": "password123",
+                    "pwd-new_password": "newpassword456",
+                    "pwd-confirm_password": "differentpassword",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            # Password must not have changed
+            user = User.query.filter_by(username="testuser").first()
+            assert user.check_password("password123") is True
+
+    def test_change_password_requires_login(self, client, app):
+        """Test that change_password requires authentication."""
+        with app.app_context():
+            response = client.post(
+                url_for("auth.change_password"),
+                data={
+                    "pwd-current_password": "password123",
+                    "pwd-new_password": "newpassword456",
+                    "pwd-confirm_password": "newpassword456",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "login" in response.location
+
+    def test_change_password_requires_confirmation(self, unconfirmed_auth_client, app):
+        """Test that unconfirmed users cannot change password."""
+        with app.app_context():
+            response = unconfirmed_auth_client.post(
+                url_for("auth.change_password"),
+                data={
+                    "pwd-current_password": "password123",
+                    "pwd-new_password": "newpassword456",
+                    "pwd-confirm_password": "newpassword456",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "unconfirmed" in response.location
+
+
+class TestPasswordToggleUI:
+    """Tests that password toggle eye-icon markup is present in templates."""
+
+    def test_login_has_password_toggle(self, client, app):
+        """Test that login page renders with the eye-icon toggle button."""
+        with app.app_context():
+            response = client.get(url_for("auth.login"))
+            assert response.status_code == 200
+            assert b"togglePassword" in response.data
+            assert b"bi-eye" in response.data
+
+    def test_register_has_password_toggles(self, client, app):
+        """Test that register page renders with eye-icon toggle buttons."""
+        with app.app_context():
+            response = client.get(url_for("auth.register"))
+            assert response.status_code == 200
+            assert response.data.count(b"togglePassword") >= 2
+
+    def test_edit_profile_has_password_toggle(self, auth_client, app):
+        """Test that edit profile page renders with eye-icon toggle buttons."""
+        with app.app_context():
+            response = auth_client.get(url_for("auth.edit_profile"))
+            assert response.status_code == 200
+            assert b"togglePassword" in response.data
+            assert b"bi-eye" in response.data
+
+    def test_edit_profile_shows_email_field(self, auth_client, app):
+        """Test that edit profile page shows the email field."""
+        with app.app_context():
+            response = auth_client.get(url_for("auth.edit_profile"))
+            assert response.status_code == 200
+            assert b"test@example.com" in response.data
+
+    def test_edit_profile_shows_password_change_section(self, auth_client, app):
+        """Test that edit profile page shows the password change section."""
+        with app.app_context():
+            response = auth_client.get(url_for("auth.edit_profile"))
+            assert response.status_code == 200
+            assert "Passwort \u00e4ndern" in response.get_data(as_text=True)
+

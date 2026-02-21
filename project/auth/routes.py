@@ -17,6 +17,7 @@ from project.auth.forms import (
     ResetPasswordForm,
     EditProfileForm,
     DeleteAccountForm,
+    ChangePasswordForm,
 )
 from project.email import send_email
 from project.models import User, Message, Notification, ExerciseDefinition, followers
@@ -46,24 +47,54 @@ def login() -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def edit_profile() -> ResponseReturnValue:
-    form = EditProfileForm(current_user.username)
+    form = EditProfileForm(current_user.username, current_user.email)
     if form.validate_on_submit():
         if form.picture.data:
             picture_file = save_picture(form.picture.data)
             current_user.image_file = picture_file
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
+        if form.email.data and form.email.data != current_user.email:
+            current_user.email = form.email.data
+            current_user.confirmed = False
+            token = generate_confirmation_token(current_user.email)
+            confirm_url = url_for("auth.confirm_email", token=token, _external=True)
+            html = render_template("email/activate.html", confirm_url=confirm_url)
+            send_email(current_user.email, "Bitte Email-Adresse bestätigen.", html)
+            flash("Deine E-Mail-Adresse wurde geändert. Bitte bestätige deine neue E-Mail-Adresse.", "warning")
+        else:
+            flash("Deine Änderungen wurden gespeichert.", "success")
         db.session.commit()
         flash("Deine Änderungen wurden gespeichert")
         return redirect(url_for("auth.edit_profile"))
     elif request.method == "GET":
         form.username.data = current_user.username
+        form.email.data = current_user.email
         form.about_me.data = current_user.about_me
     image_file = url_for("static", filename="profile_pics/" + current_user.image_file)
+    password_form = ChangePasswordForm(prefix="pwd")
     return render_template(
-        "edit_profile.html", title="Profil bearbeiten", image_file=image_file, form=form
+        "edit_profile.html", title="Profil bearbeiten", image_file=image_file, form=form, password_form=password_form
     )
 
+
+@bp.route("/change_password", methods=["POST"])
+@login_required
+@check_confirmed
+def change_password() -> ResponseReturnValue:
+    form = ChangePasswordForm(prefix="pwd")
+    if form.validate_on_submit():
+        if not current_user.check_password(form.current_password.data):
+            flash("Das aktuelle Passwort ist falsch.", "danger")
+            return redirect(url_for("auth.edit_profile"))
+        current_user.set_password(form.new_password.data)
+        db.session.commit()
+        flash("Dein Passwort wurde erfolgreich geändert.", "success")
+    else:
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                flash(error, "danger")
+    return redirect(url_for("auth.edit_profile"))
 
 
 @bp.route("/delete_account", methods=["GET", "POST"])
