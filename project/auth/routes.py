@@ -18,7 +18,7 @@ from project.auth.forms import (
     EditProfileForm,
     DeleteAccountForm,
 )
-from project.auth.email import send_email
+from project.email import send_email
 from project.models import User, Message, Notification, ExerciseDefinition, followers
 from project.token import generate_confirmation_token, confirm_token
 from project.decorators import check_confirmed

@@ -16,11 +16,10 @@ class TestSendEmail:
                 mock_thread_cls.return_value = mock_thread
 
                 send_email(
+                    to="recipient@example.com",
                     subject="Test Subject",
+                    template="<p>html</p>",
                     sender="sender@example.com",
-                    recipients=["recipient@example.com"],
-                    text_body="plain text",
-                    html_body="<p>html</p>",
                 )
 
                 mock_thread_cls.assert_called_once()
