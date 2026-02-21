@@ -10,6 +10,8 @@
             <p class="text-secondary">{{ current_user.email }}</p>
           </div>
         </div>
+
+        <!-- Porife details form -->
           <form class="needs-validation" method="POST" action="" enctype="multipart/form-data" novalidate>
               {{ form.hidden_tag() }}
               <fieldset class="form-group">
@@ -26,6 +28,19 @@
                           </div>
                       {% else %}
                           {{ form.username(class="form-control form-control-lg") }}
+                      {% endif %}
+                  </div>
+                  <div class="form-group">
+                      {{ form.email.label(class="form-control-label") }}
+                      {% if form.email.errors %}
+                          {{ form.email(class="form-control form-control-lg is-invalid") }}
+                          <div class="invalid-feedback">
+                              {% for error in form.email.errors %}
+                                  <span>{{ error }}</span>
+                              {% endfor %}
+                          </div>
+                      {% else %}
+                          {{ form.email(class="form-control form-control-lg") }}
                       {% endif %}
                   </div>
                   <div class="form-group">
@@ -55,6 +70,88 @@
                   {{ form.submit(class="btn btn-outline-info") }}
               </div>
           </form>
+          
+          
+          <!-- Password change form -->
+          <form class="needs-validation mt-4" method="POST" action="{{ url_for('auth.change_password') }}" novalidate>
+              {{ password_form.hidden_tag() }}
+              <fieldset class="form-group">
+                  <legend class="border-bottom mb-4">Passwort ändern</legend>
+                  <div class="form-group">
+                      {{ password_form.current_password.label(class="form-control-label") }}
+                      <div class="input-group">
+                          {% if password_form.current_password.errors %}
+                              {{ password_form.current_password(class="form-control form-control-lg is-invalid", id="pwd_current_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_current_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                              <div class="invalid-feedback">
+                                  {% for error in password_form.current_password.errors %}<span>{{ error }}</span>{% endfor %}
+                              </div>
+                          {% else %}
+                              {{ password_form.current_password(class="form-control form-control-lg", id="pwd_current_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_current_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                          {% endif %}
+                      </div>
+                  </div>
+                  <div class="form-group">
+                      {{ password_form.new_password.label(class="form-control-label") }}
+                      <div class="input-group">
+                          {% if password_form.new_password.errors %}
+                              {{ password_form.new_password(class="form-control form-control-lg is-invalid", id="pwd_new_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_new_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                              <div class="invalid-feedback">
+                                  {% for error in password_form.new_password.errors %}<span>{{ error }}</span>{% endfor %}
+                              </div>
+                          {% else %}
+                              {{ password_form.new_password(class="form-control form-control-lg", id="pwd_new_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_new_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                          {% endif %}
+                      </div>
+                  </div>
+                  <div class="form-group">
+                      {{ password_form.confirm_password.label(class="form-control-label") }}
+                      <div class="input-group">
+                          {% if password_form.confirm_password.errors %}
+                              {{ password_form.confirm_password(class="form-control form-control-lg is-invalid", id="pwd_confirm_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_confirm_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                              <div class="invalid-feedback">
+                                  {% for error in password_form.confirm_password.errors %}<span>{{ error }}</span>{% endfor %}
+                              </div>
+                          {% else %}
+                              {{ password_form.confirm_password(class="form-control form-control-lg", id="pwd_confirm_password") }}
+                              <div class="input-group-append">
+                                  <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('pwd_confirm_password', this)">
+                                      <i class="bi bi-eye"></i>
+                                  </button>
+                              </div>
+                          {% endif %}
+                      </div>
+                  </div>
+              </fieldset>
+              <div class="form-group">
+                  {{ password_form.submit_password(class="btn btn-outline-info") }}
+              </div>
+          </form>
+
         <div class="border-top mt-4 pt-3">
             <h5 class="text-danger">Gefahrenzone</h5>
             <p class="text-muted">Konto dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.</p>
