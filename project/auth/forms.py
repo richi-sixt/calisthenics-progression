@@ -19,7 +19,7 @@ class EditProfileForm(FlaskForm):
     )
     submit: SubmitField = SubmitField("Senden")
 
-    def __init__(self, original_username: str, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, original_username: str, original_email: str, *args: Any, **kwargs: Any) -> None:
         """Initialize the form with the original username for validation."""
         super().__init__(*args, **kwargs)
         self.original_username = original_username

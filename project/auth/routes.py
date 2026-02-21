@@ -47,7 +47,7 @@ def login() -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def edit_profile() -> ResponseReturnValue:
-    form = EditProfileForm(current_user.username)
+    form = EditProfileForm(current_user.username, current_user.email)
     if form.validate_on_submit():
         if form.picture.data:
             picture_file = save_picture(form.picture.data)

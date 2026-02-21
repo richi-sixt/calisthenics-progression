@@ -9,6 +9,7 @@ from project.auth.forms import (
     EditProfileForm,
     ResetPasswordRequestForm,
     ResetPasswordForm,
+    ChangePasswordForm
 )
 from project.main.forms import MessageForm, CreateExerciseForm
 from project.models import User
@@ -135,8 +136,10 @@ class TestEditProfileForm:
         with app.app_context():
             form = EditProfileForm(
                 original_username="testuser",
+                original_email="test@example.com",
                 data={
                     "username": "testuser",
+                    "email": "test@example.com",
                     "about_me": "I love calisthenics",
                 },
             )
@@ -147,8 +150,10 @@ class TestEditProfileForm:
         with app.app_context():
             form = EditProfileForm(
                 original_username="testuser",
+                original_email="test@example.com",
                 data={
                     "username": "testuser",
+                    "email": "test@example.com",
                     "about_me": "",
                 },
             )
@@ -159,10 +164,11 @@ class TestEditProfileForm:
         with app.app_context():
             form = EditProfileForm(
                 original_username="testuser",
+                original_email="test@example.com",
                 data={
                     "username": "newusername",
-                    "about_me": "",
-                },
+                    "email": "test@example.com",
+                    "about_me": "",                },
             )
             assert form.validate() is True
 
@@ -171,8 +177,10 @@ class TestEditProfileForm:
         with app.app_context():
             form = EditProfileForm(
                 original_username="testuser",
+                original_email="test@example.com",
                 data={
                     "username": "seconduser",  # Already taken
+                    "email": "test@example.com",
                     "about_me": "",
                 },
             )
@@ -184,13 +192,88 @@ class TestEditProfileForm:
         with app.app_context():
             form = EditProfileForm(
                 original_username="testuser",
+                original_email="test@example.com",
                 data={
                     "username": "testuser",
+                    "email": "test@example.com",
                     "about_me": "x" * 281,  # Exceeds 280 char limit
                 },
             )
             assert form.validate() is False
             assert "about_me" in form.errors
+
+    def test_edit_profile_form_same_email_valid(self, app, user):
+        """Test that submitting the same email as original passes (no uniqueness check)."""
+        with app.app_context():
+            form = EditProfileForm(
+                original_username="testuser",
+                original_email="test@example.com",
+                data={
+                    "username": "testuser",
+                    "email": "test@example.com",
+                    "about_me": "",
+                },
+            )
+            assert form.validate() is True
+
+    def test_edit_profile_form_new_unique_email_valid(self, app, user):
+        """Test that changing to a new unique email address passes validation."""
+        with app.app_context():
+            form = EditProfileForm(
+                original_username="testuser",
+                original_email="test@example.com",
+                data={
+                    "username": "testuser",
+                    "email": "brand_new@example.com",
+                    "about_me": "",
+                },
+            )
+            assert form.validate() is True
+
+    def test_edit_profile_form_duplicate_email_rejected(self, app, user, second_user):
+        """Test that changing to an already-taken email fails validation."""
+        with app.app_context():
+            form = EditProfileForm(
+                original_username="testuser",
+                original_email="test@example.com",
+                data={
+                    "username": "testuser",
+                    "email": "second@example.com",  # belongs to second_user
+                    "about_me": "",
+                },
+            )
+            assert form.validate() is False
+            assert "email" in form.errors
+
+    def test_edit_profile_form_missing_email(self, app, user):
+        """Test that omitting email fails validation."""
+        with app.app_context():
+            form = EditProfileForm(
+                original_username="testuser",
+                original_email="test@example.com",
+                data={
+                    "username": "testuser",
+                    "email": "",
+                    "about_me": "",
+                },
+            )
+            assert form.validate() is False
+            assert "email" in form.errors
+
+    def test_edit_profile_form_invalid_email_format(self, app, user):
+        """Test that an invalid email format fails validation."""
+        with app.app_context():
+            form = EditProfileForm(
+                original_username="testuser",
+                original_email="test@example.com",
+                data={
+                    "username": "testuser",
+                    "email": "not-a-valid-email",
+                    "about_me": "",
+                },
+            )
+            assert form.validate() is False
+            assert "email" in form.errors
 
 
 class TestResetPasswordRequestForm:
@@ -368,3 +451,71 @@ class TestCreateExerciseForm:
                 }
             )
             assert form.counting_type.data == "reps"
+
+
+class TestChangePasswordForm:
+    """Tests for the ChangePasswordForm."""
+
+    def test_change_password_form_valid(self, app):
+        """Test form passes with all fields correctly filled."""
+        with app.app_context():
+            form = ChangePasswordForm(
+                data={
+                    "current_password": "oldpassword123",
+                    "new_password": "newpassword456",
+                    "confirm_password": "newpassword456",
+                }
+            )
+            assert form.validate() is True
+
+    def test_change_password_form_missing_current_password(self, app):
+        """Test form fails when current password is empty."""
+        with app.app_context():
+            form = ChangePasswordForm(
+                data={
+                    "current_password": "",
+                    "new_password": "newpassword456",
+                    "confirm_password": "newpassword456",
+                }
+            )
+            assert form.validate() is False
+            assert "current_password" in form.errors
+
+    def test_change_password_form_missing_new_password(self, app):
+        """Test form fails when new password is empty."""
+        with app.app_context():
+            form = ChangePasswordForm(
+                data={
+                    "current_password": "oldpassword123",
+                    "new_password": "",
+                    "confirm_password": "",
+                }
+            )
+            assert form.validate() is False
+            assert "new_password" in form.errors
+
+    def test_change_password_form_mismatched_confirm(self, app):
+        """Test form fails when confirm password does not match new password."""
+        with app.app_context():
+            form = ChangePasswordForm(
+                data={
+                    "current_password": "oldpassword123",
+                    "new_password": "newpassword456",
+                    "confirm_password": "totallydifferent",
+                }
+            )
+            assert form.validate() is False
+            assert "confirm_password" in form.errors
+
+    def test_change_password_form_missing_confirm(self, app):
+        """Test form fails when confirm password field is empty."""
+        with app.app_context():
+            form = ChangePasswordForm(
+                data={
+                    "current_password": "oldpassword123",
+                    "new_password": "newpassword456",
+                    "confirm_password": "",
+                }
+            )
+            assert form.validate() is False
+            assert "confirm_password" in form.errors
