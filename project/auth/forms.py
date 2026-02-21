@@ -12,6 +12,7 @@ class EditProfileForm(FlaskForm):
     """Form for editing user profile information."""
 
     username: StringField = StringField("Benutzername", validators=[DataRequired()])
+    email: StringField = StringField("E-Mail", validators=[DataRequired(), Email()])
     about_me: TextAreaField = TextAreaField("Über mich", validators=[Length(min=0, max=280)])
     picture: FileField = FileField(
         "Profilebild hinzufügen", validators=[FileAllowed(["jpg", "png"])]
@@ -19,29 +20,26 @@ class EditProfileForm(FlaskForm):
     submit: SubmitField = SubmitField("Senden")
 
     def __init__(self, original_username: str, *args: Any, **kwargs: Any) -> None:
-        """Initialize the form with the original username for validation.
-
-        Args:
-            original_username: The user's current username for validation
-        """
+        """Initialize the form with the original username for validation."""
         super().__init__(*args, **kwargs)
         self.original_username = original_username
+        self.original_email = original_email
 
     def validate_username(self, username: StringField) -> None:
-        """Validate that the username is unique if changed.
-
-        Args:
-            username: The username field to validate
-
-        Raises:
-            ValidationError: If the username is already taken
-        """
+        """Validate that the username is unique if changed."""
         if username.data and username.data != self.original_username:
             user = User.query.filter_by(username=username.data).first()
             if user is not None:
                 raise ValidationError(
                     "Dieser Benutzername ist nicht verfügbar. Bitte einen anderen Benutzernamen wählen."
                 )
+
+    def validate_email(self, email: StringField) -> None:
+        """Validate that the email is unique if changed."""
+        if email.data and email.data != self.original_email:
+            user = User.query.filter_by(email=email.data).first()
+            if user is not None:
+                raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
 
 
 class LoginForm(FlaskForm):
@@ -65,28 +63,14 @@ class RegistrationForm(FlaskForm):
     submit: SubmitField = SubmitField("Registrieren")
 
     def validate_username(self, username: StringField) -> None:
-        """Validate that the username is unique.
-
-        Args:
-            username: The username field to validate
-
-        Raises:
-            ValidationError: If the username is already taken
-        """
+        """Validate that the username is unique."""
         if username.data:
             user = User.query.filter_by(username=username.data).first()
             if user is not None:
                 raise ValidationError("Bitte einen anderen Benutzernamen wählen.")
 
     def validate_email(self, email: StringField) -> None:
-        """Validate that the email is unique.
-
-        Args:
-            email: The email field to validate
-
-        Raises:
-            ValidationError: If the email is already taken
-        """
+        """Validate that the email is unique."""
         if email.data:
             user = User.query.filter_by(email=email.data).first()
             if user is not None:
@@ -117,3 +101,18 @@ class DeleteAccountForm(FlaskForm):
         "Passwort bestätigen", validators=[DataRequired()]
     )
     submit: SubmitField = SubmitField("Konto löschen")
+
+
+class ChangePasswordForm(FlaskForm):
+    """Form for changing the user's password from the profile page."""
+
+    current_password: PasswordField = PasswordField(
+        "Aktuelles Passwort", validators=[DataRequired()]
+    )
+    new_password: PasswordField = PasswordField(
+        "Neues Passwort", validators=[DataRequired()]
+    )
+    confirm_password: PasswordField = PasswordField(
+        "Neues Passwort bestätigen", validators=[DataRequired(), EqualTo("new_password", message="Die Passwörter stimmen nicht überein.")]
+    )
+    submit_password: SubmitField = SubmitField("Passwort ändern")
