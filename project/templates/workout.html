@@ -13,6 +13,7 @@
           {% if workout.athlete == current_user %}
           <div>
             <button type="button" class="btn btn-danger btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">Workout L&ouml;schen</button>
+            <a href="{{ url_for('main.edit_workout', workout_id=workout.id) }}" class="btn btn-warning btn-sm m-1 float-right">Workout bearbeiten</a>
           </div>
           {% endif %}
           <div>

@@ -234,6 +234,123 @@ def delete_workout(workout_id: int) -> ResponseReturnValue:
     return redirect(url_for("main.workouts"))
 
 
+@bp.route("/workout/<int:workout_id>/edit", methods=["GET", "POST"])
+@login_required
+@check_confirmed
+def edit_workout(workout_id: int) -> ResponseReturnValue:
+    workout = db.session.get(Workout, workout_id)
+    if workout is None:
+        abort(404)
+    if workout.user_id != current_user.id:
+        abort(403)
+
+    if request.method == "POST":
+        try:
+            exercise_count = int(request.form.get("exercise_count", 0))
+        except (ValueError, TypeError):
+            flash("Ungültige Formulardaten.", "danger")
+            return redirect(url_for("main.edit_workout", workout_id=workout_id))
+
+        if exercise_count < 1:
+            flash("Mindestens eine Übung ist erforderlich.", "danger")
+            return redirect(url_for("main.edit_workout", workout_id=workout_id))
+
+        # Remove all existing exercises (cascades to sets)
+        for ex in workout.exercises.all():
+            db.session.delete(ex)
+        db.session.flush()
+
+        workout.title = request.form.get("wtitle", "")
+
+        for exercise_num in range(1, exercise_count + 1):
+            exercise_def_id = request.form.get("exercise" + str(exercise_num))
+            if not exercise_def_id:
+                db.session.rollback()
+                flash("Fehlende Übungsdaten.", "danger")
+                return redirect(url_for("main.edit_workout", workout_id=workout_id))
+
+            exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
+            if exercise_def is None:
+                db.session.rollback()
+                flash("Übung nicht gefunden.", "danger")
+                return redirect(url_for("main.edit_workout", workout_id=workout_id))
+
+            exercise = Exercise(
+                exercise_order=exercise_num,
+                exercise_definition_id=int(exercise_def_id),
+                workout_id=workout.id,
+            )
+            db.session.add(exercise)
+            db.session.flush()
+
+            progressions = request.form.getlist("progression" + str(exercise_num))
+
+            set_order = 1
+            if exercise_def.counting_type == "duration":
+                durations = request.form.getlist("duration" + str(exercise_num))
+                for progression, dur in zip(progressions, durations):
+                    parts = dur.split(":")
+                    total_seconds = int(parts[0]) * 60 + int(parts[1]) if len(parts) == 2 else int(dur)
+                    work_set = Set(
+                        set_order=set_order,
+                        exercise_id=exercise.id,
+                        progression=progression,
+                        duration=total_seconds,
+                    )
+                    set_order += 1
+                    db.session.add(work_set)
+            else:
+                reps = request.form.getlist("reps" + str(exercise_num))
+                for progression, rep in zip(progressions, reps):
+                    work_set = Set(
+                        set_order=set_order,
+                        exercise_id=exercise.id,
+                        progression=progression,
+                        reps=int(rep),
+                    )
+                    set_order += 1
+                    db.session.add(work_set)
+
+        db.session.commit()
+        flash("Dein Workout wurde aktualisiert!", "success")
+        return redirect(url_for("main.workout", workout_id=workout.id))
+
+    # GET: build prefill data and exercise lists
+    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all()  # type: ignore[union-attr]
+    other_exercises = ExerciseDefinition.query.filter(
+        ExerciseDefinition.user_id != current_user.id,
+        ExerciseDefinition.archived == False,  # noqa: E712  # type: ignore[arg-type]
+    ).order_by(ExerciseDefinition.title.asc()).all()  # type: ignore[union-attr]
+
+    progression_map: dict[int, list[str]] = {}
+    for ex in my_exercises + other_exercises:
+        progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
+
+    prefill = [
+        {
+            "exercise_def_id": ex.exercise_definition_id,
+            "sets": [
+                {
+                    "progression": s.progression,
+                    "reps": s.reps,
+                    "duration": s.duration_formatted,
+                }
+                for s in ex.sets.order_by(Set.set_order).all()
+            ],
+        }
+        for ex in workout.exercises.order_by(Exercise.exercise_order).all()
+    ]
+
+    return render_template(
+        "edit_workout.html",
+        title="Workout bearbeiten",
+        workout=workout,
+        my_exercises=my_exercises,
+        other_exercises=other_exercises,
+        progression_map=progression_map,
+        prefill=prefill,
+    )
+
 @bp.route("/add_exercise", methods=["GET", "POST"])
 @login_required
 @check_confirmed

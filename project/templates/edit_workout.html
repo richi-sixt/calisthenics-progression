@@ -3,15 +3,15 @@
 
 {% block content %}
 <div class="content-section">
-    <form class="needs-validation" method="POST" action="{{ url_for('main.add_workout') }}" id="workout" novalidate>
+    <form class="needs-validation" method="POST" action="{{ url_for('main.edit_workout', workout_id=workout.id) }}" id="workout" novalidate>
         <label>Workout</label>
-        <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80" required>
+        <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80" value="{{ workout.title }}" required>
         <div class="invalid-feedback">
             Dieses Feld ist zwingend.
         </div>
 
         <div class="form-check mt-3 mb-2">
-            <input type="checkbox" class="form-check-input" id="showOnlyMine" checked>
+            <input type="checkbox" class="form-check-input" id="showOnlyMine">
             <label class="form-check-label" for="showOnlyMine">Nur meine &Uuml;bungen anzeigen</label>
         </div>
 
@@ -38,9 +38,9 @@
         <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>
         </div>
         <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
-        <input type="hidden" name="exercise_count" value="1">
+        <input type="hidden" name="exercise_count" value="{{ prefill|length }}">
         <br><br>
-        <button type="submit" class="btn btn-primary btn-block">Workout hinzuf&uuml;gen</button>
+        <button type="submit" class="btn btn-primary btn-block">Workout speichern</button>
     </form>
 </div>
 
@@ -137,3 +137,49 @@ var progressionMap = {{ progression_map | tojson }};
 }
 </style>
 {% endblock content %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    var prefill = {{ prefill | tojson }};
+
+    if (prefill.length === 0) { return; }
+
+    // Render exercises 2..N using the exercise_template (exercise 1 is static HTML)
+    for (var i = 1; i < prefill.length; i++) {
+        var num = i + 1;
+        $("[name=exercise_count]").val(num);
+        $("#addExercise").before(exercise_template({exercise_num: num}));
+        var newSelect = $("[name='exercise" + num + "']");
+        storeOriginalOptions(newSelect);
+    }
+
+    // Pre-select exercise and fill saved sets for every exercise
+    prefill.forEach(function(ex, idx) {
+        var num = idx + 1;
+        var select = $("[name='exercise" + num + "']");
+        select.val(String(ex.exercise_def_id));
+        updateCopyButton(select);
+        var levels = getLevelsForExercise(select);
+        var countingType = getCountingType(select);
+
+        // Clear the empty default container, then render each saved set
+        $("#exercise" + num).empty();
+        ex.sets.forEach(function(s) {
+            var $set = $(getSetTemplate(countingType, num, levels));
+            // For select dropdowns (progression levels), set the value
+            var $prog = $set.find("[name='progression" + num + "']");
+            $prog.val(s.progression);
+            if (countingType === "duration") {
+                $set.find("[name='duration" + num + "']").val(s.duration);
+            } else {
+                $set.find("[name='reps" + num + "']").val(s.reps);
+            }
+            $("#exercise" + num).append($set);
+        });
+    });
+
+    applyExerciseFilter();
+});
+</script>
+{% endblock scripts %}

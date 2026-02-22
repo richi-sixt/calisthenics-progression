@@ -1067,5 +1067,315 @@ class TestProgressionLevels:
             assert "Progressionsstufen" in html
             assert "Easy" in html
             assert "Medium" in html
-            
-            
+
+
+class TestEditWorkout:
+    """Integration tests for the edit workout feature."""
+
+    def test_edit_workout_page_renders(self, auth_client, workout, app):
+        """Test that the edit workout GET page renders successfully."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
+            assert response.status_code == 200
+
+    def test_edit_workout_page_prefills_title(self, auth_client, workout, app):
+        """Test that the edit workout page pre-fills the workout title."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
+            html = response.get_data(as_text=True)
+            assert "Morning Workout" in html
+            assert 'value="Morning Workout"' in html
+
+    def test_edit_workout_page_prefills_sets(self, auth_client, workout, app):
+        """Test that the edit page includes the existing set data in the prefill JSON."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
+            html = response.get_data(as_text=True)
+            # prefill JSON should appear in the page
+            assert "prefill" in html
+            assert '"reps": 10' in html
+            assert '"progression": "Standard"' in html
+
+    def test_edit_workout_requires_login(self, client, workout, app):
+        """Test that the edit workout page requires authentication."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = client.get(
+                url_for("main.edit_workout", workout_id=w.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+    def test_edit_workout_requires_confirmation(self, unconfirmed_auth_client, workout, app):
+        """Test that an unconfirmed user is redirected away from edit workout."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = unconfirmed_auth_client.get(
+                url_for("main.edit_workout", workout_id=w.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+    def test_edit_workout_forbidden_for_other_user(self, client, workout, second_user, app):
+        """Test that another user cannot edit someone else's workout."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = client.get(url_for("main.edit_workout", workout_id=w.id))
+            assert response.status_code == 403
+
+    def test_edit_workout_not_found(self, auth_client, app):
+        """Test that editing a non-existent workout returns 404."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.edit_workout", workout_id=99999))
+            assert response.status_code == 404
+
+    def test_edit_workout_updates_title(self, auth_client, workout, exercise_definition, app):
+        """Test that POSTing to edit_workout updates the workout title."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Evening Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            w = Workout.query.filter_by(id=w.id).first()
+            assert w.title == "Evening Workout"
+
+    def test_edit_workout_updates_reps(self, auth_client, workout, exercise_definition, app):
+        """Test that editing a workout updates the set reps in the database."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Morning Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["15"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = Exercise.query.filter_by(workout_id=w.id).first()
+            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            assert work_set.reps == 15
+
+    def test_edit_workout_updates_progression(self, auth_client, workout, exercise_definition, app):
+        """Test that editing a workout updates the set progression value."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Morning Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Advanced"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = Exercise.query.filter_by(workout_id=w.id).first()
+            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            assert work_set.progression == "Advanced"
+
+    def test_edit_workout_updates_duration(self, auth_client, duration_workout, app):
+        """Test that editing a duration-based workout updates set duration."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Duration Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Duration Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "duration1": ["02:00"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = Exercise.query.filter_by(workout_id=w.id).first()
+            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            assert work_set.duration == 120
+
+    def test_edit_workout_can_add_set(self, auth_client, workout, exercise_definition, app):
+        """Test that editing a workout can add an extra set."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Morning Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard", "Standard"],
+                    "reps1": ["10", "8"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = Exercise.query.filter_by(workout_id=w.id).first()
+            assert Set.query.filter_by(exercise_id=ex.id).count() == 2
+
+    def test_edit_workout_can_remove_set(self, auth_client, workout_with_two_exercises, app):
+        """Test that editing a workout can reduce sets (remove one set)."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Two Exercise Workout").first()
+            ex = Exercise.query.filter_by(workout_id=w.id, exercise_order=1).first()
+            ex_def = ExerciseDefinition.query.filter_by(id=ex.exercise_definition_id).first()
+
+            # Originally 2 sets; submit only 1
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Two Exercise Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = Exercise.query.filter_by(workout_id=w.id).first()
+            assert Set.query.filter_by(exercise_id=ex.id).count() == 1
+
+    def test_edit_workout_can_add_exercise(self, auth_client, workout, exercise_definition, app):
+        """Test that editing a workout can add a second exercise."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Morning Workout",
+                    "exercise_count": "2",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["10"],
+                    "exercise2": str(ex_def.id),
+                    "progression2": ["Standard"],
+                    "reps2": ["8"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert Exercise.query.filter_by(workout_id=w.id).count() == 2
+
+    def test_edit_workout_can_remove_exercise(self, auth_client, workout_with_two_exercises, app):
+        """Test that editing a workout can remove one of two exercises."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Two Exercise Workout").first()
+            assert Exercise.query.filter_by(workout_id=w.id).count() == 2
+
+            ex_def = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Two Exercise Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert Exercise.query.filter_by(workout_id=w.id).count() == 1
+
+    def test_edit_workout_invalid_exercise_count(self, auth_client, workout, app):
+        """Test that a non-numeric exercise_count causes a flash error and redirect."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={"exercise_count": "abc", "wtitle": "Test"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "Ung\u00fcltige Formulardaten" in response.get_data(as_text=True)
+
+    def test_edit_workout_invalid_exercise_id(self, auth_client, workout, app):
+        """Test that a nonexistent exercise definition ID causes a flash error."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "exercise_count": "1",
+                    "wtitle": "Test",
+                    "exercise1": "99999",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "nicht gefunden" in response.get_data(as_text=True)
+
+    def test_edit_workout_redirects_to_detail_on_success(
+        self, auth_client, workout, exercise_definition, app
+    ):
+        """Test that a successful POST redirects to the workout detail page."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            response = auth_client.post(
+                url_for("main.edit_workout", workout_id=w.id),
+                data={
+                    "wtitle": "Morning Workout",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": ["Standard"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert f"/workout/{w.id}" in response.headers["Location"]
+
+    def test_edit_workout_button_shown_to_owner(self, auth_client, workout, app):
+        """Test that the edit workout button appears on the detail page for the owner."""
+        with app.app_context():
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = auth_client.get(url_for("main.workout", workout_id=w.id))
+            assert response.status_code == 200
+            assert "Workout bearbeiten" in response.get_data(as_text=True)
+
+    def test_edit_workout_button_hidden_from_other(self, client, workout, second_user, app):
+        """Test that the edit workout button is hidden for non-owners."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            w = Workout.query.filter_by(title="Morning Workout").first()
+            response = client.get(url_for("main.workout", workout_id=w.id))
+            assert response.status_code == 200
+            assert "Workout bearbeiten" not in response.get_data(as_text=True)
+
