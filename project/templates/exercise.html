@@ -8,7 +8,7 @@
 
       <div class="article-metadata">
         <a class="mr-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
-        <small class="text-muted">{{ exercise.date_created.strftime('%Y-%m-%d') }}</small>
+        <small class="text-muted">{{ exercise.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
 
           {% if exercise.athlete == current_user %}
           <div>

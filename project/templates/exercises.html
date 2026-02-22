@@ -11,7 +11,7 @@
           <div class="media-body">
             <div class="article-metadata">
               <a class="mr-2" href="{{ url_for('main.user', username=exercises.athlete.username) }}">{{ exercises.athlete.username }}</a>
-                <small class="text-muted">{{ exercises.date_created.strftime('%d-%m-%Y') }}</small>
+                <small class="text-muted">{{ exercises.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
             </div>
             <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h2>
             <!-- <p class="article-content">{{ exercises.description }}</p> -->
