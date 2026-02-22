@@ -5,32 +5,33 @@ $(document).ready(function() {
     set_duration_template = _.template($("#set_duration_template").html());
 
     // Get the counting type for an exercise select
-    function getCountingType(select) {
+    window.getCountingType = function(select) {
         var selectedOption = select.find("option:selected");
         return selectedOption.data("counting-type") || "reps";
-    }
+    };
 
     // Get the progression levels for the currently selected exercise
-    function getLevelsForExercise(select) {
+    window.getLevelsForExercise = function(select) {
         var exerciseId = select.val();
         return (typeof progressionMap !== "undefined" && progressionMap[exerciseId]) ? progressionMap[exerciseId] : [];
-    }
+    };
+
     // Get the correct set template based on counting type and levels
-    function getSetTemplate(countingType, exerciseNum, levels) {
+    window.getSetTemplate = function(countingType, exerciseNum, levels) {
         levels = levels || [];
         if (countingType === "duration") {
             return set_duration_template({exercise_num: exerciseNum, levels: levels});
         }
         return set_reps_template({exercise_num: exerciseNum, levels: levels});
-    }
+    };
 
     // Store original options for each select to restore later
-    function storeOriginalOptions(select) {
+    window.storeOriginalOptions = function(select) {
         if (!select.data("originalOtherOptions")) {
             var otherOptions = select.find("optgroup.other-exercises option").clone(true);
             select.data("originalOtherOptions", otherOptions);
         }
-    }
+    };
 
     // Initialize all existing selects
     $(".exercise-select").each(function() {
@@ -38,7 +39,7 @@ $(document).ready(function() {
     });
 
     // Toggle filter for exercises - remove/restore options
-    function applyExerciseFilter() {
+    window.applyExerciseFilter = function applyExerciseFilter() {
         var showOnlyMine = $("#showOnlyMine").is(":checked");
 
         $(".exercise-select").each(function() {
@@ -73,10 +74,10 @@ $(document).ready(function() {
 
             updateCopyButton(select);
         });
-    }
+    };
 
     // Show/hide copy button based on selected exercise
-    function updateCopyButton(select) {
+    window.updateCopyButton = function updateCopyButton(select) {
         var selectedOption = select.find("option:selected");
         var copyBtn = select.closest(".exercise-select-wrapper").find(".copy-exercise-btn");
 
@@ -85,7 +86,7 @@ $(document).ready(function() {
         } else {
             copyBtn.hide();
         }
-    }
+    };
 
      // Rebuild sets when exercise selection changes
     function rebuildSetsForExercise(select) {
@@ -98,7 +99,7 @@ $(document).ready(function() {
         // Clear existing sets and re-add one
         setsContainer.empty();
         setsContainer.append(getSetTemplate(countingType, exerciseNum, levels));
-    } 
+    }
 
     // Initial filter application
     applyExerciseFilter();
@@ -161,9 +162,39 @@ $(document).ready(function() {
         });
     });
 
+    // Renumber exercises after one is removed
+    function renumberExercises() {
+        var count = 0;
+        $(".exercise-block").each(function(idx) {
+            count = idx + 1;
+            // Update select name
+            $(this).find("select.exercise-select").attr("name", "exercise" + count);
+            // Update sets container id
+            $(this).find("[id^='exercise']").attr("id", "exercise" + count);
+            // Update progression, reps, duration names inside sets container
+            $(this).find("[name^='progression']").attr("name", "progression" + count);
+            $(this).find("[name^='reps']").attr("name", "reps" + count);
+            $(this).find("[name^='duration']").attr("name", "duration" + count);
+            // Update addSet button exercise attribute
+            $(this).find(".addSet").attr("exercise", count);
+        });
+        $("[name=exercise_count]").val(count);
+    }
+
+    // Remove a single set
+    $(document).on("click", ".removeSet", function() {
+        $(this).closest(".set-row").remove();
+    });
+
+    // Remove an entire exercise block
+    $(document).on("click", ".removeExercise", function() {
+        $(this).closest(".exercise-block").remove();
+        renumberExercises();
+    });
+
     // Add exercise handler
     $("#addExercise").on("click", function() {
-        exercise_num = Number($("[name=exercise_count]").val()) + 1;
+        exercise_num = $(".exercise-block").length + 1;
         $("[name=exercise_count]").val(exercise_num);
 
         exercise_compiled = exercise_template({exercise_num : exercise_num});
@@ -186,7 +217,7 @@ $(document).ready(function() {
         var countingType = getCountingType(select);
         var levels = getLevelsForExercise(select);
         var set_compiled = getSetTemplate(countingType, exercise_num, levels);
-        $("#exercise" + exercise_num).append(set_compiled);    
-  });
+        $("#exercise" + exercise_num).append(set_compiled);
+    });
 
 });
