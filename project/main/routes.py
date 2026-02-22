@@ -1,4 +1,3 @@
-from typing import Protocol
 from flask import (
     render_template,
     flash,

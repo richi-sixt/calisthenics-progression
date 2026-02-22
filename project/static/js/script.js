@@ -10,12 +10,18 @@ $(document).ready(function() {
         return selectedOption.data("counting-type") || "reps";
     }
 
-    // Get the correct set template based on counting type
-    function getSetTemplate(countingType, exerciseNum) {
+    // Get the progression levels for the currently selected exercise
+    function getLevelsForExercise(select) {
+        var exerciseId = select.val();
+        return (typeof progressionMap !== "undefined" && progressionMap[exerciseId]) ? progressionMap[exerciseId] : [];
+    }
+    // Get the correct set template based on counting type and levels
+    function getSetTemplate(countingType, exerciseNum, levels) {
+        levels = levels || [];
         if (countingType === "duration") {
-            return set_duration_template({exercise_num: exerciseNum});
+            return set_duration_template({exercise_num: exerciseNum, levels: levels});
         }
-        return set_reps_template({exercise_num: exerciseNum});
+        return set_reps_template({exercise_num: exerciseNum, levels: levels});
     }
 
     // Store original options for each select to restore later
@@ -87,10 +93,11 @@ $(document).ready(function() {
         var exerciseNum = exerciseName.replace("exercise", "");
         var setsContainer = $("#exercise" + exerciseNum);
         var countingType = getCountingType(select);
+        var levels = getLevelsForExercise(select);
 
         // Clear existing sets and re-add one
         setsContainer.empty();
-        setsContainer.append(getSetTemplate(countingType, exerciseNum));
+        setsContainer.append(getSetTemplate(countingType, exerciseNum, levels));
     } 
 
     // Initial filter application
@@ -130,6 +137,11 @@ $(document).ready(function() {
                 $(".exercise-select optgroup.my-exercises").each(function() {
                     $(this).append(newOption);
                 });
+
+                // Register progression levels for the copied exercise
+                if (typeof progressionMap !== "undefined" && response.progression_levels) {
+                    progressionMap[response.id] = response.progression_levels;
+                }
 
                 // Select the new exercise in this dropdown
                 select.val(response.id);
@@ -172,7 +184,9 @@ $(document).ready(function() {
         exercise_num = Number($(this).attr("exercise"));
         var select = $("[name='exercise" + exercise_num + "']");
         var countingType = getCountingType(select);
-        var set_compiled = getSetTemplate(countingType, exercise_num);
-        $("#exercise" + exercise_num).append(set_compiled);    });
+        var levels = getLevelsForExercise(select);
+        var set_compiled = getSetTemplate(countingType, exercise_num, levels);
+        $("#exercise" + exercise_num).append(set_compiled);    
+  });
 
 });
