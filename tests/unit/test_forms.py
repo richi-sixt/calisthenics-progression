@@ -391,7 +391,7 @@ class TestCreateExerciseForm:
             assert "title" in form.errors
 
     def test_create_exercise_form_missing_description(self, app):
-        """Test create exercise form requires description."""
+        """Test create exercise form allows empty description (description is optional)."""
         with app.app_context():
             form = CreateExerciseForm(
                 data={
@@ -399,8 +399,7 @@ class TestCreateExerciseForm:
                     "description": "",
                 }
             )
-            assert form.validate() is False
-            assert "description" in form.errors
+            assert form.validate() is True
 
     def test_create_exercise_form_with_reps_counting_type(self, app):
         """Test create exercise form with reps counting type."""
