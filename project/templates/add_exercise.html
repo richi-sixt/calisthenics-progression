@@ -44,6 +44,12 @@
                     {% endfor %}
                 </div>
             </div>           
+            <div class="form-group">
+                <label class="form-control-label">Progressionsstufen <small class="text-muted">(eine pro Zeile, optional)</small></label>
+                <textarea class="form-control" name="progressions" rows="4"
+                          placeholder="z.B.:&#10;Knie-Liegestütze&#10;Normale Liegestütze&#10;Enge Liegestütze">{{ existing_progressions or '' }}</textarea>
+                <small class="form-text text-muted">Definiere die Stufen, zwischen denen du beim Training wählen kannst.</small>
+            </div>
         </fieldset>
         <div class="form-group">
             {{ form.submit(class="btn btn-outline-info") }}

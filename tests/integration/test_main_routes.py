@@ -5,7 +5,7 @@ import pytest
 from flask import url_for
 
 from project import db
-from project.models import User, Workout, ExerciseDefinition, Exercise, Set, Message
+from project.models import User, Workout, ExerciseDefinition, Exercise, Set, Message, ProgressionLevel
 
 
 class TestIndexRoute:
@@ -832,3 +832,240 @@ class TestNotificationsRoute:
             assert response.status_code == 200
             data = response.get_json()
             assert isinstance(data, list)
+
+
+class TestProgressionLevels:
+    """Integration tests for progression levels feature."""
+
+    def test_add_exercise_with_progression_levels(self, auth_client, app):
+        """Test creating an exercise with progression levels stores them in DB."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "Push-ups",
+                    "description": "Standard push-ups",
+                    "counting_type": "reps",
+                    "progressions": "Knie-Liegestütze\nNormale Liegestütze\nEnge Liegestütze",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            assert ex is not None
+            levels = ex.progression_levels.all()
+            assert len(levels) == 3
+            assert levels[0].name == "Knie-Liegestütze"
+            assert levels[1].name == "Normale Liegestütze"
+            assert levels[2].name == "Enge Liegestütze"
+            assert levels[0].level_order == 1
+
+    def test_add_exercise_without_progression_levels(self, auth_client, app):
+        """Test creating an exercise without progression levels works fine."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "Plank",
+                    "counting_type": "duration",
+                    "progressions": "",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = ExerciseDefinition.query.filter_by(title="Plank").first()
+            assert ex is not None
+            assert ex.progression_levels.count() == 0
+
+    def test_add_exercise_without_description(self, auth_client, app):
+        """Test creating an exercise without a description succeeds."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "No Desc Exercise",
+                    "counting_type": "reps",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = ExerciseDefinition.query.filter_by(title="No Desc Exercise").first()
+            assert ex is not None
+            assert ex.description is None
+
+    def test_update_exercise_replaces_progression_levels(
+        self, auth_client, exercise_definition, app
+    ):
+        """Test that updating an exercise replaces all existing progression levels."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+
+            # First, add some initial levels
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Easy", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Hard", level_order=2
+            ))
+            db.session.commit()
+            assert ex.progression_levels.count() == 2
+
+            # Update with different levels
+            response = auth_client.post(
+                url_for("main.update_exercise", exercises_id=ex.id),
+                data={
+                    "title": "Push-ups",
+                    "description": "Updated description",
+                    "counting_type": "reps",
+                    "progressions": "Anfänger\nFortgeschrittener",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            levels = ex.progression_levels.all()
+            assert len(levels) == 2
+            assert levels[0].name == "Anfänger"
+            assert levels[1].name == "Fortgeschrittener"
+
+    def test_update_exercise_prefills_existing_progressions(
+        self, auth_client, exercise_definition, app
+    ):
+        """Test that the update exercise GET request pre-fills progression levels."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Level 1", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Level 2", level_order=2
+            ))
+            db.session.commit()
+
+            response = auth_client.get(
+                url_for("main.update_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "Level 1" in html
+            assert "Level 2" in html
+
+    def test_copy_exercise_copies_progression_levels(
+        self, auth_client, second_user, app
+    ):
+        """Test that copying an exercise also copies its progression levels."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="Squats",
+                description="Bodyweight squats",
+                user_id=second_user.id,
+            )
+            db.session.add(ex)
+            db.session.flush()
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Shallow", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Deep", level_order=2
+            ))
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.copy_exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data["success"] is True
+            assert data["progression_levels"] == ["Shallow", "Deep"]
+
+            # Verify in DB
+            user = User.query.filter_by(username="testuser").first()
+            copied = ExerciseDefinition.query.filter(
+                ExerciseDefinition.user_id == user.id,
+                ExerciseDefinition.title.contains("Squats"),
+            ).first()
+            assert copied is not None
+            copied_levels = copied.progression_levels.all()
+            assert len(copied_levels) == 2
+            assert copied_levels[0].name == "Shallow"
+            assert copied_levels[1].name == "Deep"
+
+    def test_add_workout_page_includes_progression_map(
+        self, auth_client, exercise_definition, app
+    ):
+        """Test that add_workout GET response includes progressionMap JSON."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Easy", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Hard", level_order=2
+            ))
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.add_workout"))
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "progressionMap" in html
+            assert "Easy" in html
+            assert "Hard" in html
+
+    def test_add_workout_saves_progression_from_dropdown(
+        self, auth_client, exercise_definition, app
+    ):
+        """Test that a workout is saved correctly with a progression value selected from a dropdown."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Knee Push-ups", level_order=1
+            ))
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "wtitle": "Progression Dropdown Test",
+                    "exercise_count": "1",
+                    "exercise1": str(ex.id),
+                    "progression1": ["Knee Push-ups"],
+                    "reps1": ["10"],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            workout = Workout.query.filter_by(title="Progression Dropdown Test").first()
+            assert workout is not None
+            exercise_inst = Exercise.query.filter_by(workout_id=workout.id).first()
+            work_set = Set.query.filter_by(exercise_id=exercise_inst.id).first()
+            assert work_set.progression == "Knee Push-ups"
+
+    def test_exercise_detail_shows_progression_levels(
+        self, auth_client, exercise_definition, app
+    ):
+        """Test that the exercise detail page shows progression levels."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Easy", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Medium", level_order=2
+            ))
+            db.session.commit()
+
+            response = auth_client.get(
+                url_for("main.exercise", exercises_id=ex.id)
+            )
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "Progressionsstufen" in html
+            assert "Easy" in html
+            assert "Medium" in html
+            
+            

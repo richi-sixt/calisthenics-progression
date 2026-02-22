@@ -21,7 +21,18 @@
           </div>         
       </div>
       <h2 class="article-title">{{ exercise.title }}</h2>
+       {% if exercise.description %}
       <p class="article-content">{{ exercise.description }}</p>
+      {% endif %}
+      {% set levels = exercise.progression_levels.all() %}
+      {% if levels %}
+      <p><strong>Progressionsstufen:</strong></p>
+      <ol>
+        {% for pl in levels %}
+        <li>{{ pl.name }}</li>
+        {% endfor %}
+      </ol>
+      {% endif %}
     </div>
   </article>
   

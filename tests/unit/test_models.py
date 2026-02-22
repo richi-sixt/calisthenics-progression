@@ -10,6 +10,7 @@ from project.models import (
     Workout,
     Exercise,
     ExerciseDefinition,
+    ProgressionLevel,
     Set,
     Message,
     Notification,
@@ -229,6 +230,88 @@ class TestExercisesModel:
 
             fetched = ExerciseDefinition.query.filter_by(title="L-Sit").first()
             assert fetched.counting_type == "duration"
+
+
+class TestProgressionLevelModel:
+    """Tests for the ProgressionLevel model."""
+
+    def test_progression_levels_created_and_ordered(self, app, user):
+        """Test creating multiple progression levels with correct ordering."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="Push-ups",
+                user_id=user.id,
+            )
+            db.session.add(ex)
+            db.session.flush()
+
+            levels_data = ["Knie-Liegestütze", "Normale Liegestütze", "Enge Liegestütze"]
+            for i, name in enumerate(levels_data, start=1):
+                db.session.add(ProgressionLevel(
+                    exercise_definition_id=ex.id,
+                    name=name,
+                    level_order=i,
+                ))
+            db.session.commit()
+
+            fetched = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            levels = fetched.progression_levels.all()
+            assert len(levels) == 3
+            assert levels[0].name == "Knie-Liegestütze"
+            assert levels[1].name == "Normale Liegestütze"
+            assert levels[2].name == "Enge Liegestütze"
+            assert levels[0].level_order == 1
+            assert levels[2].level_order == 3
+
+    def test_progression_levels_cascade_delete(self, app, user):
+        """Test that deleting an ExerciseDefinition deletes its ProgressionLevels."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="Plank",
+                user_id=user.id,
+            )
+            db.session.add(ex)
+            db.session.flush()
+
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Easy", level_order=1
+            ))
+            db.session.add(ProgressionLevel(
+                exercise_definition_id=ex.id, name="Hard", level_order=2
+            ))
+            db.session.commit()
+            ex_id = ex.id
+
+            assert ProgressionLevel.query.filter_by(exercise_definition_id=ex_id).count() == 2
+
+            db.session.delete(ex)
+            db.session.commit()
+
+            assert ProgressionLevel.query.filter_by(exercise_definition_id=ex_id).count() == 0
+
+    def test_exercise_definition_without_levels(self, app, exercise_definition):
+        """Test that progression_levels returns empty for an exercise with none defined."""
+        with app.app_context():
+            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            assert ex.progression_levels.count() == 0
+
+    def test_exercise_definition_description_optional(self, app, user):
+        """Test that ExerciseDefinition can be created without a description."""
+        with app.app_context():
+            ex = ExerciseDefinition(
+                title="No Description Exercise",
+                description=None,
+                user_id=user.id,
+            )
+            db.session.add(ex)
+            db.session.commit()
+
+            fetched = ExerciseDefinition.query.filter_by(
+                title="No Description Exercise"
+            ).first()
+            assert fetched is not None
+            assert fetched.description is None
+
 
 class TestExerciseModel:
     """Tests for the Exercise model."""

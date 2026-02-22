@@ -22,6 +22,7 @@ from project.models import (
     Set,
     Message,
     Notification,
+    ProgressionLevel,
 )
 from project.main import bp
 from project.main.forms import MessageForm, CreateExerciseForm
@@ -152,10 +153,14 @@ def add_workout() -> ResponseReturnValue:
         ExerciseDefinition.user_id != current_user.id,
         ExerciseDefinition.archived == False,  # noqa: E712 # type: ignore[arg-type]
     ).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
+    progression_map: dict[int, list[str]] = {}
+    for ex in my_exercises + other_exercises:
+        progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
-        other_exercises=other_exercises
+        other_exercises=other_exercises,
+        progression_map=progression_map,
     )
 
 
@@ -184,6 +189,15 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
         counting_type=original.counting_type,
     )
     db.session.add(copied)
+    db.session.flush()
+
+    original_levels = original.progression_levels.all()
+    for pl in original_levels:
+        db.session.add(ProgressionLevel(
+            exercise_definition_id=copied.id,
+            name=pl.name,
+            level_order=pl.level_order,
+        ))
     db.session.commit()
 
     return jsonify({
@@ -192,6 +206,7 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
         "title": copied.title,
         "username": current_user.username,
         "counting_type": copied.counting_type,
+        "progression_levels": [pl.name for pl in original_levels],
     })
 
 @bp.route("/workout/<int:workout_id>")
@@ -239,6 +254,15 @@ def add_exercise() -> str | ResponseReturnValue:
                 counting_type=form.counting_type.data,
             )
             db.session.add(exercise)
+            db.session.flush()
+            raw_levels = request.form.get("progressions", "")
+            levels = [line.strip() for line in raw_levels.splitlines() if line.strip()]
+            for i, name in enumerate(levels, start=1):
+                db.session.add(ProgressionLevel(
+                    exercise_definition_id=exercise.id,
+                    name=name,
+                    level_order=i,
+                ))
             db.session.commit()
             flash("Deine Übung wurde erstellt!", "success")
             return redirect(url_for("main.all_exercises"))
@@ -299,8 +323,17 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
             flash("Du hast bereits eine Übung mit diesem Namen", "warning")
         else:
             exercise.title = form.title.data
-            exercise.description = form.description.data
+            exercise.description = form.description.data or None
             exercise.counting_type = form.counting_type.data
+            ProgressionLevel.query.filter_by(exercise_definition_id=exercise.id).delete()
+            raw_levels = request.form.get("progressions", "")
+            levels = [line.strip() for line in raw_levels.splitlines() if line.strip()]
+            for i, name in enumerate(levels, start=1):
+                db.session.add(ProgressionLevel(
+                    exercise_definition_id=exercise.id,
+                    name=name,
+                    level_order=i,
+                ))
             db.session.commit()
             flash("Deine Übung wurde geändert", "success")
             return redirect(url_for("main.exercise", exercises_id=exercise.id))
@@ -308,8 +341,15 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
         form.title.data = exercise.title
         form.description.data = exercise.description
         form.counting_type.data = exercise.counting_type
+    existing_progressions = "\n".join(
+        pl.name for pl in exercise.progression_levels.all()
+    )
     return render_template(
-        "add_exercise.html", title="Ändere Übung", form=form, legend="Ändere Übung"
+        "add_exercise.html",
+        title="Ändere Übung",
+        form=form,
+        legend="Ändere Übung",
+        existing_progressions=existing_progressions,
     )
 
 

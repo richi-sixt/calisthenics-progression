@@ -65,7 +65,15 @@
 <script type="text/html" id="set_reps_template">
     <br><br>
     <label>Progression</label>
+    <% if (levels && levels.length > 0) { %>
+    <select class="form-control" name="progression<%= exercise_num %>">
+        <% _.each(levels, function(lvl) { %>
+        <option value="<%= lvl %>"><%= lvl %></option>
+        <% }); %>
+    </select>
+    <% } else { %>
     <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
+    <% } %>
     <label>Reps</label>
     <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps" required>
     <div class="invalid-feedback">
@@ -82,6 +90,10 @@
     <div class="invalid-feedback">
         Dieses Feld ist zwingend. Bitte im Format mm:ss eingeben.
     </div>
+</script>
+
+<script>
+var progressionMap = {{ progression_map | tojson }};
 </script>
 
 <style>
