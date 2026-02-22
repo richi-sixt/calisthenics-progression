@@ -155,7 +155,7 @@ def add_workout() -> ResponseReturnValue:
     ).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
     progression_map: dict[int, list[str]] = {}
     for ex in my_exercises + other_exercises:
-        progression_map[ex.id] = [pl.name for pl in ex.progression_lvelvs.all()]
+        progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
