@@ -214,7 +214,7 @@ class ExerciseDefinition(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     counting_type = db.Column(db.String(10), nullable=False, default="reps", server_default="reps") # default=reps is only python-sid. server_default avoids row getting NULL
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
@@ -226,6 +226,15 @@ class ExerciseDefinition(db.Model):
     exercise = db.relationship(
         "Exercise", backref="exercise_definition", lazy="dynamic"
     )
+    
+    # Ordered list of user-defined progression levels for this exercise
+    progression_levels = db.relationship(
+        "ProgressionLevel",
+        backref="exercise_definition",
+        cascade="all, delete-orphan",
+        order_by="ProgressionLevel.level_order",
+        lazy="dynamic",
+    )   
 
 
     def __init__(
@@ -336,6 +345,39 @@ class Set(db.Model):
     def __repr__(self) -> str:
         """String representation of Set."""
         return f"<Set {self.id}: {self.reps} reps>"
+
+
+class ProgressionLevel(db.Model):
+    """A named progression level belonging to an ExerciseDefinition.
+
+    Users define these on their exercise definitions so that when
+    logging a workout they can pick a level from a dropdown instead
+    of typing free-form text.
+    """
+
+    __tablename__ = "progression_levels"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exercise_definition_id = db.Column(
+        db.Integer, db.ForeignKey("exercises.id"), nullable=False
+    )
+    name = db.Column(db.String(80), nullable=False)
+    level_order = db.Column(db.Integer, nullable=False)
+
+    def __init__(
+        self,
+        exercise_definition_id: int,
+        name: str,
+        level_order: int,
+    ) -> None:
+        """Initialize a progression level."""
+        self.exercise_definition_id = exercise_definition_id
+        self.name = name
+        self.level_order = level_order
+
+    def __repr__(self) -> str:
+        """String representation of ProgressionLevel."""
+        return f"<ProgressionLevel {self.name} (order {self.level_order})>"
 
 
 class Message(db.Model):
