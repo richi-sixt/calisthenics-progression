@@ -1,21 +1,21 @@
 """Integration tests for authentication routes."""
 
-from datetime import datetime, timezone
-
 import pytest
 
+__all__ = ("pytest",)
 from flask import url_for
+from sqlalchemy import func
 
 from project import db
 from project.models import (
-        User,
-        Message,
-        Notification,
-        ExerciseDefinition,
-        Exercise,
-        Set,
-        Workout,
-        followers,
+    Exercise,
+    ExerciseDefinition,
+    Message,
+    Notification,
+    Set,
+    User,
+    Workout,
+    followers,
 )
 from project.token import generate_confirmation_token
 
@@ -122,7 +122,11 @@ class TestRegistrationRoute:
             assert response.status_code == 200
 
             # Verify user was created
-            user = User.query.filter_by(username="newuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="newuser"))
+                .scalars()
+                .first()
+            )
             assert user is not None
             assert user.email == "newuser@example.com"
             assert user.confirmed is False
@@ -173,7 +177,11 @@ class TestEmailConfirmationRoute:
             assert response.status_code == 200
 
             # Verify user is now confirmed
-            user = User.query.filter_by(username="unconfirmed").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="unconfirmed"))
+                .scalars()
+                .first()
+            )
             assert user.confirmed is True
 
     def test_confirm_email_invalid_token(self, client, app, unconfirmed_user):
@@ -190,7 +198,11 @@ class TestEmailConfirmationRoute:
             assert response.status_code == 200
 
             # User should still be unconfirmed
-            user = User.query.filter_by(username="unconfirmed").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="unconfirmed"))
+                .scalars()
+                .first()
+            )
             assert user.confirmed is False
 
     def test_confirm_already_confirmed(self, auth_client, app, user):
@@ -250,14 +262,22 @@ class TestPasswordResetRoute:
             assert response.status_code == 200
 
             # Verify token was set on user
-            user = User.query.filter_by(email="test@example.com").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email="test@example.com"))
+                .scalars()
+                .first()
+            )
             assert user.password_reset_token is not None
 
     def test_forgot_new_page_renders(self, client, user, app):
         """Test password reset page renders with valid token."""
         with app.app_context():
             token = generate_confirmation_token(user.email)
-            user = User.query.filter_by(email="test@example.com").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email="test@example.com"))
+                .scalars()
+                .first()
+            )
             user.password_reset_token = token
             db.session.commit()
 
@@ -268,7 +288,11 @@ class TestPasswordResetRoute:
         """Test password reset with valid token."""
         with app.app_context():
             token = generate_confirmation_token(user.email)
-            user = User.query.filter_by(email="test@example.com").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email="test@example.com"))
+                .scalars()
+                .first()
+            )
             user.password_reset_token = token
             db.session.commit()
 
@@ -283,7 +307,11 @@ class TestPasswordResetRoute:
             assert response.status_code == 200
 
             # Verify password was changed
-            user = User.query.filter_by(email="test@example.com").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email="test@example.com"))
+                .scalars()
+                .first()
+            )
             assert user.check_password("newpassword456") is True
             assert user.password_reset_token is None
 
@@ -321,7 +349,11 @@ class TestEditProfileRoute:
             assert response.status_code == 200
 
             # Verify username was updated
-            user = User.query.filter_by(username="updateduser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="updateduser"))
+                .scalars()
+                .first()
+            )
             assert user is not None
             assert user.about_me == "Updated bio"
 
@@ -352,6 +384,7 @@ class TestEditProfileRoute:
         with app.app_context():
             # Create a minimal valid PNG image (1x1 pixel)
             from PIL import Image
+
             img = Image.new("RGB", (200, 200), color="red")
             img_bytes = io.BytesIO()
             img.save(img_bytes, format="PNG")
@@ -370,7 +403,11 @@ class TestEditProfileRoute:
             )
             assert response.status_code == 200
 
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.image_file != "default.jpg"
 
 
@@ -382,7 +419,11 @@ class TestForgotNewTokenUsed:
         with app.app_context():
             token = generate_confirmation_token(user.email)
             # Don't set password_reset_token → it stays None
-            user_obj = User.query.filter_by(email="test@example.com").first()
+            user_obj = (
+                db.session.execute(db.select(User).filter_by(email="test@example.com"))
+                .scalars()
+                .first()
+            )
             user_obj.password_reset_token = None
             db.session.commit()
 
@@ -433,7 +474,11 @@ class TestDeleteAccountRoute:
                 follow_redirects=True,
             )
             assert response.status_code == 200
-            existing_user = User.query.filter_by(username="testuser").first()
+            existing_user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert existing_user is not None
             assert "Falsches Passwort" in response.get_data(as_text=True)
 
@@ -459,9 +504,24 @@ class TestDeleteAccountRoute:
                 data={"password": "password123"},
                 follow_redirects=True,
             )
-            assert Workout.query.filter_by(user_id=user_id).count() == 0
-            assert Exercise.query.count() == 0
-            assert Set.query.count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Workout)
+                    .where(Workout.user_id == user_id)
+                ).scalar()
+                == 0
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count()).select_from(Exercise)
+                ).scalar()
+                == 0
+            )
+            assert (
+                db.session.execute(db.select(func.count()).select_from(Set)).scalar()
+                == 0
+            )
 
     def test_delete_account_removes_exercise_definitions(
         self, auth_client, user, exercise_definition, app
@@ -474,15 +534,28 @@ class TestDeleteAccountRoute:
                 data={"password": "password123"},
                 follow_redirects=True,
             )
-            assert ExerciseDefinition.query.filter_by(user_id=user_id).count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(ExerciseDefinition)
+                    .where(ExerciseDefinition.user_id == user_id)
+                ).scalar()
+                == 0
+            )
 
-    def test_delete_account_removes_messages(
-        self, auth_client, user, second_user, app
-    ):
+    def test_delete_account_removes_messages(self, auth_client, user, second_user, app):
         """Test that account deletion removes sent and received messages."""
         with app.app_context():
-            u = User.query.filter_by(username="testuser").first()
-            u2 = User.query.filter_by(username="seconduser").first()
+            u = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            u2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             msg1 = Message(sender_id=u.id, recipient_id=u2.id, body="sent")
             msg2 = Message(sender_id=u2.id, recipient_id=u.id, body="received")
             db.session.add_all([msg1, msg2])
@@ -495,9 +568,14 @@ class TestDeleteAccountRoute:
                 follow_redirects=True,
             )
             assert (
-                Message.query.filter(
-                    (Message.sender_id == user_id) | (Message.recipient_id == user_id)
-                ).count()
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Message)
+                    .where(
+                        (Message.sender_id == user_id)
+                        | (Message.recipient_id == user_id)
+                    )
+                ).scalar()
                 == 0
             )
 
@@ -506,8 +584,16 @@ class TestDeleteAccountRoute:
     ):
         """Test that account deletion removes all follow relationships."""
         with app.app_context():
-            u1 = User.query.filter_by(username="testuser").first()
-            u2 = User.query.filter_by(username="seconduser").first()
+            u1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            u2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             u1.follow(u2)
             u2.follow(u1)
             db.session.commit()
@@ -529,7 +615,11 @@ class TestDeleteAccountRoute:
     def test_delete_account_removes_notifications(self, auth_client, user, app):
         """Test that account deletion removes all notifications."""
         with app.app_context():
-            u = User.query.filter_by(username="testuser").first()
+            u = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             u.add_notification("unread_message_count", 3)
             db.session.commit()
             user_id = u.id
@@ -539,12 +629,22 @@ class TestDeleteAccountRoute:
                 data={"password": "password123"},
                 follow_redirects=True,
             )
-            assert Notification.query.filter_by(user_id=user_id).count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Notification)
+                    .where(Notification.user_id == user_id)
+                ).scalar()
+                == 0
+            )
+
 
 class TestEmailChangeInProfile:
     """Tests for changing email via the edit profile route."""
 
-    def test_email_change_updates_email_and_unconfirms(self, auth_client, app, mail_outbox):
+    def test_email_change_updates_email_and_unconfirms(
+        self, auth_client, app, mail_outbox
+    ):
         """Test that changing email updates it and sets confirmed to False."""
         with app.app_context():
             response = auth_client.post(
@@ -558,7 +658,11 @@ class TestEmailChangeInProfile:
             )
             assert response.status_code == 200
 
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.email == "newemail@example.com"
             assert user.confirmed is False
 
@@ -593,10 +697,16 @@ class TestEmailChangeInProfile:
             assert "bereits verwendet" in response.get_data(as_text=True)
 
             # Email must not have changed
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.email == "test@example.com"
 
-    def test_same_email_does_not_trigger_reconfirmation(self, auth_client, app, mail_outbox):
+    def test_same_email_does_not_trigger_reconfirmation(
+        self, auth_client, app, mail_outbox
+    ):
         """Test that submitting the same email does not change confirmed status."""
         with app.app_context():
             response = auth_client.post(
@@ -610,7 +720,11 @@ class TestEmailChangeInProfile:
             )
             assert response.status_code == 200
 
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.confirmed is True
             assert len(mail_outbox) == 0
 
@@ -633,7 +747,11 @@ class TestChangePasswordRoute:
             assert response.status_code == 200
             assert "erfolgreich ge\u00e4ndert" in response.get_data(as_text=True)
 
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.check_password("newpassword456") is True
 
     def test_change_password_wrong_current_password(self, auth_client, app):
@@ -652,7 +770,11 @@ class TestChangePasswordRoute:
             assert "falsch" in response.get_data(as_text=True)
 
             # Password must not have changed
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.check_password("password123") is True
 
     def test_change_password_mismatched_new_passwords(self, auth_client, app):
@@ -670,7 +792,11 @@ class TestChangePasswordRoute:
             assert response.status_code == 200
 
             # Password must not have changed
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.check_password("password123") is True
 
     def test_change_password_requires_login(self, client, app):
@@ -743,4 +869,3 @@ class TestPasswordToggleUI:
             response = auth_client.get(url_for("auth.edit_profile"))
             assert response.status_code == 200
             assert "Passwort \u00e4ndern" in response.get_data(as_text=True)
-

@@ -4,7 +4,9 @@ import time
 
 import pytest
 
-from project.token import generate_confirmation_token, confirm_token
+__all__ = ("pytest",)
+
+from project.token import confirm_token, generate_confirmation_token
 
 
 class TestTokenGeneration:

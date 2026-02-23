@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from time import time
-import json
 from typing import Any
 
 from flask_login import UserMixin
-from sqlalchemy.orm import Query
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from project import db, login
+from project import Base, db, login
 
 # Followers association table for many-to-many relationship
 followers = db.Table(
@@ -21,8 +20,10 @@ followers = db.Table(
 )
 
 
-class User(UserMixin, db.Model):
+class User(UserMixin, Base):
     """User model for authentication and profile management."""
+
+    __tablename__ = "user"
 
     # Primary fields
     id = db.Column(db.Integer, primary_key=True)
@@ -116,31 +117,37 @@ class User(UserMixin, db.Model):
 
     def is_following(self, user: "User") -> bool:
         """Check if this user is following another user."""
-        return self.followed.filter(followers.c.followed_id == user.id).count() > 0
+        return bool(self.followed.filter(followers.c.followed_id == user.id).count())
 
-    def followed_workouts(self) -> Query:
+    def followed_workouts(self):  # type: ignore[return]
         """Get workouts from followed users and own workouts."""
-        followed = Workout.query.join(
-            followers, (followers.c.followed_id == Workout.user_id)
-        ).filter(followers.c.follower_id == self.id)
+        followed = (
+            db.select(Workout)
+            .join(  # type: ignore[name-defined]
+                followers, (followers.c.followed_id == Workout.user_id)  # type: ignore[name-defined]
+            )
+            .filter(followers.c.follower_id == self.id)
+        )
 
-        own = Workout.query.filter_by(user_id=self.id)
+        own = db.select(Workout).filter_by(user_id=self.id)
 
-        return followed.union(own).order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
+        union_stmt = followed.union(own).order_by(Workout.timestamp.desc())  # type: ignore[union-attr]
+        return db.select(Workout).from_statement(union_stmt)
 
     def new_messages(self) -> int:
         """Count unread messages since last read time."""
         last_read_time = self.last_message_read_time or datetime(
             1900, 1, 1, tzinfo=timezone.utc
         )
-        return (
-            Message.query.filter_by(recipient_id=self.id)
-            # SQLAlchemy's __eq__, __gt__, __ne__ operators
-            # return ColumnElement[bool] at runtime,
-            # but pyright sees them as plain bool.
-            .filter(Message.timestamp > last_read_time)  # type: ignore[arg-type]
-            .count()
-        )
+        result = db.session.execute(
+            db.select(db.func.count())
+            .select_from(Message)
+            .filter(
+                Message.recipient_id == self.id,
+                Message.timestamp > last_read_time,  # type: ignore[arg-type]
+            )
+        ).scalar()
+        return int(result) if result is not None else 0
 
     def add_notification(self, name: str, data: dict) -> Notification:
         """Add or update a notification for this user."""
@@ -158,8 +165,10 @@ def load_user(id: str) -> User | None:
     return db.session.get(User, int(id))
 
 
-class Workout(db.Model):
+class Workout(Base):
     """Workout model representing a training session."""
+
+    __tablename__ = "workout"
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
@@ -190,7 +199,7 @@ class Workout(db.Model):
         return f"<Workout {self.title}>"
 
 
-class ExerciseDefinition(db.Model):
+class ExerciseDefinition(Base):
     """Exercise definition model (exercise library/templates).
 
     Represents a definition for an exercise.
@@ -207,7 +216,7 @@ class ExerciseDefinition(db.Model):
     """
 
     __tablename__ = "exercises"
-    __table_args__ = (
+    __table_args__: Any = (
         db.UniqueConstraint("title", "user_id", name="uq_exercise_title_user"),
         {},
     )
@@ -215,7 +224,9 @@ class ExerciseDefinition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(80), index=True)
     description = db.Column(db.Text, nullable=True)
-    counting_type = db.Column(db.String(10), nullable=False, default="reps", server_default="reps") # default=reps is only python-sid. server_default avoids row getting NULL
+    counting_type = db.Column(
+        db.String(10), nullable=False, default="reps", server_default="reps"
+    )  # default=reps is only python-sid. server_default avoids row getting NULL
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
@@ -226,7 +237,7 @@ class ExerciseDefinition(db.Model):
     exercise = db.relationship(
         "Exercise", backref="exercise_definition", lazy="dynamic"
     )
-    
+
     # Ordered list of user-defined progression levels for this exercise
     progression_levels = db.relationship(
         "ProgressionLevel",
@@ -234,8 +245,7 @@ class ExerciseDefinition(db.Model):
         cascade="all, delete-orphan",
         order_by="ProgressionLevel.level_order",
         lazy="dynamic",
-    )   
-
+    )
 
     def __init__(
         self,
@@ -275,7 +285,7 @@ class ExerciseDefinition(db.Model):
         return f"<ExerciseDefinition {self.title}>"
 
 
-class Exercise(db.Model):
+class Exercise(Base):
     """Exercise instance within a workout."""
 
     __tablename__ = "exercise"
@@ -306,7 +316,7 @@ class Exercise(db.Model):
         return f"<Exercise {self.id}: Order {self.exercise_order}>"
 
 
-class Set(db.Model):
+class Set(Base):
     """Set model representing a single set within an exercise."""
 
     __tablename__ = "exercise_sets"
@@ -347,7 +357,7 @@ class Set(db.Model):
         return f"<Set {self.id}: {self.reps} reps>"
 
 
-class ProgressionLevel(db.Model):
+class ProgressionLevel(Base):
     """A named progression level belonging to an ExerciseDefinition.
 
     Users define these on their exercise definitions so that when
@@ -380,8 +390,10 @@ class ProgressionLevel(db.Model):
         return f"<ProgressionLevel {self.name} (order {self.level_order})>"
 
 
-class Message(db.Model):
+class Message(Base):
     """Message model for user-to-user messaging."""
+
+    __tablename__ = "message"
 
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -410,8 +422,10 @@ class Message(db.Model):
         return f"<Message {self.body}>"
 
 
-class Notification(db.Model):
+class Notification(Base):
     """Notification model for user notifications."""
+
+    __tablename__ = "notification"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
@@ -435,7 +449,7 @@ class Notification(db.Model):
 
     def get_data(self) -> dict[str, Any]:
         """Parse and return the JSON payload."""
-        return json.loads(str(self.payload_json))
+        return json.loads(str(self.payload_json))  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
         """String representation of Notification."""

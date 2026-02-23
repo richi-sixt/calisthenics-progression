@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from typing import Any
+
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Length
+from flask_wtf.file import FileAllowed, FileField
+from wtforms import BooleanField, PasswordField, StringField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+
+from project import db
 from project.models import User
 
 
@@ -13,13 +16,17 @@ class EditProfileForm(FlaskForm):
 
     username: StringField = StringField("Benutzername", validators=[DataRequired()])
     email: StringField = StringField("E-Mail", validators=[DataRequired(), Email()])
-    about_me: TextAreaField = TextAreaField("Über mich", validators=[Length(min=0, max=280)])
+    about_me: TextAreaField = TextAreaField(
+        "Über mich", validators=[Length(min=0, max=280)]
+    )
     picture: FileField = FileField(
         "Profilebild hinzufügen", validators=[FileAllowed(["jpg", "png"])]
     )
     submit: SubmitField = SubmitField("Senden")
 
-    def __init__(self, original_username: str, original_email: str, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, original_username: str, original_email: str, *args: Any, **kwargs: Any
+    ) -> None:
         """Initialize the form with the original username for validation."""
         super().__init__(*args, **kwargs)
         self.original_username = original_username
@@ -28,7 +35,11 @@ class EditProfileForm(FlaskForm):
     def validate_username(self, username: StringField) -> None:
         """Validate that the username is unique if changed."""
         if username.data and username.data != self.original_username:
-            user = User.query.filter_by(username=username.data).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username=username.data))
+                .scalars()
+                .first()
+            )
             if user is not None:
                 raise ValidationError(
                     "Dieser Benutzername ist nicht verfügbar. Bitte einen anderen Benutzernamen wählen."
@@ -37,7 +48,11 @@ class EditProfileForm(FlaskForm):
     def validate_email(self, email: StringField) -> None:
         """Validate that the email is unique if changed."""
         if email.data and email.data != self.original_email:
-            user = User.query.filter_by(email=email.data).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email=email.data))
+                .scalars()
+                .first()
+            )
             if user is not None:
                 raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
 
@@ -65,14 +80,22 @@ class RegistrationForm(FlaskForm):
     def validate_username(self, username: StringField) -> None:
         """Validate that the username is unique."""
         if username.data:
-            user = User.query.filter_by(username=username.data).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username=username.data))
+                .scalars()
+                .first()
+            )
             if user is not None:
                 raise ValidationError("Bitte einen anderen Benutzernamen wählen.")
 
     def validate_email(self, email: StringField) -> None:
         """Validate that the email is unique."""
         if email.data:
-            user = User.query.filter_by(email=email.data).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email=email.data))
+                .scalars()
+                .first()
+            )
             if user is not None:
                 raise ValidationError("Bitte eine andere Email-Adresse wählen.")
 
@@ -113,6 +136,10 @@ class ChangePasswordForm(FlaskForm):
         "Neues Passwort", validators=[DataRequired()]
     )
     confirm_password: PasswordField = PasswordField(
-        "Neues Passwort bestätigen", validators=[DataRequired(), EqualTo("new_password", message="Die Passwörter stimmen nicht überein.")]
+        "Neues Passwort bestätigen",
+        validators=[
+            DataRequired(),
+            EqualTo("new_password", message="Die Passwörter stimmen nicht überein."),
+        ],
     )
     submit_password: SubmitField = SubmitField("Passwort ändern")

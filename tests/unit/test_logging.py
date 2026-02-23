@@ -10,6 +10,7 @@ from tests.test_config import TestConfig
 
 class ProductionConfig(TestConfig):
     """Config that triggers _configure_logging (non-debug, non-testing)."""
+
     TESTING = False
     DEBUG = False
     MAIL_SERVER = None
@@ -21,6 +22,7 @@ class TestConfigureLogging:
 
     def test_logging_with_mail_server(self):
         """Test that SMTPHandler is added when MAIL_SERVER is configured."""
+
         class MailConfig(ProductionConfig):
             MAIL_SERVER = "smtp.example.com"
             MAIL_PORT = 587
@@ -35,6 +37,7 @@ class TestConfigureLogging:
 
     def test_logging_to_stdout(self):
         """Test that StreamHandler is added when LOG_TO_STDOUT is set."""
+
         class StdoutConfig(ProductionConfig):
             LOG_TO_STDOUT = True
 

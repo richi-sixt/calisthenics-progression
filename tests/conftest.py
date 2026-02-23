@@ -1,13 +1,13 @@
 """Pytest fixtures for the test suite."""
 
+import glob
+import os
 from datetime import datetime, timezone
 
 import pytest
-import glob
-import os
 
 from project import create_app, db
-from project.models import User, Workout, Exercise, ExerciseDefinition, Set, Message, ProgressionLevel
+from project.models import Exercise, ExerciseDefinition, Set, User, Workout
 from tests.test_config import TestConfig
 
 
@@ -51,7 +51,11 @@ def user(app):
         db.session.commit()
 
         # Re-query to get attached instance
-        user = User.query.filter_by(username="testuser").first()
+        user = (
+            db.session.execute(db.select(User).filter_by(username="testuser"))
+            .scalars()
+            .first()
+        )
         yield user
 
 
@@ -69,7 +73,11 @@ def unconfirmed_user(app):
         db.session.add(user)
         db.session.commit()
 
-        user = User.query.filter_by(username="unconfirmed").first()
+        user = (
+            db.session.execute(db.select(User).filter_by(username="unconfirmed"))
+            .scalars()
+            .first()
+        )
         yield user
 
 
@@ -88,7 +96,11 @@ def second_user(app):
         db.session.add(user)
         db.session.commit()
 
-        user = User.query.filter_by(username="seconduser").first()
+        user = (
+            db.session.execute(db.select(User).filter_by(username="seconduser"))
+            .scalars()
+            .first()
+        )
         yield user
 
 
@@ -125,7 +137,13 @@ def exercise_definition(app, user):
         db.session.add(exercise_def)
         db.session.commit()
 
-        exercise_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+        exercise_def = (
+            db.session.execute(
+                db.select(ExerciseDefinition).filter_by(title="Push-ups")
+            )
+            .scalars()
+            .first()
+        )
         yield exercise_def
 
 
@@ -157,8 +175,13 @@ def workout(app, user, exercise_definition):
         db.session.add(work_set)
         db.session.commit()
 
-        workout = Workout.query.filter_by(title="Morning Workout").first()
+        workout = (
+            db.session.execute(db.select(Workout).filter_by(title="Morning Workout"))
+            .scalars()
+            .first()
+        )
         yield workout
+
 
 @pytest.fixture
 def duration_exercise_definition(app, user):
@@ -173,7 +196,11 @@ def duration_exercise_definition(app, user):
         db.session.add(exercise_def)
         db.session.commit()
 
-        exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+        exercise_def = (
+            db.session.execute(db.select(ExerciseDefinition).filter_by(title="Plank"))
+            .scalars()
+            .first()
+        )
         yield exercise_def
 
 
@@ -205,7 +232,11 @@ def duration_workout(app, user, duration_exercise_definition):
         db.session.add(work_set)
         db.session.commit()
 
-        w = Workout.query.filter_by(title="Duration Workout").first()
+        w = (
+            db.session.execute(db.select(Workout).filter_by(title="Duration Workout"))
+            .scalars()
+            .first()
+        )
         yield w
 
 
@@ -233,21 +264,40 @@ def workout_with_two_exercises(app, user):
         db.session.add(w)
         db.session.flush()
 
-        ex1 = Exercise(exercise_order=1, workout_id=w.id, exercise_definition_id=reps_def.id)
+        ex1 = Exercise(
+            exercise_order=1, workout_id=w.id, exercise_definition_id=reps_def.id
+        )
         db.session.add(ex1)
         db.session.flush()
-        db.session.add(Set(set_order=1, exercise_id=ex1.id, progression="Standard", reps=10))
-        db.session.add(Set(set_order=2, exercise_id=ex1.id, progression="Standard", reps=8))
+        db.session.add(
+            Set(set_order=1, exercise_id=ex1.id, progression="Standard", reps=10)
+        )
+        db.session.add(
+            Set(set_order=2, exercise_id=ex1.id, progression="Standard", reps=8)
+        )
 
-        ex2 = Exercise(exercise_order=2, workout_id=w.id, exercise_definition_id=duration_def.id)
+        ex2 = Exercise(
+            exercise_order=2, workout_id=w.id, exercise_definition_id=duration_def.id
+        )
         db.session.add(ex2)
         db.session.flush()
-        db.session.add(Set(set_order=1, exercise_id=ex2.id, progression="Standard", duration=60))
-        db.session.add(Set(set_order=2, exercise_id=ex2.id, progression="Standard", duration=90))
+        db.session.add(
+            Set(set_order=1, exercise_id=ex2.id, progression="Standard", duration=60)
+        )
+        db.session.add(
+            Set(set_order=2, exercise_id=ex2.id, progression="Standard", duration=90)
+        )
 
         db.session.commit()
-        w = Workout.query.filter_by(title="Two Exercise Workout").first()
+        w = (
+            db.session.execute(
+                db.select(Workout).filter_by(title="Two Exercise Workout")
+            )
+            .scalars()
+            .first()
+        )
         yield w
+
 
 @pytest.fixture
 def mail_outbox(app):

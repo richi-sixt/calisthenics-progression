@@ -1,4 +1,5 @@
 """Utility functions for sending emails asynchronously."""
+
 from threading import Thread
 from typing import Sequence
 
@@ -43,8 +44,7 @@ def send_email(
     """Create and send an email message asynchronously in a background thread."""
     recipients = [to] if isinstance(to, str) else list(to)
     from_addr = sender or current_app.config.get(
-        "MAIL_DEFAULT_SENDER",
-        "noreply@example.com"
+        "MAIL_DEFAULT_SENDER", "noreply@example.com"
     )
     msg = Message(
         subject=subject,
@@ -53,10 +53,9 @@ def send_email(
         html=template,
     )
 
-    app = current_app._get_current_object()
+    app = current_app._get_current_object()  # type: ignore[attr-defined]
     Thread(
         target=send_async_email,
         args=(app, msg),
         daemon=True,
     ).start()
-
