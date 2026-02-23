@@ -1,28 +1,29 @@
-import secrets
 import os
+import secrets
 from datetime import datetime, timezone
-from PIL import Image
-from flask import render_template, flash, redirect, url_for, request, current_app
-from flask.typing import ResponseReturnValue
-from flask_login import current_user, login_user, logout_user, login_required
 from urllib.parse import urlsplit
 
+from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from flask.typing import ResponseReturnValue
+from flask_login import current_user, login_required, login_user, logout_user
+from PIL import Image
 from werkzeug.datastructures import FileStorage
+
 from project import db
 from project.auth import bp
 from project.auth.forms import (
+    ChangePasswordForm,
+    DeleteAccountForm,
+    EditProfileForm,
     LoginForm,
     RegistrationForm,
-    ResetPasswordRequestForm,
     ResetPasswordForm,
-    EditProfileForm,
-    DeleteAccountForm,
-    ChangePasswordForm,
+    ResetPasswordRequestForm,
 )
-from project.email import send_email
-from project.models import User, Message, Notification, ExerciseDefinition, followers
-from project.token import generate_confirmation_token, confirm_token
 from project.decorators import check_confirmed
+from project.email import send_email
+from project.models import ExerciseDefinition, Message, Notification, User, followers
+from project.token import confirm_token, generate_confirmation_token
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -31,7 +32,11 @@ def login() -> ResponseReturnValue:
         return redirect(url_for("main.index"))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+        user = (
+            db.session.execute(db.select(User).filter_by(username=form.username.data))
+            .scalars()
+            .first()
+        )
         if user is None or not user.check_password(form.password.data):
             flash("Ungültiger Benutzername oder Passwort")
             return redirect(url_for("auth.login"))
@@ -61,7 +66,10 @@ def edit_profile() -> ResponseReturnValue:
             confirm_url = url_for("auth.confirm_email", token=token, _external=True)
             html = render_template("email/activate.html", confirm_url=confirm_url)
             send_email(current_user.email, "Bitte Email-Adresse bestätigen.", html)
-            flash("Deine E-Mail-Adresse wurde geändert. Bitte bestätige deine neue E-Mail-Adresse.", "warning")
+            flash(
+                "Deine E-Mail-Adresse wurde geändert. Bitte bestätige deine neue E-Mail-Adresse.",
+                "warning",
+            )
         else:
             flash("Deine Änderungen wurden gespeichert.", "success")
         db.session.commit()
@@ -74,7 +82,11 @@ def edit_profile() -> ResponseReturnValue:
     image_file = url_for("static", filename="profile_pics/" + current_user.image_file)
     password_form = ChangePasswordForm(prefix="pwd")
     return render_template(
-        "edit_profile.html", title="Profil bearbeiten", image_file=image_file, form=form, password_form=password_form
+        "edit_profile.html",
+        title="Profil bearbeiten",
+        image_file=image_file,
+        form=form,
+        password_form=password_form,
     )
 
 
@@ -106,8 +118,10 @@ def delete_account() -> ResponseReturnValue:
         if not current_user.check_password(form.password.data):
             flash("Falsches Passwort. Konto wurde nicht gelöscht.", "danger")
             return redirect(url_for("auth.delete_account"))
- 
+
         user = db.session.get(User, current_user.id)
+        if user is None:
+            abort(404)
 
         # 1. Remove follow relationships from association table
         db.session.execute(
@@ -118,36 +132,43 @@ def delete_account() -> ResponseReturnValue:
         )
 
         # 2. Delete notifications (bulk, no children)
-        Notification.query.filter_by(user_id=user.id).delete()
+        db.session.execute(
+            db.delete(Notification).where(Notification.user_id == user.id)
+        )
 
         # 3. Delete messages (bulk, no children)
-        Message.query.filter(
-            (Message.sender_id == user.id) | (Message.recipient_id == user.id)
-        ).delete()
+        db.session.execute(
+            db.delete(Message).where(
+                (Message.sender_id == user.id) | (Message.recipient_id == user.id)
+            )
+        )
 
         # 4. Delete workouts via ORM to trigger cascade → Exercise → Set
         for workout in user.workouts.all():
             db.session.delete(workout)
 
         # 5. Flush so Exercise rows are gone before deleting ExerciseDefinitions
-        db.session.flush()   
+        db.session.flush()
 
         # 6. Delete exercise definitions
-        ExerciseDefinition.query.filter_by(user_id=user.id).delete()
+        db.session.execute(
+            db.delete(ExerciseDefinition).where(ExerciseDefinition.user_id == user.id)
+        )
 
         # 7. Delete user and commit
         db.session.delete(user)
         db.session.commit()
-     
+
         logout_user()
         flash("Dein Konto wurde erfolgreich gelöscht.", "success")
         return redirect(url_for("main.index"))
-             
+
     return render_template(
         "auth/delete_account.html",
-            title="Konto löschen",
-            form=form,
+        title="Konto löschen",
+        form=form,
     )
+
 
 def save_picture(form_picture: FileStorage) -> str:
     random_hex = secrets.token_hex(8)
@@ -159,7 +180,7 @@ def save_picture(form_picture: FileStorage) -> str:
     )
 
     output_size = (125, 125)
-    i = Image.open(form_picture) # type: ignore[arg-type]
+    i = Image.open(form_picture)  # type: ignore[arg-type]
     i.thumbnail(output_size)
     i.save(picture_path)
 
@@ -209,7 +230,13 @@ def confirm_email(token: str) -> ResponseReturnValue:
         flash("Das Konto wurde bereits bestätigt. Bitte anmelden.", "success")
         return redirect(url_for("main.index"))
     email = confirm_token(token)
-    user = User.query.filter_by(email=current_user.email).first_or_404()
+    user = (
+        db.session.execute(db.select(User).filter_by(email=current_user.email))
+        .scalars()
+        .first()
+    )
+    if user is None:
+        abort(404)
     if user.email == email:
         user.confirmed = True
         user.confirmed_on = datetime.now(timezone.utc)
@@ -245,7 +272,11 @@ def resend_confirmation() -> ResponseReturnValue:
 def forgot() -> ResponseReturnValue:
     form = ResetPasswordRequestForm(request.form)
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = (
+            db.session.execute(db.select(User).filter_by(email=form.email.data))
+            .scalars()
+            .first()
+        )
         if user is not None:
             token = generate_confirmation_token(user.email)
 
@@ -268,12 +299,18 @@ def forgot() -> ResponseReturnValue:
 @bp.route("/forgot/new/<token>", methods=["GET", "POST"])
 def forgot_new(token: str) -> ResponseReturnValue:
     email = confirm_token(token)
-    user = User.query.filter_by(email=email).first_or_404()
+    user = db.session.execute(db.select(User).filter_by(email=email)).scalars().first()
+    if user is None:
+        abort(404)
 
     if user.password_reset_token is not None:
         form = ResetPasswordForm(request.form)
         if form.validate_on_submit():
-            user = User.query.filter_by(email=email).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(email=email))
+                .scalars()
+                .first()
+            )
             if user:
                 user.set_password(form.password.data)
                 user.password_reset_token = None
@@ -297,4 +334,3 @@ def forgot_new(token: str) -> ResponseReturnValue:
         )
 
     return redirect(url_for("main.index"))
-

@@ -2,7 +2,8 @@
 
 import pytest
 
-from flask import url_for, abort
+__all__ = ("pytest",)
+from flask import url_for
 
 from project import db
 
@@ -48,7 +49,7 @@ class TestErrorHandlers:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            workout = Workout.query.first()
+            workout = db.session.execute(db.select(Workout)).scalars().first()
             response = client.post(
                 url_for("main.delete_workout", workout_id=workout.id)
             )
@@ -65,7 +66,9 @@ class TestErrorHandlers:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = client.post(
                 url_for("main.delete_exercise", exercises_id=exercise.id)
             )
@@ -82,7 +85,9 @@ class TestErrorHandlers:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -113,6 +118,7 @@ class TestErrorHandlerContent:
 
     def test_500_error_page(self, app):
         """Test 500 error page renders correctly."""
+
         @app.route("/trigger-500")
         def trigger_500():
             raise Exception("Test internal server error")

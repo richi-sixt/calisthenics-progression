@@ -4,16 +4,19 @@ from datetime import datetime, timezone
 
 import pytest
 
+__all__ = ("pytest",)
+from sqlalchemy import func
+
 from project import db
 from project.models import (
-    User,
-    Workout,
     Exercise,
     ExerciseDefinition,
-    ProgressionLevel,
-    Set,
     Message,
     Notification,
+    ProgressionLevel,
+    Set,
+    User,
+    Workout,
     followers,
 )
 
@@ -24,28 +27,48 @@ class TestUserModel:
     def test_password_hashing(self, app, user):
         """Test that password hashing and verification works."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.check_password("password123") is True
             assert user.check_password("wrongpassword") is False
 
     def test_password_hash_is_not_plain_text(self, app, user):
         """Test that password is stored as hash, not plain text."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert user.password_hash != "password123"
             assert user.password_hash is not None
 
     def test_user_repr(self, app, user):
         """Test User string representation."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             assert repr(user) == "<User testuser>"
 
     def test_follow_user(self, app, user, second_user):
         """Test following another user."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             assert user1.is_following(user2) is False
 
@@ -58,8 +81,16 @@ class TestUserModel:
     def test_unfollow_user(self, app, user, second_user):
         """Test unfollowing a user."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             user1.follow(user2)
             db.session.commit()
@@ -72,8 +103,16 @@ class TestUserModel:
     def test_follow_idempotent(self, app, user, second_user):
         """Test that following same user twice doesn't duplicate."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             user1.follow(user2)
             user1.follow(user2)  # Follow again
@@ -84,8 +123,16 @@ class TestUserModel:
     def test_followed_workouts(self, app, user, second_user, workout):
         """Test getting workouts from followed users and self."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             # Create workout for second user
             workout2 = Workout(title="Second Workout", user_id=user2.id)
@@ -93,7 +140,7 @@ class TestUserModel:
             db.session.commit()
 
             # Before following, should only see own workouts
-            own_workouts = user1.followed_workouts().all()
+            own_workouts = db.session.execute(user1.followed_workouts()).scalars().all()
             assert len(own_workouts) == 1
             assert own_workouts[0].title == "Morning Workout"
 
@@ -101,14 +148,22 @@ class TestUserModel:
             user1.follow(user2)
             db.session.commit()
 
-            all_workouts = user1.followed_workouts().all()
+            all_workouts = db.session.execute(user1.followed_workouts()).scalars().all()
             assert len(all_workouts) == 2
 
     def test_new_messages_count(self, app, user, second_user):
         """Test counting unread messages."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             # Initially no unread messages
             assert user1.new_messages() == 0
@@ -133,7 +188,11 @@ class TestUserModel:
     def test_add_notification(self, app, user):
         """Test adding and updating notifications."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
 
             # Add notification
             notification = user.add_notification("unread_message_count", 5)
@@ -159,24 +218,55 @@ class TestWorkoutModel:
     def test_workout_repr(self, app, workout):
         """Test Workout string representation."""
         with app.app_context():
-            workout = Workout.query.filter_by(title="Morning Workout").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             assert repr(workout) == "<Workout Morning Workout>"
 
     def test_workout_cascade_delete(self, app, workout):
         """Test that deleting workout deletes exercises and sets."""
         with app.app_context():
-            workout = Workout.query.filter_by(title="Morning Workout").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             workout_id = workout.id
 
             # Verify exercises and sets exist
-            assert Exercise.query.filter_by(workout_id=workout_id).count() > 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Exercise)
+                    .where(Exercise.workout_id == workout_id)
+                ).scalar()
+                > 0
+            )
 
             db.session.delete(workout)
             db.session.commit()
 
             # Verify cascade delete
-            assert Workout.query.filter_by(id=workout_id).first() is None
-            assert Exercise.query.filter_by(workout_id=workout_id).count() == 0
+            assert (
+                db.session.execute(db.select(Workout).filter_by(id=workout_id))
+                .scalars()
+                .first()
+                is None
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Exercise)
+                    .where(Exercise.workout_id == workout_id)
+                ).scalar()
+                == 0
+            )
 
 
 class TestExercisesModel:
@@ -185,7 +275,13 @@ class TestExercisesModel:
     def test_exercises_repr(self, app, exercise_definition):
         """Test Exercises string representation."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert repr(ex) == "<ExerciseDefinition Push-ups>"
 
     def test_exercise_definition_with_explicit_date(self, app, user):
@@ -203,17 +299,28 @@ class TestExercisesModel:
 
             assert ex.date_created == custom_date
 
-
     def test_counting_type_defaults_to_reps(self, app, exercise_definition):
         """Test counting_type defaults to 'reps'."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert ex.counting_type == "reps"
 
     def test_counting_type_duration(self, app, duration_exercise_definition):
         """Test creating exercise definition with duration counting_type."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Plank").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             assert ex.counting_type == "duration"
 
     def test_counting_type_persists(self, app, user):
@@ -228,7 +335,13 @@ class TestExercisesModel:
             db.session.add(ex)
             db.session.commit()
 
-            fetched = ExerciseDefinition.query.filter_by(title="L-Sit").first()
+            fetched = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="L-Sit")
+                )
+                .scalars()
+                .first()
+            )
             assert fetched.counting_type == "duration"
 
 
@@ -245,16 +358,28 @@ class TestProgressionLevelModel:
             db.session.add(ex)
             db.session.flush()
 
-            levels_data = ["Knie-Liegestütze", "Normale Liegestütze", "Enge Liegestütze"]
+            levels_data = [
+                "Knie-Liegestütze",
+                "Normale Liegestütze",
+                "Enge Liegestütze",
+            ]
             for i, name in enumerate(levels_data, start=1):
-                db.session.add(ProgressionLevel(
-                    exercise_definition_id=ex.id,
-                    name=name,
-                    level_order=i,
-                ))
+                db.session.add(
+                    ProgressionLevel(
+                        exercise_definition_id=ex.id,
+                        name=name,
+                        level_order=i,
+                    )
+                )
             db.session.commit()
 
-            fetched = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            fetched = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             levels = fetched.progression_levels.all()
             assert len(levels) == 3
             assert levels[0].name == "Knie-Liegestütze"
@@ -273,26 +398,50 @@ class TestProgressionLevelModel:
             db.session.add(ex)
             db.session.flush()
 
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Easy", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Hard", level_order=2
-            ))
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Easy", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Hard", level_order=2
+                )
+            )
             db.session.commit()
             ex_id = ex.id
 
-            assert ProgressionLevel.query.filter_by(exercise_definition_id=ex_id).count() == 2
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(ProgressionLevel)
+                    .where(ProgressionLevel.exercise_definition_id == ex_id)
+                ).scalar()
+                == 2
+            )
 
             db.session.delete(ex)
             db.session.commit()
 
-            assert ProgressionLevel.query.filter_by(exercise_definition_id=ex_id).count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(ProgressionLevel)
+                    .where(ProgressionLevel.exercise_definition_id == ex_id)
+                ).scalar()
+                == 0
+            )
 
     def test_exercise_definition_without_levels(self, app, exercise_definition):
         """Test that progression_levels returns empty for an exercise with none defined."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert ex.progression_levels.count() == 0
 
     def test_exercise_definition_description_optional(self, app, user):
@@ -306,9 +455,15 @@ class TestProgressionLevelModel:
             db.session.add(ex)
             db.session.commit()
 
-            fetched = ExerciseDefinition.query.filter_by(
-                title="No Description Exercise"
-            ).first()
+            fetched = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(
+                        title="No Description Exercise"
+                    )
+                )
+                .scalars()
+                .first()
+            )
             assert fetched is not None
             assert fetched.description is None
 
@@ -319,21 +474,35 @@ class TestExerciseModel:
     def test_exercise_repr(self, app, workout):
         """Test Exercise string representation."""
         with app.app_context():
-            exercise = Exercise.query.first()
+            exercise = db.session.execute(db.select(Exercise)).scalars().first()
             assert "Order 1" in repr(exercise)
 
     def test_exercise_cascade_delete_sets(self, app, workout):
         """Test that deleting exercise deletes its sets."""
         with app.app_context():
-            exercise = Exercise.query.first()
+            exercise = db.session.execute(db.select(Exercise)).scalars().first()
             exercise_id = exercise.id
 
-            assert Set.query.filter_by(exercise_id=exercise_id).count() > 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Set)
+                    .where(Set.exercise_id == exercise_id)
+                ).scalar()
+                > 0
+            )
 
             db.session.delete(exercise)
             db.session.commit()
 
-            assert Set.query.filter_by(exercise_id=exercise_id).count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Set)
+                    .where(Set.exercise_id == exercise_id)
+                ).scalar()
+                == 0
+            )
 
 
 class TestSetModel:
@@ -342,14 +511,13 @@ class TestSetModel:
     def test_set_repr(self, app, workout):
         """Test Set string representation."""
         with app.app_context():
-            work_set = Set.query.first()
+            work_set = db.session.execute(db.select(Set)).scalars().first()
             assert "10 reps" in repr(work_set)
-
 
     def test_set_with_duration(self, app, duration_workout):
         """Test creating a set with duration instead of reps."""
         with app.app_context():
-            work_set = Set.query.first()
+            work_set = db.session.execute(db.select(Set)).scalars().first()
             assert work_set.duration == 90
             assert work_set.reps is None
 
@@ -424,8 +592,16 @@ class TestMessageModel:
     def test_message_repr(self, app, user, second_user):
         """Test Message string representation."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
 
             msg = Message(
                 sender_id=user1.id,
@@ -437,12 +613,19 @@ class TestMessageModel:
 
             assert repr(msg) == "<Message Test message>"
 
-
     def test_message_with_explicit_timestamp(self, app, user, second_user):
         """Test creating Message with explicit timestamp."""
         with app.app_context():
-            user1 = User.query.filter_by(username="testuser").first()
-            user2 = User.query.filter_by(username="seconduser").first()
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             custom_time = datetime(2024, 6, 1, 12, 0, 0)
 
             msg = Message(
@@ -463,7 +646,11 @@ class TestNotificationModel:
     def test_notification_repr(self, app, user):
         """Test Notification string representation."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             notification = user.add_notification("test_notification", {"key": "value"})
             db.session.commit()
 
@@ -472,7 +659,11 @@ class TestNotificationModel:
     def test_notification_get_data(self, app, user):
         """Test getting notification payload data."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             data = {"count": 5, "items": ["a", "b"]}
             notification = user.add_notification("complex_data", data)
             db.session.commit()
@@ -483,7 +674,11 @@ class TestNotificationModel:
     def test_notification_with_explicit_timestamp(self, app, user):
         """Test creating a Notification with an explicit timestamp."""
         with app.app_context():
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             n = Notification(name="timed", user=user, timestamp=123.456)
             db.session.add(n)
             db.session.commit()
@@ -497,40 +692,84 @@ class TestUserAccountDeletion:
     def test_delete_user_with_workouts_cascade(self, app, user, workout):
         """Test that ORM-deleting workouts cascades to exercises and sets, then user can be deleted."""
         with app.app_context():
-            u = User.query.filter_by(username="testuser").first()
+            u = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             user_id = u.id
 
             for w in u.workouts.all():
                 db.session.delete(w)
             db.session.flush()
 
-            ExerciseDefinition.query.filter_by(user_id=user_id).delete()
+            db.session.execute(
+                db.delete(ExerciseDefinition).where(
+                    ExerciseDefinition.user_id == user_id
+                )
+            )
             db.session.delete(u)
             db.session.commit()
 
             assert db.session.get(User, user_id) is None
-            assert Workout.query.filter_by(user_id=user_id).count() == 0
-            assert Exercise.query.count() == 0
-            assert Set.query.count() == 0
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Workout)
+                    .where(Workout.user_id == user_id)
+                ).scalar()
+                == 0
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count()).select_from(Exercise)
+                ).scalar()
+                == 0
+            )
+            assert (
+                db.session.execute(db.select(func.count()).select_from(Set)).scalar()
+                == 0
+            )
 
     def test_exercise_definition_deleted_after_workouts(self, app, user, workout):
         """Test that ExerciseDefinitions can be deleted after workouts (removes FK references via Exercise)."""
         with app.app_context():
-            u = User.query.filter_by(username="testuser").first()
+            u = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             for w in u.workouts.all():
                 db.session.delete(w)
             db.session.flush()
 
-            count = ExerciseDefinition.query.filter_by(user_id=u.id).delete()
+            result = db.session.execute(
+                db.delete(ExerciseDefinition).where(ExerciseDefinition.user_id == u.id)
+            )
             db.session.commit()
-            assert count >= 1
-            assert ExerciseDefinition.query.filter_by(user_id=u.id).count() == 0
+            assert result.rowcount >= 1
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(ExerciseDefinition)
+                    .where(ExerciseDefinition.user_id == u.id)
+                ).scalar()
+                == 0
+            )
 
     def test_follow_relationships_deleted_via_sql(self, app, user, second_user):
         """Test that follow relationships can be deleted via direct SQL on the association table."""
         with app.app_context():
-            u1 = User.query.filter_by(username="testuser").first()
-            u2 = User.query.filter_by(username="seconduser").first()
+            u1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            u2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             u1.follow(u2)
             u2.follow(u1)
             db.session.commit()

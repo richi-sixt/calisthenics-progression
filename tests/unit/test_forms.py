@@ -2,17 +2,17 @@
 
 import pytest
 
-from project import db
+__all__ = ("pytest",)
+
 from project.auth.forms import (
+    ChangePasswordForm,
+    EditProfileForm,
     LoginForm,
     RegistrationForm,
-    EditProfileForm,
-    ResetPasswordRequestForm,
     ResetPasswordForm,
-    ChangePasswordForm
+    ResetPasswordRequestForm,
 )
-from project.main.forms import MessageForm, CreateExerciseForm
-from project.models import User
+from project.main.forms import CreateExerciseForm, MessageForm
 
 
 class TestLoginForm:
@@ -168,7 +168,8 @@ class TestEditProfileForm:
                 data={
                     "username": "newusername",
                     "email": "test@example.com",
-                    "about_me": "",                },
+                    "about_me": "",
+                },
             )
             assert form.validate() is True
 

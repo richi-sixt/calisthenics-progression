@@ -1,32 +1,32 @@
+from datetime import datetime, timezone
+
 from flask import (
-    render_template,
-    flash,
-    redirect,
-    url_for,
-    request,
-    jsonify,
     abort,
     current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
-from datetime import datetime, timezone
-
 
 from project import db
+from project.decorators import check_confirmed
+from project.main import bp
+from project.main.forms import CreateExerciseForm, MessageForm
 from project.models import (
-    User,
-    Workout,
-    ExerciseDefinition,
     Exercise,
-    Set,
+    ExerciseDefinition,
     Message,
     Notification,
     ProgressionLevel,
+    Set,
+    User,
+    Workout,
 )
-from project.main import bp
-from project.main.forms import MessageForm, CreateExerciseForm
-from project.decorators import check_confirmed
 
 
 # helper functions
@@ -38,6 +38,7 @@ def before_request() -> None:
 
 
 # routes
+
 
 @bp.route("/", methods=["GET", "POST"])
 @bp.route("/index", methods=["GET", "POST"])
@@ -51,12 +52,13 @@ def index() -> ResponseReturnValue:
 @login_required
 def workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
-    workouts = (
-        Workout.query.filter_by(user_id=current_user.get_id())
-        .order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
-        .paginate(
-            page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
-        )
+    workouts = db.paginate(
+        db.select(Workout)
+        .filter_by(user_id=current_user.get_id())
+        .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
+        page=page,
+        per_page=current_app.config["WORKOUTS_PER_PAGE"],
+        error_out=False,
     )
     next_url = (
         url_for("main.index", page=workouts.next_num) if workouts.has_next else None
@@ -90,7 +92,9 @@ def add_workout() -> ResponseReturnValue:
 
         user = current_user
         workout = Workout(
-            timestamp=datetime.now(timezone.utc), user_id=user.id, title=request.form.get("wtitle", "")
+            timestamp=datetime.now(timezone.utc),
+            user_id=user.id,
+            title=request.form.get("wtitle", ""),
         )
         db.session.add(workout)
         db.session.flush()
@@ -116,15 +120,18 @@ def add_workout() -> ResponseReturnValue:
             db.session.add(exercise)  # Add exercise to session
             db.session.flush()  # flush() to generate the ID
 
-            progressions = request.form.getlist(
-                "progression" + str(exercise_num))
+            progressions = request.form.getlist("progression" + str(exercise_num))
 
             set_order = 1
             if exercise_def.counting_type == "duration":
                 durations = request.form.getlist("duration" + str(exercise_num))
                 for progression, dur in zip(progressions, durations):
                     parts = dur.split(":")
-                    total_seconds = int(parts[0]) * 60 + int(parts[1]) if len(parts) == 2 else int(dur)
+                    total_seconds = (
+                        int(parts[0]) * 60 + int(parts[1])
+                        if len(parts) == 2
+                        else int(dur)
+                    )
                     work_set = Set(
                         set_order=set_order,
                         exercise_id=exercise.id,
@@ -148,13 +155,27 @@ def add_workout() -> ResponseReturnValue:
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
-    other_exercises = ExerciseDefinition.query.filter(
-        ExerciseDefinition.user_id != current_user.id,
-        ExerciseDefinition.archived == False,  # noqa: E712 # type: ignore[arg-type]
-    ).order_by(ExerciseDefinition.title.asc()).all() # type: ignore[union-attr]
+    my_exercises = (
+        db.session.execute(
+            db.select(ExerciseDefinition).filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
+    other_exercises = (
+        db.session.execute(
+            db.select(ExerciseDefinition)
+            .filter(
+                ExerciseDefinition.user_id != current_user.id,
+                ExerciseDefinition.archived == False,  # noqa: E712
+            )
+            .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
     progression_map: dict[int, list[str]] = {}
-    for ex in my_exercises + other_exercises:
+    for ex in my_exercises + other_exercises:  # type: ignore[operator]
         progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
     return render_template(
         "add_workout.html",
@@ -172,13 +193,25 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
     if original is None:
         abort(404)
     if original.user_id == current_user.id:
-        return jsonify({"error": "Du kannst deine eigenen Übungen nicht kopieren."}), 400
+        return (
+            jsonify({"error": "Du kannst deine eigenen Übungen nicht kopieren."}),
+            400,
+        )
 
     # Generate a unique title by appending "(Kopie)" "(Kopie 2)" etc.
     base_title = original.title
     new_title = f"{base_title} (Kopie)"
     counter = 2
-    while ExerciseDefinition.query.filter_by(title=new_title, user_id=current_user.id).first() is not None:
+    while (
+        db.session.execute(
+            db.select(ExerciseDefinition).filter_by(
+                title=new_title, user_id=current_user.id
+            )
+        )
+        .scalars()
+        .first()
+        is not None
+    ):
         new_title = f"{base_title} (Kopie {counter})"
         counter += 1
 
@@ -193,21 +226,26 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
 
     original_levels = original.progression_levels.all()
     for pl in original_levels:
-        db.session.add(ProgressionLevel(
-            exercise_definition_id=copied.id,
-            name=pl.name,
-            level_order=pl.level_order,
-        ))
+        db.session.add(
+            ProgressionLevel(
+                exercise_definition_id=copied.id,
+                name=pl.name,
+                level_order=pl.level_order,
+            )
+        )
     db.session.commit()
 
-    return jsonify({
-        "success": True,
-        "id": copied.id,
-        "title": copied.title,
-        "username": current_user.username,
-        "counting_type": copied.counting_type,
-        "progression_levels": [pl.name for pl in original_levels],
-    })
+    return jsonify(
+        {
+            "success": True,
+            "id": copied.id,
+            "title": copied.title,
+            "username": current_user.username,
+            "counting_type": copied.counting_type,
+            "progression_levels": [pl.name for pl in original_levels],
+        }
+    )
+
 
 @bp.route("/workout/<int:workout_id>")
 @login_required
@@ -290,7 +328,11 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
                 durations = request.form.getlist("duration" + str(exercise_num))
                 for progression, dur in zip(progressions, durations):
                     parts = dur.split(":")
-                    total_seconds = int(parts[0]) * 60 + int(parts[1]) if len(parts) == 2 else int(dur)
+                    total_seconds = (
+                        int(parts[0]) * 60 + int(parts[1])
+                        if len(parts) == 2
+                        else int(dur)
+                    )
                     work_set = Set(
                         set_order=set_order,
                         exercise_id=exercise.id,
@@ -316,14 +358,28 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         return redirect(url_for("main.workout", workout_id=workout.id))
 
     # GET: build prefill data and exercise lists
-    my_exercises = ExerciseDefinition.query.filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc()).all()  # type: ignore[union-attr]
-    other_exercises = ExerciseDefinition.query.filter(
-        ExerciseDefinition.user_id != current_user.id,
-        ExerciseDefinition.archived == False,  # noqa: E712  # type: ignore[arg-type]
-    ).order_by(ExerciseDefinition.title.asc()).all()  # type: ignore[union-attr]
+    my_exercises = (
+        db.session.execute(
+            db.select(ExerciseDefinition).filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
+    other_exercises = (
+        db.session.execute(
+            db.select(ExerciseDefinition)
+            .filter(
+                ExerciseDefinition.user_id != current_user.id,
+                ExerciseDefinition.archived == False,  # noqa: E712
+            )
+            .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
 
     progression_map: dict[int, list[str]] = {}
-    for ex in my_exercises + other_exercises:
+    for ex in my_exercises + other_exercises:  # type: ignore[operator]
         progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
 
     prefill = [
@@ -338,7 +394,7 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
                 for s in ex.sets.order_by(Set.set_order).all()
             ],
         }
-        for ex in workout.exercises.order_by(Exercise.exercise_order).all()
+        for ex in workout.exercises.order_by(Exercise.exercise_order).all()  # type: ignore[misc, operator]
     ]
 
     return render_template(
@@ -351,6 +407,7 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         prefill=prefill,
     )
 
+
 @bp.route("/add_exercise", methods=["GET", "POST"])
 @login_required
 @check_confirmed
@@ -358,9 +415,15 @@ def add_exercise() -> str | ResponseReturnValue:
     form = CreateExerciseForm()
     if form.validate_on_submit():
         # check for duplicates (user scope)
-        existing = ExerciseDefinition.query.filter_by(
-            title=form.title.data, user_id=current_user.id
-        ).first()
+        existing = (
+            db.session.execute(
+                db.select(ExerciseDefinition).filter_by(
+                    title=form.title.data, user_id=current_user.id
+                )
+            )
+            .scalars()
+            .first()
+        )
         if existing:
             flash("Du hast bereits eine Übung mit diesem Namen.", "warning")
         else:
@@ -375,11 +438,13 @@ def add_exercise() -> str | ResponseReturnValue:
             raw_levels = request.form.get("progressions", "")
             levels = [line.strip() for line in raw_levels.splitlines() if line.strip()]
             for i, name in enumerate(levels, start=1):
-                db.session.add(ProgressionLevel(
-                    exercise_definition_id=exercise.id,
-                    name=name,
-                    level_order=i,
-                ))
+                db.session.add(
+                    ProgressionLevel(
+                        exercise_definition_id=exercise.id,
+                        name=name,
+                        level_order=i,
+                    )
+                )
             db.session.commit()
             flash("Deine Übung wurde erstellt!", "success")
             return redirect(url_for("main.all_exercises"))
@@ -403,8 +468,11 @@ def exercise(exercises_id: int) -> ResponseReturnValue:
 @check_confirmed
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
-    exercises = ExerciseDefinition.query.filter_by(archived=False).order_by(ExerciseDefinition.title.asc()).paginate( # type: ignore[umion-attr]
-        page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
+    exercises = db.paginate(
+        db.select(ExerciseDefinition).filter_by(archived=False).order_by(ExerciseDefinition.title.asc()),  # type: ignore[union-attr]
+        page=page,
+        per_page=current_app.config["WORKOUTS_PER_PAGE"],
+        error_out=False,
     )
     next_url = (
         url_for("main.index", page=exercises.next_num) if exercises.has_next else None
@@ -433,24 +501,36 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
     form = CreateExerciseForm()
     if form.validate_on_submit():
         # Add a duplicate check before commiting
-        existing = ExerciseDefinition.query.filter_by(
-            title=form.title.data, user_id=current_user.id
-        ).first()
+        existing = (
+            db.session.execute(
+                db.select(ExerciseDefinition).filter_by(
+                    title=form.title.data, user_id=current_user.id
+                )
+            )
+            .scalars()
+            .first()
+        )
         if existing and existing.id != exercise.id:
             flash("Du hast bereits eine Übung mit diesem Namen", "warning")
         else:
             exercise.title = form.title.data
             exercise.description = form.description.data or None
             exercise.counting_type = form.counting_type.data
-            ProgressionLevel.query.filter_by(exercise_definition_id=exercise.id).delete()
+            db.session.execute(
+                db.delete(ProgressionLevel).where(
+                    ProgressionLevel.exercise_definition_id == exercise.id
+                )
+            )
             raw_levels = request.form.get("progressions", "")
             levels = [line.strip() for line in raw_levels.splitlines() if line.strip()]
             for i, name in enumerate(levels, start=1):
-                db.session.add(ProgressionLevel(
-                    exercise_definition_id=exercise.id,
-                    name=name,
-                    level_order=i,
-                ))
+                db.session.add(
+                    ProgressionLevel(
+                        exercise_definition_id=exercise.id,
+                        name=name,
+                        level_order=i,
+                    )
+                )
             db.session.commit()
             flash("Deine Übung wurde geändert", "success")
             return redirect(url_for("main.exercise", exercises_id=exercise.id))
@@ -490,21 +570,18 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
 @check_confirmed
 def explore() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
-    workouts = (
-        Workout.query.filter(Workout.user_id != current_user.id)
-        .order_by(Workout.timestamp.desc()) # type: ignore[union-attr]
-        .paginate(
-            page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
-        )
+    workouts = db.paginate(
+        db.select(Workout).filter(Workout.user_id != current_user.id).order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
+        page=page,
+        per_page=current_app.config["WORKOUTS_PER_PAGE"],
+        error_out=False,
     )
 
     next_url = (
-        url_for("main.explore",
-                page=workouts.next_num) if workouts.has_next else None
+        url_for("main.explore", page=workouts.next_num) if workouts.has_next else None
     )
     prev_url = (
-        url_for("main.explore",
-                page=workouts.prev_num) if workouts.has_prev else None
+        url_for("main.explore", page=workouts.prev_num) if workouts.has_prev else None
     )
     return render_template(
         "explore.html",
@@ -519,9 +596,15 @@ def explore() -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def user(username: str) -> ResponseReturnValue:
-    user = User.query.filter_by(username=username).first_or_404()
+    user = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if user is None:
+        abort(404)
     page = request.args.get("page", 1, type=int)
-    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate( #type: ignore[union-attr]
+    workouts = user.workouts.order_by(Workout.timestamp.desc()).paginate(  # type: ignore[union-attr]
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
@@ -549,7 +632,11 @@ def user(username: str) -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def follow(username: str) -> ResponseReturnValue:
-    user = User.query.filter_by(username=username).first()
+    user = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
     if user is None:
         flash("Benutzer {} konnte nicht gefunden werden.".format(username))
         return redirect(url_for("main.index"))
@@ -566,7 +653,11 @@ def follow(username: str) -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def unfollow(username: str) -> ResponseReturnValue:
-    user = User.query.filter_by(username=username).first()
+    user = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
     if user is None:
         flash("Benutzer {} konnte nicht gefunden werden.".format(username))
         return redirect(url_for("main.index"))
@@ -588,17 +679,15 @@ def messages() -> ResponseReturnValue:
     db.session.commit()
     page = request.args.get("page", 1, type=int)
     messages = current_user.messages_received.order_by(
-        Message.timestamp.desc() # type: ignore[union-attr]
+        Message.timestamp.desc()  # type: ignore[union-attr]
     ).paginate(
         page=page, per_page=current_app.config["WORKOUTS_PER_PAGE"], error_out=False
     )
     next_url = (
-        url_for("main.messages",
-                page=messages.next_num) if messages.has_next else None
+        url_for("main.messages", page=messages.next_num) if messages.has_next else None
     )
     prev_url = (
-        url_for("main.messages",
-                page=messages.prev_num) if messages.has_prev else None
+        url_for("main.messages", page=messages.prev_num) if messages.has_prev else None
     )
     return render_template(
         "messages.html", messages=messages.items, next_url=next_url, prev_url=prev_url
@@ -609,11 +698,18 @@ def messages() -> ResponseReturnValue:
 @login_required
 @check_confirmed
 def send_message(recipient: str) -> ResponseReturnValue:
-    user = User.query.filter_by(username=recipient).first_or_404()
+    user = (
+        db.session.execute(db.select(User).filter_by(username=recipient))
+        .scalars()
+        .first()
+    )
+    if user is None:
+        abort(404)
     form = MessageForm()
     if form.validate_on_submit():
-        msg = Message(sender_id=current_user.id, recipient_id=user.id,
-                      body=form.message.data)
+        msg = Message(
+            sender_id=current_user.id, recipient_id=user.id, body=form.message.data
+        )
         db.session.add(msg)
         user.add_notification("unread_message_count", user.new_messages())
         db.session.commit()
@@ -631,7 +727,10 @@ def notifications() -> ResponseReturnValue:
     since = request.args.get("since", 0.0, type=float)
     notifications = current_user.notifications.filter(
         Notification.timestamp > since
-        ).order_by(Notification.timestamp.asc()) # type: ignore[arg-type]
+    ).order_by(
+        Notification.timestamp.asc()
+    )  # type: ignore[arg-type]
+
     return jsonify(
         [
             {"name": n.name, "data": n.get_data(), "timestamp": n.timestamp}

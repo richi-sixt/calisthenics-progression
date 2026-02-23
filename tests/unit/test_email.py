@@ -1,8 +1,8 @@
 """Unit tests for project/email.py async email sending."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from project.email import send_email, send_async_email
+from project.email import send_async_email, send_email
 
 
 class TestSendEmail:

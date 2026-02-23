@@ -5,5 +5,6 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Import and create app
-from project import create_app
+from project import create_app  # noqa: E402
+
 application = create_app()

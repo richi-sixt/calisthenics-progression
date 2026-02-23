@@ -2,10 +2,20 @@
 
 import pytest
 
+__all__ = ("pytest",)
 from flask import url_for
+from sqlalchemy import func
 
 from project import db
-from project.models import User, Workout, ExerciseDefinition, Exercise, Set, Message, ProgressionLevel
+from project.models import (
+    Exercise,
+    ExerciseDefinition,
+    Message,
+    ProgressionLevel,
+    Set,
+    User,
+    Workout,
+)
 
 
 class TestIndexRoute:
@@ -48,10 +58,8 @@ class TestWorkoutsRoute:
     def test_workout_detail_page(self, auth_client, workout, app):
         """Test workout detail page renders."""
         with app.app_context():
-            workout = Workout.query.first()
-            response = auth_client.get(
-                url_for("main.workout", workout_id=workout.id)
-            )
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
             assert response.status_code == 200
             assert b"Morning Workout" in response.data
 
@@ -70,7 +78,9 @@ class TestWorkoutsRoute:
     def test_add_workout_creates_workout(self, auth_client, app, exercise_definition):
         """Test creating a new workout."""
         with app.app_context():
-            exercise_def = ExerciseDefinition.query.first()
+            exercise_def = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = auth_client.post(
                 url_for("main.add_workout"),
                 data={
@@ -85,13 +95,19 @@ class TestWorkoutsRoute:
             assert response.status_code == 200
 
             # Verify workout was created
-            workout = Workout.query.filter_by(title="New Test Workout").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="New Test Workout")
+                )
+                .scalars()
+                .first()
+            )
             assert workout is not None
 
     def test_delete_workout_own(self, auth_client, workout, app):
         """Test user can delete their own workout."""
         with app.app_context():
-            workout = Workout.query.first()
+            workout = db.session.execute(db.select(Workout)).scalars().first()
             workout_id = workout.id
             response = auth_client.post(
                 url_for("main.delete_workout", workout_id=workout_id),
@@ -100,7 +116,12 @@ class TestWorkoutsRoute:
             assert response.status_code == 200
 
             # Verify workout was deleted
-            assert Workout.query.filter_by(id=workout_id).first() is None
+            assert (
+                db.session.execute(db.select(Workout).filter_by(id=workout_id))
+                .scalars()
+                .first()
+                is None
+            )
 
     def test_delete_workout_others_forbidden(self, client, workout, second_user, app):
         """Test user cannot delete another user's workout."""
@@ -110,7 +131,7 @@ class TestWorkoutsRoute:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            workout = Workout.query.first()
+            workout = db.session.execute(db.select(Workout)).scalars().first()
             response = client.post(
                 url_for("main.delete_workout", workout_id=workout.id),
             )
@@ -202,14 +223,22 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was created
-            exercise = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
+            exercise = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Pull-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert exercise is not None
             assert exercise.description == "Standard pull-up exercise for back."
 
     def test_exercise_detail_page(self, auth_client, exercise_definition, app):
         """Test exercise detail page renders."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = auth_client.get(
                 url_for("main.exercise", exercises_id=exercise.id)
             )
@@ -219,7 +248,9 @@ class TestExercisesRoute:
     def test_update_exercise_page_renders(self, auth_client, exercise_definition, app):
         """Test update exercise page renders."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = auth_client.get(
                 url_for("main.update_exercise", exercises_id=exercise.id)
             )
@@ -228,7 +259,9 @@ class TestExercisesRoute:
     def test_update_exercise(self, auth_client, exercise_definition, app):
         """Test updating an exercise."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = auth_client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -240,7 +273,13 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was updated
-            exercise = ExerciseDefinition.query.filter_by(title="Updated Push-ups").first()
+            exercise = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Updated Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert exercise is not None
 
     def test_update_exercise_others_forbidden(
@@ -252,7 +291,9 @@ class TestExercisesRoute:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = client.post(
                 url_for("main.update_exercise", exercises_id=exercise.id),
                 data={
@@ -265,7 +306,9 @@ class TestExercisesRoute:
     def test_delete_exercise_own(self, auth_client, exercise_definition, app):
         """Test user can archive their own exercise."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             exercise_id = exercise.id
             response = auth_client.post(
                 url_for("main.delete_exercise", exercises_id=exercise_id),
@@ -274,7 +317,13 @@ class TestExercisesRoute:
             assert response.status_code == 200
 
             # Verify exercise was archived, not deleted
-            exercise = ExerciseDefinition.query.filter_by(id=exercise_id).first()
+            exercise = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(id=exercise_id)
+                )
+                .scalars()
+                .first()
+            )
             assert exercise is not None
             assert exercise.archived is True
 
@@ -287,16 +336,22 @@ class TestExercisesRoute:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = client.post(
                 url_for("main.delete_exercise", exercises_id=exercise.id),
             )
             assert response.status_code == 403
 
-    def test_archived_exercise_not_in_add_workout(self, auth_client, exercise_definition, app):
+    def test_archived_exercise_not_in_add_workout(
+        self, auth_client, exercise_definition, app
+    ):
         """Test archived exercises don't appear in add_workout dropdown."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             exercise.archived = True
             db.session.commit()
 
@@ -304,10 +359,14 @@ class TestExercisesRoute:
             assert response.status_code == 200
             assert exercise.title.encode() not in response.data
 
-    def test_archived_exercise_not_in_exercises_list(self, auth_client, exercise_definition, app):
+    def test_archived_exercise_not_in_exercises_list(
+        self, auth_client, exercise_definition, app
+    ):
         """Test archived exercises don't appear in exercises list."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             exercise.archived = True
             db.session.commit()
 
@@ -318,8 +377,12 @@ class TestExercisesRoute:
     def test_archived_exercise_keeps_workout_reference(self, auth_client, workout, app):
         """Test archiving an exercise definition preserves workout references."""
         with app.app_context():
-            exercise_def = ExerciseDefinition.query.first()
-            exercise_instance = Exercise.query.first()
+            exercise_def = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
+            exercise_instance = (
+                db.session.execute(db.select(Exercise)).scalars().first()
+            )
             assert exercise_instance.exercise_definition_id == exercise_def.id
 
             # Archive the definition
@@ -327,7 +390,9 @@ class TestExercisesRoute:
             db.session.commit()
 
             # Exercise instance still references the definition
-            exercise_instance = Exercise.query.first()
+            exercise_instance = (
+                db.session.execute(db.select(Exercise)).scalars().first()
+            )
             assert exercise_instance is not None
             assert exercise_instance.exercise_definition_id == exercise_def.id
 
@@ -362,7 +427,11 @@ class TestExercisesRoute:
             )
             db.session.add(ex)
             # Create existing copy with "(Kopie)" title owned by current user
-            user = User.query.filter_by(username="testuser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
             existing_copy = ExerciseDefinition(
                 title="Dips (Kopie)",
                 description="Parallel bar dips",
@@ -390,7 +459,7 @@ class TestExercisesRoute:
     def test_copy_own_exercise_fails(self, auth_client, exercise_definition, app):
         """Test copying own exercise returns 400 error."""
         with app.app_context():
-            ex = ExerciseDefinition.query.first()
+            ex = db.session.execute(db.select(ExerciseDefinition)).scalars().first()
             response = auth_client.post(
                 url_for("main.copy_exercise", exercises_id=ex.id)
             )
@@ -428,7 +497,13 @@ class TestExercisesRoute:
             )
             assert response.status_code == 200
 
-            exercise = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
+            exercise = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Pull-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert exercise is not None
             assert exercise.counting_type == "reps"
 
@@ -446,14 +521,22 @@ class TestExercisesRoute:
             )
             assert response.status_code == 200
 
-            exercise = ExerciseDefinition.query.filter_by(title="Plank").first()
+            exercise = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             assert exercise is not None
             assert exercise.counting_type == "duration"
 
     def test_update_exercise_counting_type(self, auth_client, exercise_definition, app):
         """Test updating exercise counting_type from reps to duration."""
         with app.app_context():
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             assert exercise.counting_type == "reps"
 
             response = auth_client.post(
@@ -467,7 +550,9 @@ class TestExercisesRoute:
             )
             assert response.status_code == 200
 
-            exercise = ExerciseDefinition.query.first()
+            exercise = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             assert exercise.counting_type == "duration"
 
     def test_update_exercise_preserves_counting_type_on_get(
@@ -490,7 +575,7 @@ class TestExercisesRoute:
             assert response.status_code == 200
             # The duration radio button should be checked
             html = response.get_data(as_text=True)
-            assert 'checked' in html
+            assert "checked" in html
             assert 'value="duration"' in html
 
     def test_copy_exercise_preserves_counting_type(self, auth_client, second_user, app):
@@ -514,10 +599,20 @@ class TestExercisesRoute:
             assert data["counting_type"] == "duration"
 
             # Verify the copied exercise has duration counting_type
-            user = User.query.filter_by(username="testuser").first()
-            copied = ExerciseDefinition.query.filter_by(
-                user_id=user.id, counting_type="duration"
-            ).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            copied = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(
+                        user_id=user.id, counting_type="duration"
+                    )
+                )
+                .scalars()
+                .first()
+            )
             assert copied is not None
 
     def test_add_exercise_form_shows_counting_type(self, auth_client, app):
@@ -538,7 +633,13 @@ class TestWorkoutWithDuration:
     ):
         """Test creating a workout with a duration-based exercise."""
         with app.app_context():
-            exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            exercise_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.add_workout"),
                 data={
@@ -552,11 +653,25 @@ class TestWorkoutWithDuration:
             )
             assert response.status_code == 200
 
-            workout = Workout.query.filter_by(title="Duration Test Workout").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Duration Test Workout")
+                )
+                .scalars()
+                .first()
+            )
             assert workout is not None
 
-            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
-            work_set = Set.query.filter_by(exercise_id=exercise.id).first()
+            exercise = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=workout.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(db.select(Set).filter_by(exercise_id=exercise.id))
+                .scalars()
+                .first()
+            )
             assert work_set.duration == 90
             assert work_set.reps is None
 
@@ -565,7 +680,9 @@ class TestWorkoutWithDuration:
     ):
         """Test creating a workout with a reps-based exercise still works."""
         with app.app_context():
-            exercise_def = ExerciseDefinition.query.first()
+            exercise_def = (
+                db.session.execute(db.select(ExerciseDefinition)).scalars().first()
+            )
             response = auth_client.post(
                 url_for("main.add_workout"),
                 data={
@@ -579,11 +696,25 @@ class TestWorkoutWithDuration:
             )
             assert response.status_code == 200
 
-            workout = Workout.query.filter_by(title="Reps Test Workout").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Reps Test Workout")
+                )
+                .scalars()
+                .first()
+            )
             assert workout is not None
 
-            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
-            work_set = Set.query.filter_by(exercise_id=exercise.id).first()
+            exercise = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=workout.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(db.select(Set).filter_by(exercise_id=exercise.id))
+                .scalars()
+                .first()
+            )
             assert work_set.reps == 12
             assert work_set.duration is None
 
@@ -592,7 +723,13 @@ class TestWorkoutWithDuration:
     ):
         """Test creating a workout with multiple duration sets."""
         with app.app_context():
-            exercise_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            exercise_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.add_workout"),
                 data={
@@ -606,11 +743,29 @@ class TestWorkoutWithDuration:
             )
             assert response.status_code == 200
 
-            workout = Workout.query.filter_by(title="Multi Set Duration").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Multi Set Duration")
+                )
+                .scalars()
+                .first()
+            )
             assert workout is not None
 
-            exercise = Exercise.query.filter_by(workout_id=workout.id).first()
-            sets = Set.query.filter_by(exercise_id=exercise.id).order_by(Set.set_order).all()
+            exercise = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=workout.id))
+                .scalars()
+                .first()
+            )
+            sets = (
+                db.session.execute(
+                    db.select(Set)
+                    .filter_by(exercise_id=exercise.id)
+                    .order_by(Set.set_order)
+                )
+                .scalars()
+                .all()
+            )
             assert len(sets) == 2
             assert sets[0].duration == 30
             assert sets[1].duration == 60
@@ -618,10 +773,14 @@ class TestWorkoutWithDuration:
     def test_workout_detail_shows_duration(self, auth_client, duration_workout, app):
         """Test workout detail page displays duration instead of reps."""
         with app.app_context():
-            workout = Workout.query.filter_by(title="Duration Workout").first()
-            response = auth_client.get(
-                url_for("main.workout", workout_id=workout.id)
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Duration Workout")
+                )
+                .scalars()
+                .first()
             )
+            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
             assert response.status_code == 200
             assert b"Dauer:" in response.data
             assert b"01:30" in response.data
@@ -631,10 +790,14 @@ class TestWorkoutWithDuration:
     def test_workout_detail_shows_reps(self, auth_client, workout, app):
         """Test workout detail page displays reps for reps-based exercises."""
         with app.app_context():
-            workout = Workout.query.filter_by(title="Morning Workout").first()
-            response = auth_client.get(
-                url_for("main.workout", workout_id=workout.id)
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
             )
+            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
             assert response.status_code == 200
             assert b"Reps:" in response.data
             # Should NOT show "Dauer:" for a reps exercise
@@ -649,6 +812,7 @@ class TestWorkoutWithDuration:
             assert response.status_code == 200
             assert b"data-counting-type" in response.data
 
+
 class TestFollowRoutes:
     """Tests for follow/unfollow routes."""
 
@@ -662,16 +826,32 @@ class TestFollowRoutes:
             assert response.status_code == 200
 
             # Verify follow relationship
-            user = User.query.filter_by(username="testuser").first()
-            second = User.query.filter_by(username="seconduser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            second = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             assert user.is_following(second) is True
 
     def test_unfollow_user(self, auth_client, second_user, app):
         """Test unfollowing a user."""
         with app.app_context():
             # First follow
-            user = User.query.filter_by(username="testuser").first()
-            second = User.query.filter_by(username="seconduser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            second = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             user.follow(second)
             db.session.commit()
 
@@ -682,8 +862,16 @@ class TestFollowRoutes:
             assert response.status_code == 200
 
             # Verify unfollow
-            user = User.query.filter_by(username="testuser").first()
-            second = User.query.filter_by(username="seconduser").first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            second = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
             assert user.is_following(second) is False
 
     def test_follow_self_fails(self, auth_client, app):
@@ -774,7 +962,13 @@ class TestMessageRoutes:
             assert response.status_code == 200
 
             # Verify message was sent
-            message = Message.query.filter_by(body="Hello, second user!").first()
+            message = (
+                db.session.execute(
+                    db.select(Message).filter_by(body="Hello, second user!")
+                )
+                .scalars()
+                .first()
+            )
             assert message is not None
 
     def test_send_message_to_nonexistent_user(self, auth_client, app):
@@ -795,9 +989,7 @@ class TestExploreRoute:
             response = auth_client.get(url_for("main.explore"))
             assert response.status_code == 200
 
-    def test_explore_shows_other_users_workouts(
-        self, auth_client, second_user, app
-    ):
+    def test_explore_shows_other_users_workouts(self, auth_client, second_user, app):
         """Test explore shows workouts from other users."""
         with app.app_context():
             # Create workout for second user
@@ -826,9 +1018,7 @@ class TestNotificationsRoute:
     def test_notifications_with_since_param(self, auth_client, app):
         """Test notifications with since parameter."""
         with app.app_context():
-            response = auth_client.get(
-                url_for("main.notifications") + "?since=0"
-            )
+            response = auth_client.get(url_for("main.notifications") + "?since=0")
             assert response.status_code == 200
             data = response.get_json()
             assert isinstance(data, list)
@@ -852,7 +1042,13 @@ class TestProgressionLevels:
             )
             assert response.status_code == 200
 
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             assert ex is not None
             levels = ex.progression_levels.all()
             assert len(levels) == 3
@@ -875,7 +1071,13 @@ class TestProgressionLevels:
             )
             assert response.status_code == 200
 
-            ex = ExerciseDefinition.query.filter_by(title="Plank").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             assert ex is not None
             assert ex.progression_levels.count() == 0
 
@@ -892,7 +1094,13 @@ class TestProgressionLevels:
             )
             assert response.status_code == 200
 
-            ex = ExerciseDefinition.query.filter_by(title="No Desc Exercise").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="No Desc Exercise")
+                )
+                .scalars()
+                .first()
+            )
             assert ex is not None
             assert ex.description is None
 
@@ -901,15 +1109,25 @@ class TestProgressionLevels:
     ):
         """Test that updating an exercise replaces all existing progression levels."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
 
             # First, add some initial levels
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Easy", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Hard", level_order=2
-            ))
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Easy", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Hard", level_order=2
+                )
+            )
             db.session.commit()
             assert ex.progression_levels.count() == 2
 
@@ -926,7 +1144,13 @@ class TestProgressionLevels:
             )
             assert response.status_code == 200
 
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             levels = ex.progression_levels.all()
             assert len(levels) == 2
             assert levels[0].name == "Anfänger"
@@ -937,13 +1161,23 @@ class TestProgressionLevels:
     ):
         """Test that the update exercise GET request pre-fills progression levels."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Level 1", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Level 2", level_order=2
-            ))
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Level 1", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Level 2", level_order=2
+                )
+            )
             db.session.commit()
 
             response = auth_client.get(
@@ -966,12 +1200,16 @@ class TestProgressionLevels:
             )
             db.session.add(ex)
             db.session.flush()
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Shallow", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Deep", level_order=2
-            ))
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Shallow", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Deep", level_order=2
+                )
+            )
             db.session.commit()
 
             response = auth_client.post(
@@ -983,11 +1221,21 @@ class TestProgressionLevels:
             assert data["progression_levels"] == ["Shallow", "Deep"]
 
             # Verify in DB
-            user = User.query.filter_by(username="testuser").first()
-            copied = ExerciseDefinition.query.filter(
-                ExerciseDefinition.user_id == user.id,
-                ExerciseDefinition.title.contains("Squats"),
-            ).first()
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            copied = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).where(
+                        ExerciseDefinition.user_id == user.id,
+                        ExerciseDefinition.title.contains("Squats"),
+                    )
+                )
+                .scalars()
+                .first()
+            )
             assert copied is not None
             copied_levels = copied.progression_levels.all()
             assert len(copied_levels) == 2
@@ -999,13 +1247,23 @@ class TestProgressionLevels:
     ):
         """Test that add_workout GET response includes progressionMap JSON."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Easy", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Hard", level_order=2
-            ))
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Easy", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Hard", level_order=2
+                )
+            )
             db.session.commit()
 
             response = auth_client.get(url_for("main.add_workout"))
@@ -1020,10 +1278,18 @@ class TestProgressionLevels:
     ):
         """Test that a workout is saved correctly with a progression value selected from a dropdown."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Knee Push-ups", level_order=1
-            ))
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Knee Push-ups", level_order=1
+                )
+            )
             db.session.commit()
 
             response = auth_client.post(
@@ -1039,10 +1305,26 @@ class TestProgressionLevels:
             )
             assert response.status_code == 200
 
-            workout = Workout.query.filter_by(title="Progression Dropdown Test").first()
+            workout = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Progression Dropdown Test")
+                )
+                .scalars()
+                .first()
+            )
             assert workout is not None
-            exercise_inst = Exercise.query.filter_by(workout_id=workout.id).first()
-            work_set = Set.query.filter_by(exercise_id=exercise_inst.id).first()
+            exercise_inst = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=workout.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(
+                    db.select(Set).filter_by(exercise_id=exercise_inst.id)
+                )
+                .scalars()
+                .first()
+            )
             assert work_set.progression == "Knee Push-ups"
 
     def test_exercise_detail_shows_progression_levels(
@@ -1050,18 +1332,26 @@ class TestProgressionLevels:
     ):
         """Test that the exercise detail page shows progression levels."""
         with app.app_context():
-            ex = ExerciseDefinition.query.filter_by(title="Push-ups").first()
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Easy", level_order=1
-            ))
-            db.session.add(ProgressionLevel(
-                exercise_definition_id=ex.id, name="Medium", level_order=2
-            ))
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Easy", level_order=1
+                )
+            )
+            db.session.add(
+                ProgressionLevel(
+                    exercise_definition_id=ex.id, name="Medium", level_order=2
+                )
+            )
             db.session.commit()
 
-            response = auth_client.get(
-                url_for("main.exercise", exercises_id=ex.id)
-            )
+            response = auth_client.get(url_for("main.exercise", exercises_id=ex.id))
             assert response.status_code == 200
             html = response.get_data(as_text=True)
             assert "Progressionsstufen" in html
@@ -1075,14 +1365,26 @@ class TestEditWorkout:
     def test_edit_workout_page_renders(self, auth_client, workout, app):
         """Test that the edit workout GET page renders successfully."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
             assert response.status_code == 200
 
     def test_edit_workout_page_prefills_title(self, auth_client, workout, app):
         """Test that the edit workout page pre-fills the workout title."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
             html = response.get_data(as_text=True)
             assert "Morning Workout" in html
@@ -1091,7 +1393,13 @@ class TestEditWorkout:
     def test_edit_workout_page_prefills_sets(self, auth_client, workout, app):
         """Test that the edit page includes the existing set data in the prefill JSON."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
             html = response.get_data(as_text=True)
             # prefill JSON should appear in the page
@@ -1102,31 +1410,53 @@ class TestEditWorkout:
     def test_edit_workout_requires_login(self, client, workout, app):
         """Test that the edit workout page requires authentication."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = client.get(
                 url_for("main.edit_workout", workout_id=w.id),
                 follow_redirects=False,
             )
             assert response.status_code == 302
 
-    def test_edit_workout_requires_confirmation(self, unconfirmed_auth_client, workout, app):
+    def test_edit_workout_requires_confirmation(
+        self, unconfirmed_auth_client, workout, app
+    ):
         """Test that an unconfirmed user is redirected away from edit workout."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = unconfirmed_auth_client.get(
                 url_for("main.edit_workout", workout_id=w.id),
                 follow_redirects=False,
             )
             assert response.status_code == 302
 
-    def test_edit_workout_forbidden_for_other_user(self, client, workout, second_user, app):
+    def test_edit_workout_forbidden_for_other_user(
+        self, client, workout, second_user, app
+    ):
         """Test that another user cannot edit someone else's workout."""
         with app.app_context():
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = client.get(url_for("main.edit_workout", workout_id=w.id))
             assert response.status_code == 403
 
@@ -1136,11 +1466,25 @@ class TestEditWorkout:
             response = auth_client.get(url_for("main.edit_workout", workout_id=99999))
             assert response.status_code == 404
 
-    def test_edit_workout_updates_title(self, auth_client, workout, exercise_definition, app):
+    def test_edit_workout_updates_title(
+        self, auth_client, workout, exercise_definition, app
+    ):
         """Test that POSTing to edit_workout updates the workout title."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1153,14 +1497,32 @@ class TestEditWorkout:
                 follow_redirects=True,
             )
             assert response.status_code == 200
-            w = Workout.query.filter_by(id=w.id).first()
+            w = (
+                db.session.execute(db.select(Workout).filter_by(id=w.id))
+                .scalars()
+                .first()
+            )
             assert w.title == "Evening Workout"
 
-    def test_edit_workout_updates_reps(self, auth_client, workout, exercise_definition, app):
+    def test_edit_workout_updates_reps(
+        self, auth_client, workout, exercise_definition, app
+    ):
         """Test that editing a workout updates the set reps in the database."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1174,15 +1536,37 @@ class TestEditWorkout:
             )
             assert response.status_code == 200
 
-            ex = Exercise.query.filter_by(workout_id=w.id).first()
-            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            ex = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=w.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(db.select(Set).filter_by(exercise_id=ex.id))
+                .scalars()
+                .first()
+            )
             assert work_set.reps == 15
 
-    def test_edit_workout_updates_progression(self, auth_client, workout, exercise_definition, app):
+    def test_edit_workout_updates_progression(
+        self, auth_client, workout, exercise_definition, app
+    ):
         """Test that editing a workout updates the set progression value."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1196,15 +1580,35 @@ class TestEditWorkout:
             )
             assert response.status_code == 200
 
-            ex = Exercise.query.filter_by(workout_id=w.id).first()
-            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            ex = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=w.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(db.select(Set).filter_by(exercise_id=ex.id))
+                .scalars()
+                .first()
+            )
             assert work_set.progression == "Advanced"
 
     def test_edit_workout_updates_duration(self, auth_client, duration_workout, app):
         """Test that editing a duration-based workout updates set duration."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Duration Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Plank").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Duration Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Plank")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1218,15 +1622,37 @@ class TestEditWorkout:
             )
             assert response.status_code == 200
 
-            ex = Exercise.query.filter_by(workout_id=w.id).first()
-            work_set = Set.query.filter_by(exercise_id=ex.id).first()
+            ex = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=w.id))
+                .scalars()
+                .first()
+            )
+            work_set = (
+                db.session.execute(db.select(Set).filter_by(exercise_id=ex.id))
+                .scalars()
+                .first()
+            )
             assert work_set.duration == 120
 
-    def test_edit_workout_can_add_set(self, auth_client, workout, exercise_definition, app):
+    def test_edit_workout_can_add_set(
+        self, auth_client, workout, exercise_definition, app
+    ):
         """Test that editing a workout can add an extra set."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1240,15 +1666,48 @@ class TestEditWorkout:
             )
             assert response.status_code == 200
 
-            ex = Exercise.query.filter_by(workout_id=w.id).first()
-            assert Set.query.filter_by(exercise_id=ex.id).count() == 2
+            ex = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=w.id))
+                .scalars()
+                .first()
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Set)
+                    .filter_by(exercise_id=ex.id)
+                ).scalar()
+                == 2
+            )
 
-    def test_edit_workout_can_remove_set(self, auth_client, workout_with_two_exercises, app):
+    def test_edit_workout_can_remove_set(
+        self, auth_client, workout_with_two_exercises, app
+    ):
         """Test that editing a workout can reduce sets (remove one set)."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Two Exercise Workout").first()
-            ex = Exercise.query.filter_by(workout_id=w.id, exercise_order=1).first()
-            ex_def = ExerciseDefinition.query.filter_by(id=ex.exercise_definition_id).first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Two Exercise Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex = (
+                db.session.execute(
+                    db.select(Exercise).filter_by(workout_id=w.id, exercise_order=1)
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(
+                        id=ex.exercise_definition_id
+                    )
+                )
+                .scalars()
+                .first()
+            )
 
             # Originally 2 sets; submit only 1
             response = auth_client.post(
@@ -1264,14 +1723,39 @@ class TestEditWorkout:
             )
             assert response.status_code == 200
 
-            ex = Exercise.query.filter_by(workout_id=w.id).first()
-            assert Set.query.filter_by(exercise_id=ex.id).count() == 1
+            ex = (
+                db.session.execute(db.select(Exercise).filter_by(workout_id=w.id))
+                .scalars()
+                .first()
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Set)
+                    .filter_by(exercise_id=ex.id)
+                ).scalar()
+                == 1
+            )
 
-    def test_edit_workout_can_add_exercise(self, auth_client, workout, exercise_definition, app):
+    def test_edit_workout_can_add_exercise(
+        self, auth_client, workout, exercise_definition, app
+    ):
         """Test that editing a workout can add a second exercise."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1287,15 +1771,43 @@ class TestEditWorkout:
                 follow_redirects=True,
             )
             assert response.status_code == 200
-            assert Exercise.query.filter_by(workout_id=w.id).count() == 2
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Exercise)
+                    .filter_by(workout_id=w.id)
+                ).scalar()
+                == 2
+            )
 
-    def test_edit_workout_can_remove_exercise(self, auth_client, workout_with_two_exercises, app):
+    def test_edit_workout_can_remove_exercise(
+        self, auth_client, workout_with_two_exercises, app
+    ):
         """Test that editing a workout can remove one of two exercises."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Two Exercise Workout").first()
-            assert Exercise.query.filter_by(workout_id=w.id).count() == 2
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Two Exercise Workout")
+                )
+                .scalars()
+                .first()
+            )
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Exercise)
+                    .filter_by(workout_id=w.id)
+                ).scalar()
+                == 2
+            )
 
-            ex_def = ExerciseDefinition.query.filter_by(title="Pull-ups").first()
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Pull-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1308,12 +1820,25 @@ class TestEditWorkout:
                 follow_redirects=True,
             )
             assert response.status_code == 200
-            assert Exercise.query.filter_by(workout_id=w.id).count() == 1
+            assert (
+                db.session.execute(
+                    db.select(func.count())
+                    .select_from(Exercise)
+                    .filter_by(workout_id=w.id)
+                ).scalar()
+                == 1
+            )
 
     def test_edit_workout_invalid_exercise_count(self, auth_client, workout, app):
         """Test that a non-numeric exercise_count causes a flash error and redirect."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={"exercise_count": "abc", "wtitle": "Test"},
@@ -1325,7 +1850,13 @@ class TestEditWorkout:
     def test_edit_workout_invalid_exercise_id(self, auth_client, workout, app):
         """Test that a nonexistent exercise definition ID causes a flash error."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1343,8 +1874,20 @@ class TestEditWorkout:
     ):
         """Test that a successful POST redirects to the workout detail page."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
-            ex_def = ExerciseDefinition.query.filter_by(title="Push-ups").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.post(
                 url_for("main.edit_workout", workout_id=w.id),
                 data={
@@ -1362,20 +1905,33 @@ class TestEditWorkout:
     def test_edit_workout_button_shown_to_owner(self, auth_client, workout, app):
         """Test that the edit workout button appears on the detail page for the owner."""
         with app.app_context():
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = auth_client.get(url_for("main.workout", workout_id=w.id))
             assert response.status_code == 200
             assert "Workout bearbeiten" in response.get_data(as_text=True)
 
-    def test_edit_workout_button_hidden_from_other(self, client, workout, second_user, app):
+    def test_edit_workout_button_hidden_from_other(
+        self, client, workout, second_user, app
+    ):
         """Test that the edit workout button is hidden for non-owners."""
         with app.app_context():
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            w = Workout.query.filter_by(title="Morning Workout").first()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
             response = client.get(url_for("main.workout", workout_id=w.id))
             assert response.status_code == 200
             assert "Workout bearbeiten" not in response.get_data(as_text=True)
-
