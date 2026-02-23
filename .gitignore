@@ -5,7 +5,6 @@ __pycache__
 .DS_Store
 instance
 migrations
-avante.md
 .coverage
 .flake8
 pyrightconfig.json
