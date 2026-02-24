@@ -54,7 +54,10 @@ def workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = db.paginate(
         db.select(Workout)
-        .filter_by(user_id=current_user.get_id())
+        .filter(
+            Workout.user_id == current_user.get_id(),
+            Workout.is_template == False,  # noqa: E712
+        )
         .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
@@ -99,89 +102,51 @@ def add_workout() -> ResponseReturnValue:
         db.session.add(workout)
         db.session.flush()
 
-        for exercise_num in range(1, exercise_count + 1):
-            exercise_def_id = request.form.get("exercise" + str(exercise_num))
-            if not exercise_def_id:
-                db.session.rollback()
-                flash("Fehlende Übungsdaten.", "danger")
-                return redirect(url_for("main.add_workout"))
-
-            exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
-            if exercise_def is None:
-                db.session.rollback()
-                flash("Übung nicht gefunden.", "danger")
-                return redirect(url_for("main.add_workout"))
-
-            exercise = Exercise(
-                exercise_order=exercise_num,
-                exercise_definition_id=int(exercise_def_id),
-                workout_id=workout.id,
-            )
-            db.session.add(exercise)  # Add exercise to session
-            db.session.flush()  # flush() to generate the ID
-
-            progressions = request.form.getlist("progression" + str(exercise_num))
-
-            set_order = 1
-            if exercise_def.counting_type == "duration":
-                durations = request.form.getlist("duration" + str(exercise_num))
-                for progression, dur in zip(progressions, durations):
-                    parts = dur.split(":")
-                    total_seconds = (
-                        int(parts[0]) * 60 + int(parts[1])
-                        if len(parts) == 2
-                        else int(dur)
-                    )
-                    work_set = Set(
-                        set_order=set_order,
-                        exercise_id=exercise.id,
-                        progression=progression,
-                        duration=total_seconds,
-                    )
-                    set_order += 1
-                    db.session.add(work_set)
-            else:
-                reps = request.form.getlist("reps" + str(exercise_num))
-                for progression, rep in zip(progressions, reps):
-                    work_set = Set(
-                        set_order=set_order,
-                        exercise_id=exercise.id,
-                        progression=progression,
-                        reps=int(rep),
-                    )
-                    set_order += 1
-                    db.session.add(work_set)
+        err = _save_exercises_to_workout(
+            workout,
+            exercise_count,
+            url_for("main.add_workout"),
+        )
+        if err is not None:
+            return err
 
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises = (
+    my_exercises, other_exercises, progression_map = (
+        _get_exercise_lists_and_progression_map()
+    )
+
+    # Fetch user's templates for the selector dropdown
+    user_templates = list(
         db.session.execute(
-            db.select(ExerciseDefinition).filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+            db.select(Workout)
+            .filter_by(user_id=current_user.id, is_template=True)
+            .order_by(Workout.title.asc())  # type: ignore[union-attr]
         )
         .scalars()
         .all()
     )
-    other_exercises = (
-        db.session.execute(
-            db.select(ExerciseDefinition)
-            .filter(
-                ExerciseDefinition.user_id != current_user.id,
-                ExerciseDefinition.archived == False,  # noqa: E712
-            )
-            .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
-        )
-        .scalars()
-        .all()
-    )
-    progression_map: dict[int, list[str]] = {}
-    for ex in my_exercises + other_exercises:  # type: ignore[operator]
-        progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
+
+    # Optional: pre-fill from a template
+    prefill = None
+    template_title = None
+    selected_template_id = request.args.get("template_id", type=int)
+    if selected_template_id is not None:
+        tmpl = db.session.get(Workout, selected_template_id)
+        if tmpl is not None and tmpl.is_template and tmpl.user_id == current_user.id:
+            template_title = tmpl.title
+            prefill = _build_prefill(tmpl)
+
     return render_template(
         "add_workout.html",
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
+        prefill=prefill,
+        template_title=template_title,
+        templates=user_templates,
+        selected_template_id=selected_template_id,
     )
 
 
@@ -300,72 +265,69 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
 
         workout.title = request.form.get("wtitle", "")
 
-        for exercise_num in range(1, exercise_count + 1):
-            exercise_def_id = request.form.get("exercise" + str(exercise_num))
-            if not exercise_def_id:
-                db.session.rollback()
-                flash("Fehlende Übungsdaten.", "danger")
-                return redirect(url_for("main.edit_workout", workout_id=workout_id))
-
-            exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
-            if exercise_def is None:
-                db.session.rollback()
-                flash("Übung nicht gefunden.", "danger")
-                return redirect(url_for("main.edit_workout", workout_id=workout_id))
-
-            exercise = Exercise(
-                exercise_order=exercise_num,
-                exercise_definition_id=int(exercise_def_id),
-                workout_id=workout.id,
-            )
-            db.session.add(exercise)
-            db.session.flush()
-
-            progressions = request.form.getlist("progression" + str(exercise_num))
-
-            set_order = 1
-            if exercise_def.counting_type == "duration":
-                durations = request.form.getlist("duration" + str(exercise_num))
-                for progression, dur in zip(progressions, durations):
-                    parts = dur.split(":")
-                    total_seconds = (
-                        int(parts[0]) * 60 + int(parts[1])
-                        if len(parts) == 2
-                        else int(dur)
-                    )
-                    work_set = Set(
-                        set_order=set_order,
-                        exercise_id=exercise.id,
-                        progression=progression,
-                        duration=total_seconds,
-                    )
-                    set_order += 1
-                    db.session.add(work_set)
-            else:
-                reps = request.form.getlist("reps" + str(exercise_num))
-                for progression, rep in zip(progressions, reps):
-                    work_set = Set(
-                        set_order=set_order,
-                        exercise_id=exercise.id,
-                        progression=progression,
-                        reps=int(rep),
-                    )
-                    set_order += 1
-                    db.session.add(work_set)
+        err = _save_exercises_to_workout(
+            workout,
+            exercise_count,
+            url_for("main.edit_workout", workout_id=workout_id),
+        )
+        if err is not None:
+            return err
 
         db.session.commit()
         flash("Dein Workout wurde aktualisiert!", "success")
         return redirect(url_for("main.workout", workout_id=workout.id))
 
     # GET: build prefill data and exercise lists
-    my_exercises = (
+    my_exercises, other_exercises, progression_map = (
+        _get_exercise_lists_and_progression_map()
+    )
+    prefill = _build_prefill(workout)
+
+    return render_template(
+        "edit_workout.html",
+        title="Workout bearbeiten",
+        workout=workout,
+        my_exercises=my_exercises,
+        other_exercises=other_exercises,
+        progression_map=progression_map,
+        prefill=prefill,
+    )
+
+
+@bp.route("/workout_templates")
+@login_required
+@check_confirmed
+def workout_templates() -> ResponseReturnValue:
+    templates = (
         db.session.execute(
-            db.select(ExerciseDefinition).filter_by(user_id=current_user.id, archived=False).order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+            db.select(Workout)
+            .filter_by(user_id=current_user.id, is_template=True)
+            .order_by(Workout.title.asc())  # type: ignore[union-attr]
         )
         .scalars()
         .all()
     )
-    other_exercises = (
+    return render_template(
+        "workout_templates.html",
+        title="Vorlagen",
+        templates=templates,
+    )
+
+
+def _get_exercise_lists_and_progression_map() -> (
+    tuple[list, list, dict[int, list[str]]]
+):
+    """Shared helper: fetch exercise lists and progression map for template/workout forms."""
+    my_exercises = list(
+        db.session.execute(
+            db.select(ExerciseDefinition)
+            .filter_by(user_id=current_user.id, archived=False)
+            .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
+    other_exercises = list(
         db.session.execute(
             db.select(ExerciseDefinition)
             .filter(
@@ -377,12 +339,81 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         .scalars()
         .all()
     )
-
     progression_map: dict[int, list[str]] = {}
-    for ex in my_exercises + other_exercises:  # type: ignore[operator]
+    for ex in my_exercises + other_exercises:
         progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
+    return my_exercises, other_exercises, progression_map
 
-    prefill = [
+
+def _save_exercises_to_workout(
+    workout: Workout,
+    exercise_count: int,
+    redirect_url: str,
+) -> ResponseReturnValue | None:
+    """Shared helper: parse form data and create Exercise+Set records for a workout/template.
+
+    Returns a redirect Response on validation error, or None on success (caller commits).
+    """
+    for exercise_num in range(1, exercise_count + 1):
+        exercise_def_id = request.form.get("exercise" + str(exercise_num))
+        if not exercise_def_id:
+            db.session.rollback()
+            flash("Fehlende Übungsdaten.", "danger")
+            return redirect(redirect_url)
+
+        exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
+        if exercise_def is None:
+            db.session.rollback()
+            flash("Übung nicht gefunden.", "danger")
+            return redirect(redirect_url)
+
+        exercise = Exercise(
+            exercise_order=exercise_num,
+            exercise_definition_id=int(exercise_def_id),
+            workout_id=workout.id,
+        )
+        db.session.add(exercise)
+        db.session.flush()
+
+        progressions = request.form.getlist("progression" + str(exercise_num))
+        set_order = 1
+        if exercise_def.counting_type == "duration":
+            durations = request.form.getlist("duration" + str(exercise_num))
+            for progression, dur in zip(progressions, durations):
+                if dur:
+                    parts = dur.split(":")
+                    total_seconds: int | None = (
+                        int(parts[0]) * 60 + int(parts[1])
+                        if len(parts) == 2
+                        else int(dur)
+                    )
+                else:
+                    total_seconds = None
+                work_set = Set(
+                    set_order=set_order,
+                    exercise_id=exercise.id,
+                    progression=progression,
+                    duration=total_seconds,
+                )
+                set_order += 1
+                db.session.add(work_set)
+        else:
+            reps = request.form.getlist("reps" + str(exercise_num))
+            for progression, rep in zip(progressions, reps):
+                work_set = Set(
+                    set_order=set_order,
+                    exercise_id=exercise.id,
+                    progression=progression,
+                    reps=int(rep) if rep else None,
+                )
+                set_order += 1
+                db.session.add(work_set)
+    return None
+
+
+def _build_prefill(workout: Workout) -> list[dict]:
+    """Build prefill list from an existing workout or template for form pre-population."""
+    return [
         {
             "exercise_def_id": ex.exercise_definition_id,
             "sets": [
@@ -397,15 +428,135 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         for ex in workout.exercises.order_by(Exercise.exercise_order).all()  # type: ignore[misc, operator]
     ]
 
+
+@bp.route("/add_template", methods=["GET", "POST"])
+@login_required
+@check_confirmed
+def add_template() -> ResponseReturnValue:
+    if request.method == "POST":
+        try:
+            exercise_count = int(request.form.get("exercise_count", 0))
+        except (ValueError, TypeError):
+            flash("Ungültige Formulardaten.", "danger")
+            return redirect(url_for("main.add_template"))
+
+        if exercise_count < 1:
+            flash("Mindestens eine Übung ist erforderlich.", "danger")
+            return redirect(url_for("main.add_template"))
+
+        template = Workout(
+            title=request.form.get("wtitle", ""),
+            user_id=current_user.id,
+            is_template=True,
+        )
+        db.session.add(template)
+        db.session.flush()
+
+        err = _save_exercises_to_workout(
+            template,
+            exercise_count,
+            url_for("main.add_template"),
+        )
+        if err is not None:
+            return err
+
+        db.session.commit()
+        flash("Deine Vorlage wurde erstellt!", "success")
+        return redirect(url_for("main.workout_templates"))
+
+    my_exercises, other_exercises, progression_map = (
+        _get_exercise_lists_and_progression_map()
+    )
     return render_template(
-        "edit_workout.html",
-        title="Workout bearbeiten",
-        workout=workout,
+        "add_template.html",
+        title="Neue Vorlage",
+        my_exercises=my_exercises,
+        other_exercises=other_exercises,
+        progression_map=progression_map,
+        legend="Neue Vorlage",
+    )
+
+
+@bp.route("/workout_template/<int:workout_id>/edit", methods=["GET", "POST"])
+@login_required
+@check_confirmed
+def edit_template(workout_id: int) -> ResponseReturnValue:
+    template = db.session.get(Workout, workout_id)
+    if template is None:
+        abort(404)
+    if template.user_id != current_user.id or not template.is_template:
+        abort(403)
+
+    if request.method == "POST":
+        try:
+            exercise_count = int(request.form.get("exercise_count", 0))
+        except (ValueError, TypeError):
+            flash("Ungültige Formulardaten.", "danger")
+            return redirect(url_for("main.edit_template", workout_id=workout_id))
+
+        if exercise_count < 1:
+            flash("Mindestens eine Übung ist erforderlich.", "danger")
+            return redirect(url_for("main.edit_template", workout_id=workout_id))
+
+        for ex in template.exercises.all():
+            db.session.delete(ex)
+        db.session.flush()
+
+        template.title = request.form.get("wtitle", "")
+
+        err = _save_exercises_to_workout(
+            template,
+            exercise_count,
+            url_for("main.edit_template", workout_id=workout_id),
+        )
+        if err is not None:
+            return err
+
+        db.session.commit()
+        flash("Deine Vorlage wurde aktualisiert!", "success")
+        return redirect(url_for("main.workout_templates"))
+
+    my_exercises, other_exercises, progression_map = (
+        _get_exercise_lists_and_progression_map()
+    )
+    prefill = _build_prefill(template)
+    return render_template(
+        "add_template.html",
+        title="Vorlage bearbeiten",
+        template=template,
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
         prefill=prefill,
+        legend="Vorlage bearbeiten",
     )
+
+
+@bp.route("/workout_template/<int:workout_id>/delete", methods=["POST"])
+@login_required
+@check_confirmed
+def delete_template(workout_id: int) -> ResponseReturnValue:
+    template = db.session.get(Workout, workout_id)
+    if template is None:
+        abort(404)
+    if template.user_id != current_user.id or not template.is_template:
+        abort(403)
+    db.session.delete(template)
+    db.session.commit()
+    flash("Deine Vorlage wurde gelöscht!", "success")
+    return redirect(url_for("main.workout_templates"))
+
+
+@bp.route("/workout_template/<int:workout_id>/use")
+@login_required
+@check_confirmed
+def use_template(workout_id: int) -> ResponseReturnValue:
+    template = db.session.get(Workout, workout_id)
+    if template is None:
+        abort(404)
+    if template.user_id != current_user.id or not template.is_template:
+        abort(403)
+    return redirect(url_for("main.add_workout", template_id=workout_id))
 
 
 @bp.route("/add_exercise", methods=["GET", "POST"])
@@ -571,7 +722,12 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
 def explore() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts = db.paginate(
-        db.select(Workout).filter(Workout.user_id != current_user.id).order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
+        db.select(Workout)
+        .filter(
+            Workout.user_id != current_user.id,
+            Workout.is_template == False,  # noqa: E712
+        )
+        .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
         error_out=False,

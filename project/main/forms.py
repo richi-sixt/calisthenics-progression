@@ -15,7 +15,7 @@ class CreateExerciseForm(FlaskForm):
     description = TextAreaField("Beschreibung", validators=[Optional()])
     counting_type = RadioField(
         "Zählweise",
-        choices=[("reps", "Wiederholungen"), ("duration", "Dauer (mm:ss)")],
+        choices=[("reps", "Reps"), ("duration", "Dauer (mm:ss)")],
         default="reps",
         validators=[DataRequired()],
     )

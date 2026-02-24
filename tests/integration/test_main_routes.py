@@ -1935,3 +1935,353 @@ class TestEditWorkout:
             response = client.get(url_for("main.workout", workout_id=w.id))
             assert response.status_code == 200
             assert "Workout bearbeiten" not in response.get_data(as_text=True)
+
+
+class TestWorkoutTemplatesRoutes:
+    """Tests for workout template routes."""
+
+    # ── Template list ──────────────────────────────────────────────────────
+
+    def test_templates_page_renders(self, auth_client, app):
+        """GET /workout_templates returns 200."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workout_templates"))
+            assert response.status_code == 200
+
+    def test_templates_page_empty(self, auth_client, app):
+        """Templates page renders correctly when there are no templates."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workout_templates"))
+            assert response.status_code == 200
+            assert "noch keine Vorlagen" in response.get_data(as_text=True)
+
+    def test_templates_page_shows_own_templates(
+        self, auth_client, workout_template, app
+    ):
+        """User's template title appears on the templates list page."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workout_templates"))
+            assert response.status_code == 200
+            assert b"My Template" in response.data
+
+    # ── Create template ────────────────────────────────────────────────────
+
+    def test_add_template_page_renders(self, auth_client, app):
+        """GET /add_template returns 200."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_template"))
+            assert response.status_code == 200
+
+    def test_add_template_creates_template(self, auth_client, exercise_definition, app):
+        """POST /add_template creates a Workout with is_template=True."""
+        with app.app_context():
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.post(
+                url_for("main.add_template"),
+                data={
+                    "wtitle": "New Template",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": "Standard",
+                    "reps1": "10",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+            template = (
+                db.session.execute(db.select(Workout).filter_by(title="New Template"))
+                .scalars()
+                .first()
+            )
+            assert template is not None
+            assert template.is_template is True
+            assert template.exercises.count() == 1
+
+    def test_add_template_requires_exercise(self, auth_client, app):
+        """POST /add_template with exercise_count=0 flashes an error."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_template"),
+                data={"wtitle": "Bad Template", "exercise_count": "0"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert "Mindestens eine" in response.get_data(as_text=True)
+
+    def test_add_template_redirects_to_templates_on_success(
+        self, auth_client, exercise_definition, app
+    ):
+        """Successful template creation redirects to the templates list."""
+        with app.app_context():
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.post(
+                url_for("main.add_template"),
+                data={
+                    "wtitle": "Redirect Template",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": "Standard",
+                    "reps1": "5",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert b"Redirect Template" in response.data
+
+    # ── Edit template ──────────────────────────────────────────────────────
+
+    def test_edit_template_page_renders_with_prefill(
+        self, auth_client, workout_template, app
+    ):
+        """GET /workout_template/<id>/edit returns 200 and shows the template title."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            response = auth_client.get(
+                url_for("main.edit_template", workout_id=tmpl.id)
+            )
+            assert response.status_code == 200
+            assert b"My Template" in response.data
+
+    def test_edit_template_saves_changes(
+        self, auth_client, workout_template, exercise_definition, app
+    ):
+        """POST /workout_template/<id>/edit updates the template."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.post(
+                url_for("main.edit_template", workout_id=tmpl.id),
+                data={
+                    "wtitle": "Updated Template",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": "Advanced",
+                    "reps1": "15",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            updated = db.session.get(Workout, tmpl.id)
+            assert updated.title == "Updated Template"
+            sets = updated.exercises.first().sets.all()
+            assert sets[0].reps == 15
+
+    def test_edit_template_forbidden_for_other_user(
+        self, client, workout_template, second_user, app
+    ):
+        """Non-owner gets 403 when trying to edit a template."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            response = client.get(url_for("main.edit_template", workout_id=tmpl.id))
+            assert response.status_code == 403
+
+    # ── Delete template ────────────────────────────────────────────────────
+
+    def test_delete_template_removes_template(self, auth_client, workout_template, app):
+        """POST /workout_template/<id>/delete removes the template."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            tmpl_id = tmpl.id
+
+            response = auth_client.post(
+                url_for("main.delete_template", workout_id=tmpl_id),
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert db.session.get(Workout, tmpl_id) is None
+
+    def test_delete_template_forbidden_for_other_user(
+        self, client, workout_template, second_user, app
+    ):
+        """Non-owner gets 403 when trying to delete a template."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            response = client.post(url_for("main.delete_template", workout_id=tmpl.id))
+            assert response.status_code == 403
+
+    def test_delete_template_does_not_affect_regular_workouts(
+        self, auth_client, workout_template, workout, app
+    ):
+        """Deleting a template does not affect regular workouts."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            regular = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            regular_id = regular.id
+
+            auth_client.post(url_for("main.delete_template", workout_id=tmpl.id))
+
+            assert db.session.get(Workout, regular_id) is not None
+
+    # ── Use template ───────────────────────────────────────────────────────
+
+    def test_use_template_redirects_to_add_workout(
+        self, auth_client, workout_template, app
+    ):
+        """GET /workout_template/<id>/use redirects to add_workout with template_id."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.get(
+                url_for("main.use_template", workout_id=tmpl.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "template_id" in response.location
+            assert str(tmpl.id) in response.location
+
+    def test_add_workout_with_template_prefill_renders(
+        self, auth_client, workout_template, app
+    ):
+        """GET /add_workout?template_id=X returns 200 with the template title."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.get(url_for("main.add_workout", template_id=tmpl.id))
+            assert response.status_code == 200
+            assert b"My Template" in response.data
+
+    def test_add_workout_from_template_creates_independent_copy(
+        self, auth_client, workout_template, exercise_definition, app
+    ):
+        """Saving a workout pre-filled from a template creates a new regular workout
+        and leaves the template unchanged."""
+        with app.app_context():
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            ex_def = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.post(
+                url_for("main.add_workout"),
+                data={
+                    "wtitle": "My Template",
+                    "exercise_count": "1",
+                    "exercise1": str(ex_def.id),
+                    "progression1": "Standard",
+                    "reps1": "12",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+            # A new regular workout was created
+            new_workout = (
+                db.session.execute(
+                    db.select(Workout).filter(
+                        Workout.title == "My Template",
+                        Workout.is_template == False,  # noqa: E712
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            assert new_workout is not None
+
+            # The template still exists and is unchanged
+            tmpl_reloaded = db.session.get(Workout, tmpl.id)
+            assert tmpl_reloaded is not None
+            assert tmpl_reloaded.is_template is True
+            original_reps = tmpl_reloaded.exercises.first().sets.first().reps
+            assert original_reps == 10  # original value, not 12
+
+    # ── Isolation / regression ─────────────────────────────────────────────
+
+    def test_workouts_page_excludes_templates(
+        self, auth_client, workout, workout_template, app
+    ):
+        """The workouts list page does not show templates."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workouts"))
+            html = response.get_data(as_text=True)
+            assert "Morning Workout" in html
+            assert "My Template" not in html
+
+    def test_explore_page_excludes_templates(
+        self, client, workout_template, second_user, app
+    ):
+        """The explore page does not include templates from other users."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            response = client.get(url_for("main.explore"))
+            assert response.status_code == 200
+            assert b"My Template" not in response.data

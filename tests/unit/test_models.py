@@ -268,6 +268,89 @@ class TestWorkoutModel:
                 == 0
             )
 
+    def test_workout_is_template_defaults_to_false(self, app, user):
+        """Test that a newly created Workout has is_template=False by default."""
+        with app.app_context():
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            w = Workout(title="Regular Workout", user_id=user.id)
+            db.session.add(w)
+            db.session.commit()
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Regular Workout")
+                )
+                .scalars()
+                .first()
+            )
+            assert w.is_template is False
+
+    def test_workout_template_flag_persists(self, app, user):
+        """Test that is_template=True is stored and retrieved correctly."""
+        with app.app_context():
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            tmpl = Workout(title="Test Template", user_id=user.id, is_template=True)
+            db.session.add(tmpl)
+            db.session.commit()
+            tmpl = (
+                db.session.execute(db.select(Workout).filter_by(title="Test Template"))
+                .scalars()
+                .first()
+            )
+            assert tmpl.is_template is True
+
+    def test_template_cascade_delete(self, app, workout_template):
+        """Test that deleting a template cascades to its exercises and sets."""
+        with app.app_context():
+            template = (
+                db.session.execute(db.select(Workout).filter_by(title="My Template"))
+                .scalars()
+                .first()
+            )
+            template_id = template.id
+            exercise_ids = [ex.id for ex in template.exercises.all()]
+
+            db.session.delete(template)
+            db.session.commit()
+
+            assert db.session.get(Workout, template_id) is None
+            for ex_id in exercise_ids:
+                assert db.session.get(Exercise, ex_id) is None
+
+    def test_is_template_filter_excludes_templates(self, app, user, workout_template):
+        """Test that filtering is_template=False correctly excludes templates."""
+        with app.app_context():
+            user = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            # Add a regular workout alongside the template
+            w = Workout(title="Regular Workout", user_id=user.id, is_template=False)
+            db.session.add(w)
+            db.session.commit()
+
+            regular = (
+                db.session.execute(
+                    db.select(Workout).filter(
+                        Workout.user_id == user.id,
+                        Workout.is_template == False,  # noqa: E712
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            titles = [r.title for r in regular]
+            assert "Regular Workout" in titles
+            assert "My Template" not in titles
+
 
 class TestExercisesModel:
     """Tests for the Exercises (exercise definition) model."""

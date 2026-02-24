@@ -300,6 +300,108 @@ def workout_with_two_exercises(app, user):
 
 
 @pytest.fixture
+def workout_template(app, user, exercise_definition):
+    """Create a workout template with one reps-based exercise and set."""
+    with app.app_context():
+        template = Workout(
+            title="My Template",
+            user_id=user.id,
+            is_template=True,
+        )
+        db.session.add(template)
+        db.session.flush()
+
+        exercise = Exercise(
+            exercise_order=1,
+            workout_id=template.id,
+            exercise_definition_id=exercise_definition.id,
+        )
+        db.session.add(exercise)
+        db.session.flush()
+
+        work_set = Set(
+            set_order=1,
+            exercise_id=exercise.id,
+            progression="Standard",
+            reps=10,
+        )
+        db.session.add(work_set)
+        db.session.commit()
+
+        template = (
+            db.session.execute(db.select(Workout).filter_by(title="My Template"))
+            .scalars()
+            .first()
+        )
+        yield template
+
+
+@pytest.fixture
+def workout_template_with_two_exercises(app, user):
+    """Create a workout template with two exercises (reps + duration) and two sets each."""
+    with app.app_context():
+        reps_def = ExerciseDefinition(
+            title="Template Pull-ups",
+            description="Pull-ups for template",
+            user_id=user.id,
+            counting_type="reps",
+        )
+        duration_def = ExerciseDefinition(
+            title="Template Plank",
+            description="Plank for template",
+            user_id=user.id,
+            counting_type="duration",
+        )
+        db.session.add(reps_def)
+        db.session.add(duration_def)
+        db.session.flush()
+
+        template = Workout(
+            title="Two Exercise Template",
+            user_id=user.id,
+            is_template=True,
+        )
+        db.session.add(template)
+        db.session.flush()
+
+        ex1 = Exercise(
+            exercise_order=1, workout_id=template.id, exercise_definition_id=reps_def.id
+        )
+        db.session.add(ex1)
+        db.session.flush()
+        db.session.add(
+            Set(set_order=1, exercise_id=ex1.id, progression="Standard", reps=10)
+        )
+        db.session.add(
+            Set(set_order=2, exercise_id=ex1.id, progression="Standard", reps=8)
+        )
+
+        ex2 = Exercise(
+            exercise_order=2,
+            workout_id=template.id,
+            exercise_definition_id=duration_def.id,
+        )
+        db.session.add(ex2)
+        db.session.flush()
+        db.session.add(
+            Set(set_order=1, exercise_id=ex2.id, progression="Standard", duration=60)
+        )
+        db.session.add(
+            Set(set_order=2, exercise_id=ex2.id, progression="Standard", duration=90)
+        )
+
+        db.session.commit()
+        template = (
+            db.session.execute(
+                db.select(Workout).filter_by(title="Two Exercise Template")
+            )
+            .scalars()
+            .first()
+        )
+        yield template
+
+
+@pytest.fixture
 def mail_outbox(app):
     """Fixture to capture sent emails."""
     from project import mail
