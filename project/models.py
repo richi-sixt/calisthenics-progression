@@ -120,16 +120,19 @@ class User(UserMixin, Base):
         return bool(self.followed.filter(followers.c.followed_id == user.id).count())
 
     def followed_workouts(self):  # type: ignore[return]
-        """Get workouts from followed users and own workouts."""
+        """Get workouts from followed users and own workouts (excludes templates)."""
         followed = (
             db.select(Workout)
             .join(  # type: ignore[name-defined]
                 followers, (followers.c.followed_id == Workout.user_id)  # type: ignore[name-defined]
             )
-            .filter(followers.c.follower_id == self.id)
+            .filter(
+                followers.c.follower_id == self.id,
+                Workout.is_template == False,  # noqa: E712
+            )
         )
 
-        own = db.select(Workout).filter_by(user_id=self.id)
+        own = db.select(Workout).filter_by(user_id=self.id, is_template=False)
 
         union_stmt = followed.union(own).order_by(Workout.timestamp.desc())  # type: ignore[union-attr]
         return db.select(Workout).from_statement(union_stmt)
@@ -166,7 +169,7 @@ def load_user(id: str) -> User | None:
 
 
 class Workout(Base):
-    """Workout model representing a training session."""
+    """Workout model representing a training session or a reusable template."""
 
     __tablename__ = "workout"
 
@@ -176,6 +179,9 @@ class Workout(Base):
         db.DateTime, index=True, default=lambda: datetime.now(timezone.utc)
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    is_template = db.Column(
+        db.Boolean, nullable=False, default=False, server_default="0"
+    )
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -187,10 +193,12 @@ class Workout(Base):
         title: str,
         user_id: int,
         timestamp: datetime | None = None,
+        is_template: bool = False,
     ) -> None:
-        """Initialize a workout session."""
+        """Initialize a workout session or template."""
         self.title = title
         self.user_id = user_id
+        self.is_template = is_template
         if timestamp is not None:  # has a default
             self.timestamp = timestamp
 

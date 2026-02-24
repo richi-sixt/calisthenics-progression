@@ -1,8 +1,10 @@
 # Calisthenics Progression
 
-A Flask web application for tracking calisthenics workouts — built for learning purposes.
+A Flask web application for tracking calisthenics workouts — built for learning purposes.\
+Handcrafted in 2019 with inspiration from [Flask Mega Tutorial](https://github.com/miguelgrinberg/microblog-2018), now enhanced with the assistance of AI.
 
-Log your training sessions, define custom exercises with progression levels, and connect with other athletes. This project covers the full stack of a production-ready Flask app: authentication, ORM relationships, email flows, testing, and deployment.
+Log your training sessions, define custom exercises with progression levels and workout templates, and connect with other athletes.
+This project demonstrates the full stack of a production-ready Flask app: authentication, ORM relationships, email flows, automated testing, and deployment.
 
 ---
 
@@ -28,9 +30,10 @@ Log your training sessions, define custom exercises with progression levels, and
 
 ### Workout tracking
 
-- Log workouts with multiple exercises, sets, and rep or duration counts
+- Log workouts with multiple exercises, sets, and rep counts or duration values
+- Create and use workout templates
 - Select custom exercises with ordered progression levels (e.g. Tuck Planche → Straddle Planche → Full Planche)
-- Select or copy exercises from other athletes
+- Browse and copy exercises from other athletes
 - Select a progression level from a dropdown when logging a set
 - Edit and delete workouts
 
@@ -46,7 +49,8 @@ Log your training sessions, define custom exercises with progression levels, and
 - Notification badge for unread messages
 
 ### Account
-- Registration with email confirmation
+
+- Account registration with email confirmation
 - Password reset via secure token link
 - Profile picture upload
 - Edit profile and change password
@@ -153,19 +157,23 @@ flake8 project/ tests/      # lint
 
 ---
 
+## Motivation
+
+I started this project in 2019 to learn how to build a real-world Python application from the ground up and to scratch my own itch as a calisthenics enthusiast. Over time, it turned into a playground for experimenting with better architecture, testing practices, and deployment setups. In its latest iteration, it also became a way to explore how modern AI assistants and autonomous coding agents can support day-to-day development work — from shaping features to keeping the codebase clean.
+
 ## What I Learned
 
-This project was built deliberately to get hands-on experience with patterns that come up in real Flask applications:
 
-- **Application factory pattern** — structuring the app so it can be instantiated with different configs (development, testing, production)
-- **Blueprints** — splitting `auth`, `main`, and `errors` into self-contained modules
-- **SQLAlchemy ORM** — modelling a non-trivial schema with many-to-many (followers), cascading deletes, and relationship loading
-- **Flask-Migrate / Alembic** — managing schema changes across environments without losing data
-- **Token-based email flows** — secure account confirmation and password reset using `itsdangerous`
-- **Flask-Login** — session management, `@login_required`, and custom `@check_confirmed` decorators
-- **Testing a Flask app** — using `pytest-flask` with an in-memory test database, writing unit and integration tests for full request/response cycles
-- **Type annotations** — applying `mypy` to a dynamically typed Flask codebase
-- **Pre-commit hooks** — automating code quality checks with `black`, `isort`, and `flake8`
-- **Production deployment** — configuring `passenger_wsgi.py` for cPanel hosting with structured logging and email error alerts
+This project was built to gain hands-on experience with key patterns and tools found in real-world Flask applications:
 
-Heavily inspired by [Flask Mega Tutorial](https://github.com/miguelgrinberg/microblog-2018)
+- Applied the **application factory pattern** to instantiate the app with separate configurations for development, testing, and production
+- Organized features using **Flask Blueprints** for `auth`, `main`, and `errors` modules
+- Modeled a non-trivial schema with **SQLAlchemy ORM**, including many-to-many relationships (followers), cascading deletes, and relationship loading
+- Managed schema migrations across environments using **Flask-Migrate / Alembic** without data loss
+- Implemented **token-based email flows** for secure account confirmation and password resets with `itsdangerous`
+- Handled authentication and session management with **Flask-Login**, including custom decorators like `@check_confirmed`
+- Tested the application using **pytest-flask** with an in-memory database for full request/response testing
+- Enforced code quality and consistent style with **type annotations**, **pre-commit hooks**, and tools like `black`, `flake8`, and `isort`
+- Deployed the application on shared hosting using **passenger_wsgi.py**, structured logging
+- Leveraged **AI assistance (Claude and autonomous agents)** to guide feature design, streamline development, and maintain high code quality
+

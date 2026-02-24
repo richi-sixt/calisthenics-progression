@@ -1,34 +1,14 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
-{% if templates %}
-<div class="content-section mb-2">
-    <form method="GET" action="{{ url_for('main.add_workout') }}">
-        <label class="mb-1">Aus Vorlage laden:</label>
-        <div class="d-flex align-items-center">
-            <select name="template_id" class="form-control">
-                <option value="">-- Vorlage w&auml;hlen --</option>
-                {% for t in templates %}
-                <option value="{{ t.id }}"
-                    {% if selected_template_id == t.id %}selected{% endif %}>
-                    {{ t.title }}
-                </option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-outline-info btn-sm ml-2">Laden</button>
-        </div>
-    </form>
-</div>
-{% endif %}
-{% if template_title %}
-<div class="alert alert-info">Aus Vorlage: <strong>{{ template_title }}</strong></div>
-{% endif %}
 <div class="content-section">
-    <form class="needs-validation" method="POST" action="{{ url_for('main.add_workout') }}" id="workout" novalidate>
-        <label>Workout</label>
-        <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80"
-               value="{{ template_title if template_title else '' }}" required>
+    <form class="needs-validation" method="POST"
+          action="{{ url_for('main.edit_template', workout_id=template.id) if template else url_for('main.add_template') }}"
+          id="workout" novalidate>
+        <label>{{ legend }}</label>
+        <input type="text" class="form-control" name="wtitle" id="wtitle"
+               placeholder="Template Titel" maxlength="80"
+               value="{{ template.title if template else '' }}" required>
         <div class="invalid-feedback">
             Dieses Feld ist zwingend.
         </div>
@@ -64,7 +44,7 @@
         <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
         <input type="hidden" name="exercise_count" value="{{ prefill|length if prefill else 1 }}">
         <br><br>
-        <button type="submit" class="btn btn-primary btn-block">Workout hinzuf&uuml;gen</button>
+        <button type="submit" class="btn btn-primary btn-block">Vorlage speichern</button>
     </form>
 </div>
 
@@ -110,10 +90,7 @@
     <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
     <% } %>
     <label>Reps</label>
-    <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps" required>
-    <div class="invalid-feedback">
-        Dieses Feld ist zwingend. Bitte nur Zahlen eingeben.
-    </div>
+    <input type="text" class="form-control" name="reps<%= exercise_num %>" placeholder="Reps">
     </div>
 </script>
 
@@ -135,16 +112,29 @@
     <input type="text" class="form-control" name="progression<%= exercise_num %>" placeholder="Progression">
     <% } %>
     <label>Dauer (mm:ss)</label>
-    <input type="text" class="form-control" name="duration<%= exercise_num %>" placeholder="00:00" pattern="[0-9]{1,2}:[0-9]{2}" required>
-    <div class="invalid-feedback">
-        Dieses Feld ist zwingend. Bitte im Format mm:ss eingeben.
-    </div>
+    <input type="text" class="form-control" name="duration<%= exercise_num %>" placeholder="00:00" pattern="[0-9]{1,2}:[0-9]{2}">
     </div>
 </script>
 
 <script>
 var progressionMap = {{ progression_map | tojson }};
 </script>
+
+<style>
+.exercise-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.exercise-select-wrapper .form-control {
+    flex: 1;
+}
+.copy-exercise-btn {
+    white-space: nowrap;
+}
+</style>
+{% endblock content %}
 
 {% block scripts %}
 {% if prefill %}
@@ -192,19 +182,3 @@ $(document).ready(function() {
 </script>
 {% endif %}
 {% endblock scripts %}
-
-<style>
-.exercise-select-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-.exercise-select-wrapper .form-control {
-    flex: 1;
-}
-.copy-exercise-btn {
-    white-space: nowrap;
-}
-</style>
-{% endblock content %}

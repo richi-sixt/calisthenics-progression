@@ -28,6 +28,7 @@
           <div class="collapse navbar-collapse" id="navbarToggle">
             <div class="navbar-nav mr-auto">
                 <a class="nav-item nav-link" href="{{ url_for('main.workouts') }}">Meine Workouts</a>
+                <a class="nav-item nav-link" href="{{ url_for('main.workout_templates') }}">Vorlagen</a>
                 <a class="nav-item nav-link" href="{{ url_for('main.explore') }}">Entdecken</a>
                 <a class="nav-item nav-link" href="{{ url_for('main.all_exercises') }}">&Uuml;bungen</a>                
             </div>
@@ -73,6 +74,9 @@
               <ul class="list-group">
                 <li class="list-group-item list-group-item-light">
                     <a href="{{ url_for('main.add_workout') }}">Workout hinzuf&uuml;gen</a>
+                </li>
+                <li class="list-group-item list-group-item-light">
+                    <a href="{{ url_for('main.add_template') }}">Vorlage hinzuf&uuml;gen</a>
                 </li>
                 <li class="list-group-item list-group-item-light">
                     <a href="{{ url_for('main.add_exercise') }}">&Uuml;bung hinzuf&uuml;gen</a>
