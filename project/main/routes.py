@@ -19,6 +19,7 @@ from project.main import bp
 from project.main.forms import CreateExerciseForm, MessageForm
 from project.models import (
     Exercise,
+    ExerciseCategory,
     ExerciseDefinition,
     Message,
     Notification,
@@ -113,9 +114,10 @@ def add_workout() -> ResponseReturnValue:
         db.session.commit()
         return redirect(url_for("main.index"))
 
-    my_exercises, other_exercises, progression_map = (
+    my_exercises, other_exercises, progression_map, category_map = (
         _get_exercise_lists_and_progression_map()
     )
+    all_categories = _get_all_categories()
 
     # Fetch user's templates for the selector dropdown
     user_templates = list(
@@ -143,6 +145,8 @@ def add_workout() -> ResponseReturnValue:
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
+        category_map=category_map,
+        all_categories=all_categories,
         prefill=prefill,
         template_title=template_title,
         templates=user_templates,
@@ -208,6 +212,7 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
             "username": current_user.username,
             "counting_type": copied.counting_type,
             "progression_levels": [pl.name for pl in original_levels],
+            "category_ids": [c.id for c in original.categories],  # type: ignore[attr-defined]
         }
     )
 
@@ -278,9 +283,10 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         return redirect(url_for("main.workout", workout_id=workout.id))
 
     # GET: build prefill data and exercise lists
-    my_exercises, other_exercises, progression_map = (
+    my_exercises, other_exercises, progression_map, category_map = (
         _get_exercise_lists_and_progression_map()
     )
+    all_categories = _get_all_categories()
     prefill = _build_prefill(workout)
 
     return render_template(
@@ -290,6 +296,8 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
+        category_map=category_map,
+        all_categories=all_categories,
         prefill=prefill,
     )
 
@@ -315,9 +323,9 @@ def workout_templates() -> ResponseReturnValue:
 
 
 def _get_exercise_lists_and_progression_map() -> (
-    tuple[list, list, dict[int, list[str]]]
+    tuple[list, list, dict[int, list[str]], dict[int, list[int]]]
 ):
-    """Shared helper: fetch exercise lists and progression map for template/workout forms."""
+    """Shared helper: fetch exercise lists, progression map, and category map for forms."""
     my_exercises = list(
         db.session.execute(
             db.select(ExerciseDefinition)
@@ -340,9 +348,22 @@ def _get_exercise_lists_and_progression_map() -> (
         .all()
     )
     progression_map: dict[int, list[str]] = {}
+    category_map: dict[int, list[int]] = {}
     for ex in my_exercises + other_exercises:
         progression_map[ex.id] = [pl.name for pl in ex.progression_levels.all()]
-    return my_exercises, other_exercises, progression_map
+        category_map[ex.id] = [c.id for c in ex.categories]
+    return my_exercises, other_exercises, progression_map, category_map
+
+
+def _get_all_categories() -> list:
+    """Shared helper: fetch all exercise categories ordered by name."""
+    return list(
+        db.session.execute(
+            db.select(ExerciseCategory).order_by(ExerciseCategory.name.asc())  # type: ignore[union-attr]
+        )
+        .scalars()
+        .all()
+    )
 
 
 def _save_exercises_to_workout(
@@ -464,15 +485,18 @@ def add_template() -> ResponseReturnValue:
         flash("Deine Vorlage wurde erstellt!", "success")
         return redirect(url_for("main.workout_templates"))
 
-    my_exercises, other_exercises, progression_map = (
+    my_exercises, other_exercises, progression_map, category_map = (
         _get_exercise_lists_and_progression_map()
     )
+    all_categories = _get_all_categories()
     return render_template(
         "add_template.html",
         title="Neue Vorlage",
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
+        category_map=category_map,
+        all_categories=all_categories,
         legend="Neue Vorlage",
     )
 
@@ -516,9 +540,10 @@ def edit_template(workout_id: int) -> ResponseReturnValue:
         flash("Deine Vorlage wurde aktualisiert!", "success")
         return redirect(url_for("main.workout_templates"))
 
-    my_exercises, other_exercises, progression_map = (
+    my_exercises, other_exercises, progression_map, category_map = (
         _get_exercise_lists_and_progression_map()
     )
+    all_categories = _get_all_categories()
     prefill = _build_prefill(template)
     return render_template(
         "add_template.html",
@@ -527,6 +552,8 @@ def edit_template(workout_id: int) -> ResponseReturnValue:
         my_exercises=my_exercises,
         other_exercises=other_exercises,
         progression_map=progression_map,
+        category_map=category_map,
+        all_categories=all_categories,
         prefill=prefill,
         legend="Vorlage bearbeiten",
     )
@@ -596,11 +623,30 @@ def add_exercise() -> str | ResponseReturnValue:
                         level_order=i,
                     )
                 )
+            # Save category assignments
+            raw_cat_ids = request.form.getlist("category_ids")
+            cat_ids = [int(i) for i in raw_cat_ids if i.isdigit()]
+            if cat_ids:
+                exercise.categories = list(  # type: ignore[assignment]
+                    db.session.execute(
+                        db.select(ExerciseCategory).where(
+                            ExerciseCategory.id.in_(cat_ids)
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
             db.session.commit()
             flash("Deine Übung wurde erstellt!", "success")
             return redirect(url_for("main.all_exercises"))
+    all_categories = _get_all_categories()
     return render_template(
-        "add_exercise.html", title="Neue Übung", form=form, legend="Neue Übung"
+        "add_exercise.html",
+        title="Neue Übung",
+        form=form,
+        legend="Neue Übung",
+        all_categories=all_categories,
+        selected_category_ids=[],
     )
 
 
@@ -619,22 +665,55 @@ def exercise(exercises_id: int) -> ResponseReturnValue:
 @check_confirmed
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
+    category_id = request.args.get("category", type=int)
+    user_filter = request.args.get("user", "all")  # "mine" or "all"
+
+    query = (
+        db.select(ExerciseDefinition)
+        .filter_by(archived=False)
+        .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
+    )
+    if user_filter == "mine":
+        query = query.filter(ExerciseDefinition.user_id == current_user.id)
+    if category_id:
+        query = query.filter(
+            ExerciseDefinition.categories.any(ExerciseCategory.id == category_id)
+        )
+
     exercises = db.paginate(
-        db.select(ExerciseDefinition).filter_by(archived=False).order_by(ExerciseDefinition.title.asc()),  # type: ignore[union-attr]
+        query,
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
         error_out=False,
     )
+    all_categories = _get_all_categories()
     next_url = (
-        url_for("main.index", page=exercises.next_num) if exercises.has_next else None
+        url_for(
+            "main.all_exercises",
+            page=exercises.next_num,
+            user=user_filter,
+            category=category_id,
+        )
+        if exercises.has_next
+        else None
     )
     prev_url = (
-        url_for("main.index", page=exercises.prev_num) if exercises.has_prev else None
+        url_for(
+            "main.all_exercises",
+            page=exercises.prev_num,
+            user=user_filter,
+            category=category_id,
+        )
+        if exercises.has_prev
+        else None
     )
     return render_template(
         "exercises.html",
         title="Alle Übungen",
         exercises=exercises.items,
+        all_categories=all_categories,
+        selected_category=category_id,
+        user_filter=user_filter,
         next_url=next_url,
         prev_url=prev_url,
     )
@@ -682,6 +761,22 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
                         level_order=i,
                     )
                 )
+            # Replace category assignments
+            raw_cat_ids = request.form.getlist("category_ids")
+            cat_ids = [int(i) for i in raw_cat_ids if i.isdigit()]
+            exercise.categories = (
+                list(  # type: ignore[assignment]
+                    db.session.execute(
+                        db.select(ExerciseCategory).where(
+                            ExerciseCategory.id.in_(cat_ids)
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                if cat_ids
+                else []
+            )
             db.session.commit()
             flash("Deine Übung wurde geändert", "success")
             return redirect(url_for("main.exercise", exercises_id=exercise.id))
@@ -692,12 +787,16 @@ def update_exercise(exercises_id: int) -> ResponseReturnValue:
     existing_progressions = "\n".join(
         pl.name for pl in exercise.progression_levels.all()
     )
+    all_categories = _get_all_categories()
+    selected_category_ids = [c.id for c in exercise.categories]  # type: ignore[attr-defined]
     return render_template(
         "add_exercise.html",
         title="Ändere Übung",
         form=form,
         legend="Ändere Übung",
         existing_progressions=existing_progressions,
+        all_categories=all_categories,
+        selected_category_ids=selected_category_ids,
     )
 
 
@@ -714,6 +813,28 @@ def delete_exercise(exercises_id: int) -> ResponseReturnValue:
     db.session.commit()
     flash("Deine Übung wurde archiviert!", "success")
     return redirect(url_for("main.all_exercises"))
+
+
+@bp.route("/categories/add", methods=["POST"])
+@login_required
+@check_confirmed
+def add_category() -> ResponseReturnValue:
+    """Create a new global exercise category or return the existing one."""
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    if not name:
+        return jsonify({"error": "Name darf nicht leer sein."}), 400
+    existing = (
+        db.session.execute(db.select(ExerciseCategory).filter_by(name=name))
+        .scalars()
+        .first()
+    )
+    if existing:
+        return jsonify({"id": existing.id, "name": existing.name}), 200
+    cat = ExerciseCategory(name=name)
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify({"id": cat.id, "name": cat.name}), 201
 
 
 @bp.route("/explore")

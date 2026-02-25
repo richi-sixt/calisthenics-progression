@@ -19,6 +19,23 @@ followers = db.Table(
     db.Column("followed_id", db.Integer, db.ForeignKey("user.id")),
 )
 
+# Exercise categories many-to-many association table
+exercise_categories = db.Table(
+    "exercise_categories",
+    db.Column(
+        "exercise_definition_id",
+        db.Integer,
+        db.ForeignKey("exercises.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "category_id",
+        db.Integer,
+        db.ForeignKey("exercise_category.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
 
 class User(UserMixin, Base):
     """User model for authentication and profile management."""
@@ -255,6 +272,14 @@ class ExerciseDefinition(Base):
         lazy="dynamic",
     )
 
+    # Categories this exercise belongs to (many-to-many, global)
+    categories = db.relationship(
+        "ExerciseCategory",
+        secondary=exercise_categories,
+        backref=db.backref("exercise_definitions", lazy="dynamic"),
+        lazy="subquery",
+    )
+
     def __init__(
         self,
         title: str | None = None,
@@ -396,6 +421,27 @@ class ProgressionLevel(Base):
     def __repr__(self) -> str:
         """String representation of ProgressionLevel."""
         return f"<ProgressionLevel {self.name} (order {self.level_order})>"
+
+
+class ExerciseCategory(Base):
+    """Global category for exercise definitions (e.g. 'Upper Body', 'Push').
+
+    Categories are shared across all users to provide a consistent vocabulary
+    for filtering exercises in the library and workout forms.
+    """
+
+    __tablename__ = "exercise_category"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False, unique=True, index=True)
+
+    def __init__(self, name: str) -> None:
+        """Initialize an exercise category."""
+        self.name = name
+
+    def __repr__(self) -> str:
+        """String representation of ExerciseCategory."""
+        return f"<ExerciseCategory {self.name}>"
 
 
 class Message(Base):

@@ -5,6 +5,36 @@
     <h2>&Uuml;bungen</h2>
     <hr>
     <p><a href="{{ url_for('main.add_exercise') }}" class="btn btn-primary" role="button">&Uuml;bung hinzuf&uuml;gen</a></p>
+
+    <!-- User filter toggle -->
+    <div class="btn-group mb-2 mr-2" role="group">
+        <a href="{{ url_for('main.all_exercises', user='all', category=selected_category) }}"
+           class="btn btn-sm {% if user_filter != 'mine' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            Alle Athleten
+        </a>
+        <a href="{{ url_for('main.all_exercises', user='mine', category=selected_category) }}"
+           class="btn btn-sm {% if user_filter == 'mine' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            Meine &Uuml;bungen
+        </a>
+    </div>
+
+    <!-- Category filter chips -->
+    {% if all_categories %}
+    <div class="mb-3">
+        <small class="text-muted d-block mb-1">Kategorie:</small>
+        <a href="{{ url_for('main.all_exercises', user=user_filter) }}"
+           class="badge {% if not selected_category %}badge-secondary{% else %}badge-light{% endif %} mr-1">
+            Alle
+        </a>
+        {% for cat in all_categories %}
+        <a href="{{ url_for('main.all_exercises', user=user_filter, category=cat.id) }}"
+           class="badge {% if selected_category == cat.id %}badge-secondary{% else %}badge-light{% endif %} mr-1">
+            {{ cat.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% for exercises in exercises %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercises.athlete.image_file) }}">
@@ -12,6 +42,13 @@
             <div class="article-metadata">
               <a class="mr-2" href="{{ url_for('main.user', username=exercises.athlete.username) }}">{{ exercises.athlete.username }}</a>
                 <small class="text-muted">{{ exercises.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
+                {% if exercises.categories %}
+                <span class="ml-2">
+                    {% for cat in exercises.categories %}
+                    <span class="badge badge-info">{{ cat.name }}</span>
+                    {% endfor %}
+                </span>
+                {% endif %}
             </div>
             <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h2>
             <!-- <p class="article-content">{{ exercises.description }}</p> -->
