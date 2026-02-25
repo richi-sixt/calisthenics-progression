@@ -16,7 +16,7 @@ from flask_login import current_user, login_required
 from project import db
 from project.decorators import check_confirmed
 from project.main import bp
-from project.main.forms import CreateExerciseForm, MessageForm
+from project.main.forms import CreateExerciseForm, ManageCategoriesForm, MessageForm
 from project.models import (
     Exercise,
     ExerciseCategory,
@@ -665,7 +665,7 @@ def exercise(exercises_id: int) -> ResponseReturnValue:
 @check_confirmed
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
-    category_id = request.args.get("category", type=int)
+    selected_categories = request.args.getlist("category", type=int)
     user_filter = request.args.get("user", "all")  # "mine" or "all"
 
     query = (
@@ -675,9 +675,11 @@ def all_exercises() -> str:
     )
     if user_filter == "mine":
         query = query.filter(ExerciseDefinition.user_id == current_user.id)
-    if category_id:
+    if selected_categories:
         query = query.filter(
-            ExerciseDefinition.categories.any(ExerciseCategory.id == category_id)
+            ExerciseDefinition.categories.any(
+                ExerciseCategory.id.in_(selected_categories)
+            )
         )
 
     exercises = db.paginate(
@@ -692,7 +694,7 @@ def all_exercises() -> str:
             "main.all_exercises",
             page=exercises.next_num,
             user=user_filter,
-            category=category_id,
+            category=selected_categories,
         )
         if exercises.has_next
         else None
@@ -702,7 +704,7 @@ def all_exercises() -> str:
             "main.all_exercises",
             page=exercises.prev_num,
             user=user_filter,
-            category=category_id,
+            category=selected_categories,
         )
         if exercises.has_prev
         else None
@@ -712,7 +714,7 @@ def all_exercises() -> str:
         title="Alle Übungen",
         exercises=exercises.items,
         all_categories=all_categories,
-        selected_category=category_id,
+        selected_categories=selected_categories,
         user_filter=user_filter,
         next_url=next_url,
         prev_url=prev_url,
@@ -835,6 +837,91 @@ def add_category() -> ResponseReturnValue:
     db.session.add(cat)
     db.session.commit()
     return jsonify({"id": cat.id, "name": cat.name}), 201
+
+
+@bp.route("/categories", methods=["GET", "POST"])
+@login_required
+@check_confirmed
+def manage_categories() -> ResponseReturnValue:
+    """GET: list all categories with usage counts.  POST: create a new one."""
+    form = ManageCategoriesForm()
+    if request.method == "POST" and form.validate_on_submit():
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Name darf nicht leer sein.", "warning")
+        else:
+            existing = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name=name))
+                .scalars()
+                .first()
+            )
+            if existing:
+                flash(f'Kategorie "{name}" existiert bereits.', "warning")
+            else:
+                db.session.add(ExerciseCategory(name=name))
+                db.session.commit()
+                flash(f'Kategorie "{name}" erstellt.', "success")
+        return redirect(url_for("main.manage_categories"))
+
+    categories = _get_all_categories()
+    counts: dict[int, int] = {
+        cat.id: cat.exercise_definitions.count()  # type: ignore[attr-defined]
+        for cat in categories
+    }
+    return render_template(
+        "manage_categories.html",
+        title="Kategorien verwalten",
+        categories=categories,
+        exercise_counts=counts,
+        form=form,
+    )
+
+
+@bp.route("/categories/<int:cat_id>/rename", methods=["POST"])
+@login_required
+@check_confirmed
+def rename_category(cat_id: int) -> ResponseReturnValue:
+    """AJAX: rename a category by ID."""
+    cat = db.session.get(ExerciseCategory, cat_id)
+    if not cat:
+        return jsonify({"error": "Nicht gefunden."}), 404
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    if not name:
+        return jsonify({"error": "Name darf nicht leer sein."}), 400
+    duplicate = (
+        db.session.execute(db.select(ExerciseCategory).filter_by(name=name))
+        .scalars()
+        .first()
+    )
+    if duplicate and duplicate.id != cat_id:
+        return jsonify({"error": f'"{name}" existiert bereits.'}), 409
+    cat.name = name
+    db.session.commit()
+    return jsonify({"id": cat.id, "name": cat.name}), 200
+
+
+@bp.route("/categories/<int:cat_id>/delete", methods=["POST"])
+@login_required
+@check_confirmed
+def delete_category(cat_id: int) -> ResponseReturnValue:
+    """Form POST: delete a category only if no exercises use it."""
+    cat = db.session.get(ExerciseCategory, cat_id)
+    if not cat:
+        flash("Kategorie nicht gefunden.", "warning")
+        return redirect(url_for("main.manage_categories"))
+    count = cat.exercise_definitions.count()  # type: ignore[attr-defined]
+    if count > 0:
+        flash(
+            f'Kategorie "{cat.name}" wird von {count} Übung(en) verwendet '
+            f"und kann nicht gelöscht werden.",
+            "danger",
+        )
+        return redirect(url_for("main.manage_categories"))
+    db.session.delete(cat)
+    db.session.commit()
+    flash("Kategorie gelöscht.", "success")
+    return redirect(url_for("main.manage_categories"))
 
 
 @bp.route("/explore")

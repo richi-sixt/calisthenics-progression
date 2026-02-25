@@ -37,12 +37,16 @@ $(document).ready(function() {
         }
     };
 
-    // Get the active category chip ID (0 = "Alle")
-    window.getActiveCategoryId = function() {
-        var $active = $(".category-chip.badge-secondary");
-        if (!$active.length) { return 0; }
-        var catId = parseInt($active.data("cat-id"));
-        return isNaN(catId) ? 0 : catId;
+    // Get all active category chip IDs (returns [] when "Alle" is selected)
+    window.getActiveCategoryIds = function() {
+        var ids = [];
+        $(".category-chip").each(function() {
+            var catId = parseInt($(this).data("cat-id"));
+            if (catId !== 0 && $(this).hasClass("badge-secondary")) {
+                ids.push(catId);
+            }
+        });
+        return ids;
     };
 
     // Initialize all existing selects
@@ -53,7 +57,7 @@ $(document).ready(function() {
     // Toggle filter for exercises - apply user filter and/or category filter
     window.applyExerciseFilter = function applyExerciseFilter() {
         var showOnlyMine = $("#showOnlyMine").is(":checked");
-        var activeCatId = (typeof getActiveCategoryId === "function") ? getActiveCategoryId() : 0;
+        var activeCatIds = (typeof getActiveCategoryIds === "function") ? getActiveCategoryIds() : [];
 
         $(".exercise-select").each(function() {
             var select = $(this);
@@ -78,11 +82,13 @@ $(document).ready(function() {
                 otherOptgroup.empty();
             }
 
-            // Apply category filter: remove options not matching the active category
-            if (activeCatId !== 0 && typeof categoryMap !== "undefined") {
+            // Apply category filter: remove options not matching any active category
+            if (activeCatIds.length > 0 && typeof categoryMap !== "undefined") {
                 var catFilterFn = function() {
                     var exId = parseInt($(this).val());
-                    return !(categoryMap[exId] && categoryMap[exId].indexOf(activeCatId) !== -1);
+                    return !(categoryMap[exId] && activeCatIds.some(function(catId) {
+                        return categoryMap[exId].indexOf(catId) !== -1;
+                    }));
                 };
                 myOptgroup.find("option").filter(catFilterFn).remove();
                 if (!showOnlyMine) {
@@ -142,10 +148,23 @@ $(document).ready(function() {
         applyExerciseFilter();
     });
 
-    // Category chip click handler (delegated for dynamic content)
+    // Category chip click handler (multi-select toggle, delegated for dynamic content)
     $(document).on("click", ".category-chip", function() {
-        $(".category-chip").removeClass("badge-secondary").addClass("badge-light");
-        $(this).addClass("badge-secondary").removeClass("badge-light");
+        var catId = parseInt($(this).data("cat-id"));
+        if (catId === 0) {
+            // "Alle": deactivate all specific category chips
+            $(".category-chip").removeClass("badge-secondary").addClass("badge-light");
+            $(this).addClass("badge-secondary").removeClass("badge-light");
+        } else {
+            // Deactivate "Alle" chip
+            $(".category-chip[data-cat-id='0']").removeClass("badge-secondary").addClass("badge-light");
+            // Toggle this specific chip
+            $(this).toggleClass("badge-secondary badge-light");
+            // If no specific chip is active, reactivate "Alle"
+            if ($(".category-chip:not([data-cat-id='0']).badge-secondary").length === 0) {
+                $(".category-chip[data-cat-id='0']").addClass("badge-secondary").removeClass("badge-light");
+            }
+        }
         applyExerciseFilter();
     });
 

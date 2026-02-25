@@ -3,6 +3,12 @@ from wtforms import RadioField, StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional
 
 
+class ManageCategoriesForm(FlaskForm):
+    """Minimal form used solely for CSRF token generation on the manage-categories page."""
+
+    submit = SubmitField("Hinzufügen")
+
+
 class MessageForm(FlaskForm):
     message = TextAreaField(
         ("Nachricht"), validators=[DataRequired(), Length(min=0, max=140)]
