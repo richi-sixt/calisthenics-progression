@@ -1,6 +1,6 @@
 # Calisthenics Progression
 
-A Flask web application for tracking calisthenics workouts — built for learning purposes.\
+A Flask web application (with German labels) for tracking calisthenics workouts — built for learning purposes.\
 Handcrafted in 2019 with inspiration from [Flask Mega Tutorial](https://github.com/miguelgrinberg/microblog-2018), now enhanced with the assistance of AI.
 
 Log your training sessions, define custom exercises with progression levels and workout templates, and connect with other athletes.
@@ -33,6 +33,7 @@ This project demonstrates the full stack of a production-ready Flask app: authen
 - Log workouts with multiple exercises, sets, and rep counts or duration values
 - Create and use workout templates
 - Select custom exercises with ordered progression levels (e.g. Tuck Planche → Straddle Planche → Full Planche)
+- Categorize individual exercises and filter them by category
 - Browse and copy exercises from other athletes
 - Select a progression level from a dropdown when logging a set
 - Edit and delete workouts
