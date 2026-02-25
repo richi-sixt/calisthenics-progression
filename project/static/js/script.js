@@ -31,6 +31,22 @@ $(document).ready(function() {
             var otherOptions = select.find("optgroup.other-exercises option").clone(true);
             select.data("originalOtherOptions", otherOptions);
         }
+        if (!select.data("originalMyOptions")) {
+            var myOptions = select.find("optgroup.my-exercises option").clone(true);
+            select.data("originalMyOptions", myOptions);
+        }
+    };
+
+    // Get all active category chip IDs (returns [] when "Alle" is selected)
+    window.getActiveCategoryIds = function() {
+        var ids = [];
+        $(".category-chip").each(function() {
+            var catId = parseInt($(this).data("cat-id"));
+            if (catId !== 0 && $(this).hasClass("badge-secondary")) {
+                ids.push(catId);
+            }
+        });
+        return ids;
     };
 
     // Initialize all existing selects
@@ -38,37 +54,54 @@ $(document).ready(function() {
         storeOriginalOptions($(this));
     });
 
-    // Toggle filter for exercises - remove/restore options
+    // Toggle filter for exercises - apply user filter and/or category filter
     window.applyExerciseFilter = function applyExerciseFilter() {
         var showOnlyMine = $("#showOnlyMine").is(":checked");
+        var activeCatIds = (typeof getActiveCategoryIds === "function") ? getActiveCategoryIds() : [];
 
         $(".exercise-select").each(function() {
             var select = $(this);
+            var myOptgroup = select.find("optgroup.my-exercises");
             var otherOptgroup = select.find("optgroup.other-exercises");
 
             // Store original options if not already stored
             storeOriginalOptions(select);
 
+            // Restore both optgroups from stored originals before re-applying filters
+            var originalMyOptions = select.data("originalMyOptions");
+            var originalOtherOptions = select.data("originalOtherOptions");
+            if (originalMyOptions) {
+                myOptgroup.empty().append(originalMyOptions.clone(true));
+            }
+            if (originalOtherOptions) {
+                otherOptgroup.empty().append(originalOtherOptions.clone(true));
+            }
+
+            // Apply user filter: remove "other" options entirely
             if (showOnlyMine) {
-                // Check if currently selected option is from "other"
-                var selectedOption = select.find("option:selected");
-                var needsSwitch = selectedOption.data("owner") === "other";
-
-                // Remove other athletes' options
                 otherOptgroup.empty();
+            }
 
-                // Switch to first "mine" option if needed
-                if (needsSwitch) {
-                    var firstMine = select.find("optgroup.my-exercises option:first");
-                    if (firstMine.length) {
-                        select.val(firstMine.val());
-                    }
+            // Apply category filter: remove options not matching any active category
+            if (activeCatIds.length > 0 && typeof categoryMap !== "undefined") {
+                var catFilterFn = function() {
+                    var exId = parseInt($(this).val());
+                    return !(categoryMap[exId] && activeCatIds.every(function(catId) {
+                        return categoryMap[exId].indexOf(catId) !== -1;
+                    }));
+                };
+                myOptgroup.find("option").filter(catFilterFn).remove();
+                if (!showOnlyMine) {
+                    otherOptgroup.find("option").filter(catFilterFn).remove();
                 }
-            } else {
-                // Restore other athletes' options
-                var originalOptions = select.data("originalOtherOptions");
-                if (originalOptions && otherOptgroup.children().length === 0) {
-                    otherOptgroup.append(originalOptions.clone(true));
+            }
+
+            // Fix selection if currently selected option was removed
+            if (select.find("option:selected").length === 0 || select.val() === null) {
+                var firstAvailable = select.find("option:first");
+                if (firstAvailable.length) {
+                    select.val(firstAvailable.val());
+                    rebuildSetsForExercise(select);
                 }
             }
 
@@ -115,6 +148,26 @@ $(document).ready(function() {
         applyExerciseFilter();
     });
 
+    // Category chip click handler (multi-select toggle, delegated for dynamic content)
+    $(document).on("click", ".category-chip", function() {
+        var catId = parseInt($(this).data("cat-id"));
+        if (catId === 0) {
+            // "Alle": deactivate all specific category chips
+            $(".category-chip").removeClass("badge-secondary").addClass("badge-light");
+            $(this).addClass("badge-secondary").removeClass("badge-light");
+        } else {
+            // Deactivate "Alle" chip
+            $(".category-chip[data-cat-id='0']").removeClass("badge-secondary").addClass("badge-light");
+            // Toggle this specific chip
+            $(this).toggleClass("badge-secondary badge-light");
+            // If no specific chip is active, reactivate "Alle"
+            if ($(".category-chip:not([data-cat-id='0']).badge-secondary").length === 0) {
+                $(".category-chip[data-cat-id='0']").addClass("badge-secondary").removeClass("badge-light");
+            }
+        }
+        applyExerciseFilter();
+    });
+
     // Exercise selection change handler
     $(document).on("change", ".exercise-select", function() {
         updateCopyButton($(this));
@@ -139,9 +192,12 @@ $(document).ready(function() {
                     $(this).append(newOption);
                 });
 
-                // Register progression levels for the copied exercise
+                // Register progression levels and categories for the copied exercise
                 if (typeof progressionMap !== "undefined" && response.progression_levels) {
                     progressionMap[response.id] = response.progression_levels;
+                }
+                if (typeof categoryMap !== "undefined") {
+                    categoryMap[response.id] = response.category_ids || [];
                 }
 
                 // Select the new exercise in this dropdown

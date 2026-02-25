@@ -15,6 +15,16 @@
             <label class="form-check-label" for="showOnlyMine">Nur meine &Uuml;bungen anzeigen</label>
         </div>
 
+        {% if all_categories %}
+        <div class="mb-2" id="categoryFilterPanel">
+            <small class="text-muted d-block mb-1">Nach Kategorie filtern:</small>
+            <span class="badge badge-secondary mr-1 category-chip" data-cat-id="0" style="cursor:pointer;">Alle</span>
+            {% for cat in all_categories %}
+            <span class="badge badge-light mr-1 category-chip" data-cat-id="{{ cat.id }}" style="cursor:pointer;">{{ cat.name }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <label>&Uuml;bung</label>
         <div class="exercise-block">
         <div class="exercise-select-wrapper">
@@ -121,6 +131,7 @@
 
 <script>
 var progressionMap = {{ progression_map | tojson }};
+var categoryMap = {{ category_map | tojson }};
 </script>
 
 <style>

@@ -5,11 +5,13 @@ from datetime import datetime, timezone
 import pytest
 
 __all__ = ("pytest",)
+import sqlalchemy.exc
 from sqlalchemy import func
 
 from project import db
 from project.models import (
     Exercise,
+    ExerciseCategory,
     ExerciseDefinition,
     Message,
     Notification,
@@ -873,3 +875,189 @@ class TestUserAccountDeletion:
                 )
             ).fetchall()
             assert len(result) == 0
+
+
+class TestExerciseCategoryModel:
+    """Tests for the ExerciseCategory model and many-to-many relationship."""
+
+    def test_category_created(self, app):
+        """Test that a category name persists correctly."""
+        with app.app_context():
+            cat = ExerciseCategory(name="Pull")
+            db.session.add(cat)
+            db.session.commit()
+            fetched = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Pull"))
+                .scalars()
+                .first()
+            )
+            assert fetched is not None
+            assert fetched.name == "Pull"
+
+    def test_category_name_unique(self, app):
+        """Test that duplicate category names raise an IntegrityError."""
+        with app.app_context():
+            db.session.add(ExerciseCategory(name="Push"))
+            db.session.commit()
+            db.session.add(ExerciseCategory(name="Push"))
+            with pytest.raises(sqlalchemy.exc.IntegrityError):
+                db.session.commit()
+            db.session.rollback()
+
+    def test_exercise_can_have_one_category(
+        self, app, exercise_definition, exercise_categories
+    ):
+        """Test assigning a single category to an exercise."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            cat = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [cat]
+            db.session.commit()
+
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            assert len(ex.categories) == 1
+            assert ex.categories[0].name == "Upper Body"
+
+    def test_exercise_can_have_multiple_categories(
+        self, app, exercise_definition, exercise_categories
+    ):
+        """Test assigning multiple categories to an exercise."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            cats = (
+                db.session.execute(
+                    db.select(ExerciseCategory).where(
+                        ExerciseCategory.name.in_(["Upper Body", "Core"])
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            ex.categories = list(cats)
+            db.session.commit()
+
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            cat_names = {c.name for c in ex.categories}
+            assert cat_names == {"Upper Body", "Core"}
+
+    def test_category_filter_any_query(
+        self, app, exercise_definition, exercise_categories
+    ):
+        """Test that .any() filter returns only exercises with a given category."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+
+            results = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter(
+                        ExerciseDefinition.categories.any(
+                            ExerciseCategory.id == upper_body.id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            assert len(results) == 1
+            assert results[0].title == "Push-ups"
+
+            # Filtering by a different category returns nothing
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            results2 = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter(
+                        ExerciseDefinition.categories.any(
+                            ExerciseCategory.id == core.id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            assert len(results2) == 0
+
+    def test_removing_exercise_cascades_bridge_rows(
+        self, app, exercise_definition, exercise_categories
+    ):
+        """Test that archiving (or deleting) an exercise doesn't leave orphan bridge rows."""
+        from project.models import exercise_categories as bridge_table
+
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+            ex_id = ex.id
+
+            # Hard-delete the exercise definition
+            db.session.delete(ex)
+            db.session.commit()
+
+            # Bridge rows should be gone
+            rows = db.session.execute(
+                db.select(bridge_table).where(
+                    bridge_table.c.exercise_definition_id == ex_id
+                )
+            ).fetchall()
+            assert len(rows) == 0

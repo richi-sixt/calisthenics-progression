@@ -15,7 +15,7 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-fallback-key"
     WTF_CSRF_SECRET_KEY = os.environ.get("WTF_CSRF_SECRET_KEY") or SECRET_KEY
 
-    WORKOUTS_PER_PAGE = 10
+    WORKOUTS_PER_PAGE = 100
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "app.db")

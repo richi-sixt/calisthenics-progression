@@ -9,6 +9,7 @@ from sqlalchemy import func
 from project import db
 from project.models import (
     Exercise,
+    ExerciseCategory,
     ExerciseDefinition,
     Message,
     ProgressionLevel,
@@ -2285,3 +2286,605 @@ class TestWorkoutTemplatesRoutes:
             response = client.get(url_for("main.explore"))
             assert response.status_code == 200
             assert b"My Template" not in response.data
+
+
+class TestExerciseCategoryRoutes:
+    """Tests for exercise category feature: filtering, creation, and form integration."""
+
+    def test_exercises_page_shows_category_chips(
+        self, auth_client, exercise_categories, app
+    ):
+        """Exercise library page renders category filter chips."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.all_exercises"))
+            assert response.status_code == 200
+            assert b"Upper Body" in response.data
+            assert b"Core" in response.data
+            assert b"Cardio" in response.data
+
+    def test_exercises_filter_by_user_mine(
+        self, auth_client, exercise_definition, second_user, app
+    ):
+        """?user=mine excludes exercises owned by other users."""
+        with app.app_context():
+            # Create an exercise owned by second_user
+            other_ex = ExerciseDefinition(
+                title="Other Exercise",
+                user_id=second_user.id,
+                counting_type="reps",
+            )
+            db.session.add(other_ex)
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.all_exercises", user="mine"))
+            assert response.status_code == 200
+            assert b"Push-ups" in response.data
+            assert b"Other Exercise" not in response.data
+
+    def test_exercises_filter_by_category(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """?category=<id> shows only exercises with that category."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+
+            # Filter by Upper Body — should show Push-ups
+            response = auth_client.get(
+                url_for("main.all_exercises", category=upper_body.id)
+            )
+            assert response.status_code == 200
+            assert b"Push-ups" in response.data
+
+            # Filter by Core — should not show Push-ups
+            response2 = auth_client.get(url_for("main.all_exercises", category=core.id))
+            assert response2.status_code == 200
+            assert b"Push-ups" not in response2.data
+
+    def test_exercises_combined_filter(
+        self, auth_client, exercise_definition, exercise_categories, second_user, app
+    ):
+        """?user=mine&category=<id> applies both filters (intersection)."""
+        with app.app_context():
+            # Assign category to testuser's push-ups
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+
+            # Create exercise by second_user with same category
+            other_ex = ExerciseDefinition(
+                title="Other Pull-ups", user_id=second_user.id, counting_type="reps"
+            )
+            db.session.add(other_ex)
+            db.session.flush()
+            other_ex.categories = [upper_body]
+            db.session.commit()
+
+            response = auth_client.get(
+                url_for("main.all_exercises", user="mine", category=upper_body.id)
+            )
+            assert response.status_code == 200
+            assert b"Push-ups" in response.data
+            assert b"Other Pull-ups" not in response.data
+
+    def test_add_exercise_shows_category_checkboxes(
+        self, auth_client, exercise_categories, app
+    ):
+        """GET /add_exercise renders category checkboxes."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_exercise"))
+            assert response.status_code == 200
+            assert b"Kategorien" in response.data
+            assert b"Upper Body" in response.data
+
+    def test_add_exercise_saves_categories(self, auth_client, exercise_categories, app):
+        """POST /add_exercise with category_ids persists bridge rows."""
+        with app.app_context():
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+
+            response = auth_client.post(
+                url_for("main.add_exercise"),
+                data={
+                    "title": "Dips",
+                    "description": "Tricep dips",
+                    "counting_type": "reps",
+                    "category_ids": [str(upper_body.id), str(core.id)],
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Dips")
+                )
+                .scalars()
+                .first()
+            )
+            assert ex is not None
+            cat_names = {c.name for c in ex.categories}
+            assert "Upper Body" in cat_names
+            assert "Core" in cat_names
+
+    def test_update_exercise_shows_selected_categories(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """GET /exercise/<id>/update pre-checks existing categories."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+            ex_id = ex.id
+            cat_id = upper_body.id
+
+        response = auth_client.get(url_for("main.update_exercise", exercises_id=ex_id))
+        assert response.status_code == 200
+        # The checkbox with the category's value should be present and checked
+        assert f'value="{cat_id}"'.encode() in response.data
+        assert b"checked" in response.data
+
+    def test_update_exercise_replaces_categories(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """POST /exercise/<id>/update replaces category assignments."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+            ex_id = ex.id
+            core_id = core.id
+
+        # Update: replace Upper Body with Core
+        auth_client.post(
+            url_for("main.update_exercise", exercises_id=ex_id),
+            data={
+                "title": "Push-ups",
+                "counting_type": "reps",
+                "category_ids": [str(core_id)],
+            },
+            follow_redirects=True,
+        )
+        with app.app_context():
+            ex = db.session.get(ExerciseDefinition, ex_id)
+            cat_names = {c.name for c in ex.categories}
+            assert cat_names == {"Core"}
+            assert "Upper Body" not in cat_names
+
+    def test_add_category_creates_new(self, auth_client, app):
+        """POST /categories/add creates a new category and returns 201."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_category"),
+                json={"name": "Gymnastics"},
+            )
+            assert response.status_code == 201
+            data = response.get_json()
+            assert data["name"] == "Gymnastics"
+            assert isinstance(data["id"], int)
+
+            cat = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Gymnastics")
+                )
+                .scalars()
+                .first()
+            )
+            assert cat is not None
+
+    def test_add_category_returns_existing_on_duplicate(self, auth_client, app):
+        """POST /categories/add returns 200 and existing id for duplicate name."""
+        with app.app_context():
+            cat = ExerciseCategory(name="Stretching")
+            db.session.add(cat)
+            db.session.commit()
+            existing_id = cat.id
+
+        response = auth_client.post(
+            url_for("main.add_category"),
+            json={"name": "Stretching"},
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["id"] == existing_id
+        assert data["name"] == "Stretching"
+
+    def test_add_category_empty_name_returns_400(self, auth_client, app):
+        """POST /categories/add with empty name returns 400."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.add_category"),
+                json={"name": "   "},
+            )
+            assert response.status_code == 400
+
+    def test_add_workout_context_includes_category_map(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """GET /add_workout passes category_map and all_categories to template."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_workout"))
+            assert response.status_code == 200
+            assert b"categoryMap" in response.data
+            assert b"Upper Body" in response.data
+
+    def test_edit_workout_context_includes_category_map(
+        self, auth_client, workout, exercise_categories, app
+    ):
+        """GET /workout/<id>/edit passes category_map to template."""
+        with app.app_context():
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Morning Workout")
+                )
+                .scalars()
+                .first()
+            )
+            response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
+            assert response.status_code == 200
+            assert b"categoryMap" in response.data
+
+    def test_add_template_context_includes_category_map(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """GET /add_template passes category_map to template."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.add_template"))
+            assert response.status_code == 200
+            assert b"categoryMap" in response.data
+
+    def test_exercises_filter_by_multiple_categories(
+        self, auth_client, exercise_definition, exercise_categories, second_user, app
+    ):
+        """?category=id1&category=id2 shows only exercises with ALL selected categories (AND logic)."""
+        with app.app_context():
+            push_ups = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            # Create a second exercise with Core category only (not Upper Body)
+            core_ex = ExerciseDefinition(
+                title="Plank",
+                user_id=second_user.id,
+                counting_type="duration",
+            )
+            db.session.add(core_ex)
+            db.session.flush()
+            # Push-ups gets BOTH categories; Plank gets only Core
+            push_ups.categories = [upper_body, core]
+            core_ex.categories = [core]
+            db.session.commit()
+
+            # Filter by Upper Body AND Core — only Push-ups qualifies (has both)
+            response = auth_client.get(
+                f"{url_for('main.all_exercises')}?category={upper_body.id}&category={core.id}"
+            )
+            assert response.status_code == 200
+            assert b"Push-ups" in response.data
+            assert b"Plank" not in response.data  # Plank only has Core, not Upper Body
+
+            # Filter by Core only — both exercises appear
+            response2 = auth_client.get(url_for("main.all_exercises", category=core.id))
+            assert response2.status_code == 200
+            assert b"Push-ups" in response2.data
+            assert b"Plank" in response2.data
+
+
+class TestCategoryManagementRoutes:
+    """Tests for the category management CRUD page (/categories)."""
+
+    def test_manage_categories_page_accessible(
+        self, auth_client, exercise_categories, app
+    ):
+        """GET /categories returns 200."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.manage_categories"))
+            assert response.status_code == 200
+
+    def test_manage_categories_shows_all_categories(
+        self, auth_client, exercise_categories, app
+    ):
+        """GET /categories shows all category names."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.manage_categories"))
+            assert response.status_code == 200
+            assert b"Upper Body" in response.data
+            assert b"Core" in response.data
+            assert b"Cardio" in response.data
+
+    def test_manage_categories_requires_login(self, client, app):
+        """Unauthenticated user is redirected."""
+        with app.app_context():
+            response = client.get(
+                url_for("main.manage_categories"), follow_redirects=False
+            )
+            assert response.status_code == 302
+
+    def test_manage_categories_create_new(self, auth_client, app):
+        """POST /categories creates a new category and redirects."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.manage_categories"),
+                data={"name": "Gymnastics"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert b"Gymnastics" in response.data
+
+            cat = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Gymnastics")
+                )
+                .scalars()
+                .first()
+            )
+            assert cat is not None
+
+    def test_manage_categories_create_duplicate_shows_warning(
+        self, auth_client, exercise_categories, app
+    ):
+        """POST /categories with duplicate name shows a flash warning."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.manage_categories"),
+                data={"name": "Upper Body"},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert b"existiert bereits" in response.data
+
+    def test_manage_categories_create_empty_name_shows_warning(self, auth_client, app):
+        """POST /categories with empty name shows a flash warning."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.manage_categories"),
+                data={"name": "   "},
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+            assert b"leer" in response.data
+
+    def test_rename_category_success(self, auth_client, exercise_categories, app):
+        """POST /categories/<id>/rename (JSON) updates name and returns 200."""
+        with app.app_context():
+            cat = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            cat_id = cat.id
+
+        response = auth_client.post(
+            url_for("main.rename_category", cat_id=cat_id),
+            json={"name": "Core & Abs"},
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["name"] == "Core & Abs"
+        assert data["id"] == cat_id
+
+        with app.app_context():
+            updated = db.session.get(ExerciseCategory, cat_id)
+            assert updated.name == "Core & Abs"
+
+    def test_rename_category_duplicate_returns_409(
+        self, auth_client, exercise_categories, app
+    ):
+        """POST /categories/<id>/rename returns 409 when name is already taken."""
+        with app.app_context():
+            core = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            core_id = core.id
+
+        response = auth_client.post(
+            url_for("main.rename_category", cat_id=core_id),
+            json={"name": "Upper Body"},
+        )
+        assert response.status_code == 409
+
+    def test_rename_category_not_found_returns_404(self, auth_client, app):
+        """POST /categories/99999/rename returns 404 for unknown ID."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.rename_category", cat_id=99999),
+                json={"name": "Whatever"},
+            )
+            assert response.status_code == 404
+
+    def test_rename_category_empty_name_returns_400(
+        self, auth_client, exercise_categories, app
+    ):
+        """POST /categories/<id>/rename with empty name returns 400."""
+        with app.app_context():
+            cat = (
+                db.session.execute(db.select(ExerciseCategory).filter_by(name="Core"))
+                .scalars()
+                .first()
+            )
+            cat_id = cat.id
+
+        response = auth_client.post(
+            url_for("main.rename_category", cat_id=cat_id),
+            json={"name": "  "},
+        )
+        assert response.status_code == 400
+
+    def test_delete_category_success(self, auth_client, app):
+        """POST /categories/<id>/delete removes a category with 0 exercises."""
+        with app.app_context():
+            cat = ExerciseCategory(name="ToDelete")
+            db.session.add(cat)
+            db.session.commit()
+            cat_id = cat.id
+
+        response = auth_client.post(
+            url_for("main.delete_category", cat_id=cat_id),
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b"gel" in response.data  # "gelöscht" in flash message
+
+        with app.app_context():
+            gone = db.session.get(ExerciseCategory, cat_id)
+            assert gone is None
+
+    def test_delete_category_blocked_when_in_use(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """POST /categories/<id>/delete is refused when exercises use the category."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+            cat_id = upper_body.id
+
+        response = auth_client.post(
+            url_for("main.delete_category", cat_id=cat_id),
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        # Flash message warns about usage
+        assert b"verwendet" in response.data
+
+        with app.app_context():
+            still_there = db.session.get(ExerciseCategory, cat_id)
+            assert still_there is not None
+
+    def test_delete_category_not_found_redirects(self, auth_client, app):
+        """POST /categories/99999/delete with unknown ID redirects gracefully."""
+        with app.app_context():
+            response = auth_client.post(
+                url_for("main.delete_category", cat_id=99999),
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+    def test_manage_categories_shows_exercise_count(
+        self, auth_client, exercise_definition, exercise_categories, app
+    ):
+        """Category list shows how many exercises use each category."""
+        with app.app_context():
+            ex = (
+                db.session.execute(
+                    db.select(ExerciseDefinition).filter_by(title="Push-ups")
+                )
+                .scalars()
+                .first()
+            )
+            upper_body = (
+                db.session.execute(
+                    db.select(ExerciseCategory).filter_by(name="Upper Body")
+                )
+                .scalars()
+                .first()
+            )
+            ex.categories = [upper_body]
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.manage_categories"))
+            assert response.status_code == 200
+            # The count badge for Upper Body should be visible
+            assert b"badge-info" in response.data

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Kategorien verwalten</h2>
+    <hr>
+
+    {% if categories %}
+    <table class="table table-sm table-hover">
+        <thead class="thead-light">
+            <tr>
+                <th>Name</th>
+                <th class="text-center" style="width:90px;">&Uuml;bungen</th>
+                <th style="width:200px;">Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in categories %}
+            <tr id="cat-row-{{ cat.id }}">
+                <td>
+                    <span class="cat-name">{{ cat.name }}</span>
+                    <input class="form-control form-control-sm cat-rename-input d-none"
+                           value="{{ cat.name }}"
+                           style="max-width:220px; display:inline-block;"
+                           aria-label="Neuer Name für {{ cat.name }}">
+                    <small class="cat-error text-danger d-none ml-1"></small>
+                </td>
+                <td class="text-center">
+                    {% set cnt = exercise_counts[cat.id] %}
+                    {% if cnt > 0 %}
+                    <span class="badge badge-info">{{ cnt }}</span>
+                    {% else %}
+                    <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary cat-edit-btn"
+                            data-cat-id="{{ cat.id }}">Bearbeiten</button>
+                    <button class="btn btn-sm btn-outline-primary cat-save-btn d-none"
+                            data-cat-id="{{ cat.id }}">Speichern</button>
+                    <button class="btn btn-sm btn-outline-secondary cat-cancel-btn d-none"
+                            data-cat-id="{{ cat.id }}">Abbrechen</button>
+
+                    {% set cnt = exercise_counts[cat.id] %}
+                    {% if cnt > 0 %}
+                    <button class="btn btn-sm btn-outline-danger disabled"
+                            title="Wird von {{ cnt }} Übung(en) verwendet — kann nicht gelöscht werden"
+                            disabled>
+                        Löschen ({{ cnt }})
+                    </button>
+                    {% else %}
+                    <form action="{{ url_for('main.delete_category', cat_id=cat.id) }}"
+                          method="POST" style="display:inline;"
+                          onsubmit="return confirm('Kategorie &quot;{{ cat.name }}&quot; wirklich löschen?');">
+                        {{ form.hidden_tag() }}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">Noch keine Kategorien vorhanden.</p>
+    {% endif %}
+
+    <hr>
+    <h5>Neue Kategorie erstellen</h5>
+    <form method="POST" class="form-inline mt-2">
+        {{ form.hidden_tag() }}
+        <input type="text" name="name" class="form-control form-control-sm mr-2"
+               placeholder="Kategoriename..." required
+               style="max-width:240px;">
+        <button type="submit" class="btn btn-sm btn-primary">Hinzufügen</button>
+    </form>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+$(function() {
+    // Edit button: show input, hide name span and edit/delete controls
+    $(document).on('click', '.cat-edit-btn', function() {
+        var catId = $(this).data('cat-id');
+        var $row = $('#cat-row-' + catId);
+        $row.find('.cat-name').addClass('d-none');
+        $row.find('.cat-rename-input').removeClass('d-none').focus().select();
+        $row.find('.cat-edit-btn').addClass('d-none');
+        $row.find('.cat-save-btn').removeClass('d-none');
+        $row.find('.cat-cancel-btn').removeClass('d-none');
+        $row.find('.cat-error').addClass('d-none').text('');
+    });
+
+    // Cancel button: revert to read-only view
+    $(document).on('click', '.cat-cancel-btn', function() {
+        var catId = $(this).data('cat-id');
+        resetRow(catId);
+    });
+
+    // Allow Enter key in rename input to trigger save
+    $(document).on('keydown', '.cat-rename-input', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var catId = $(this).closest('tr').attr('id').replace('cat-row-', '');
+            saveCategoryName(catId);
+        } else if (e.key === 'Escape') {
+            var catId = $(this).closest('tr').attr('id').replace('cat-row-', '');
+            resetRow(catId);
+        }
+    });
+
+    // Save button: AJAX rename
+    $(document).on('click', '.cat-save-btn', function() {
+        var catId = $(this).data('cat-id');
+        saveCategoryName(catId);
+    });
+
+    function saveCategoryName(catId) {
+        var $row = $('#cat-row-' + catId);
+        var newName = $row.find('.cat-rename-input').val().trim();
+        var $error = $row.find('.cat-error');
+
+        if (!newName) {
+            $error.text('Name darf nicht leer sein.').removeClass('d-none');
+            return;
+        }
+
+        $.ajax({
+            url: '/categories/' + catId + '/rename',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({name: newName}),
+        }).done(function(resp) {
+            $row.find('.cat-name').text(resp.name);
+            resetRow(catId);
+        }).fail(function(xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.error)
+                      ? xhr.responseJSON.error
+                      : 'Fehler beim Speichern.';
+            $error.text(msg).removeClass('d-none');
+        });
+    }
+
+    function resetRow(catId) {
+        var $row = $('#cat-row-' + catId);
+        var originalName = $row.find('.cat-name').text();
+        $row.find('.cat-rename-input').val(originalName).addClass('d-none');
+        $row.find('.cat-name').removeClass('d-none');
+        $row.find('.cat-edit-btn').removeClass('d-none');
+        $row.find('.cat-save-btn').addClass('d-none');
+        $row.find('.cat-cancel-btn').addClass('d-none');
+        $row.find('.cat-error').addClass('d-none').text('');
+    }
+});
+</script>
+{% endblock scripts %}
