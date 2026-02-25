@@ -675,11 +675,9 @@ def all_exercises() -> str:
     )
     if user_filter == "mine":
         query = query.filter(ExerciseDefinition.user_id == current_user.id)
-    if selected_categories:
+    for cat_id in selected_categories:
         query = query.filter(
-            ExerciseDefinition.categories.any(
-                ExerciseCategory.id.in_(selected_categories)
-            )
+            ExerciseDefinition.categories.any(ExerciseCategory.id == cat_id)
         )
 
     exercises = db.paginate(

@@ -86,7 +86,7 @@ $(document).ready(function() {
             if (activeCatIds.length > 0 && typeof categoryMap !== "undefined") {
                 var catFilterFn = function() {
                     var exId = parseInt($(this).val());
-                    return !(categoryMap[exId] && activeCatIds.some(function(catId) {
+                    return !(categoryMap[exId] && activeCatIds.every(function(catId) {
                         return categoryMap[exId].indexOf(catId) !== -1;
                     }));
                 };

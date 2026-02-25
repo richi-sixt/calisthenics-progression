@@ -2608,7 +2608,7 @@ class TestExerciseCategoryRoutes:
     def test_exercises_filter_by_multiple_categories(
         self, auth_client, exercise_definition, exercise_categories, second_user, app
     ):
-        """?category=id1&category=id2 shows exercises from either category (OR logic)."""
+        """?category=id1&category=id2 shows only exercises with ALL selected categories (AND logic)."""
         with app.app_context():
             push_ups = (
                 db.session.execute(
@@ -2629,7 +2629,7 @@ class TestExerciseCategoryRoutes:
                 .scalars()
                 .first()
             )
-            # Create a second exercise with Core category only
+            # Create a second exercise with Core category only (not Upper Body)
             core_ex = ExerciseDefinition(
                 title="Plank",
                 user_id=second_user.id,
@@ -2637,25 +2637,24 @@ class TestExerciseCategoryRoutes:
             )
             db.session.add(core_ex)
             db.session.flush()
-            push_ups.categories = [upper_body]
+            # Push-ups gets BOTH categories; Plank gets only Core
+            push_ups.categories = [upper_body, core]
             core_ex.categories = [core]
             db.session.commit()
 
-            # Filter by both Upper Body and Core — should show both exercises
+            # Filter by Upper Body AND Core — only Push-ups qualifies (has both)
             response = auth_client.get(
                 f"{url_for('main.all_exercises')}?category={upper_body.id}&category={core.id}"
             )
             assert response.status_code == 200
             assert b"Push-ups" in response.data
-            assert b"Plank" in response.data
+            assert b"Plank" not in response.data  # Plank only has Core, not Upper Body
 
-            # Filter by Upper Body only — should show Push-ups but not Plank
-            response2 = auth_client.get(
-                url_for("main.all_exercises", category=upper_body.id)
-            )
+            # Filter by Core only — both exercises appear
+            response2 = auth_client.get(url_for("main.all_exercises", category=core.id))
             assert response2.status_code == 200
             assert b"Push-ups" in response2.data
-            assert b"Plank" not in response2.data
+            assert b"Plank" in response2.data
 
 
 class TestCategoryManagementRoutes:
