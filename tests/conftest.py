@@ -7,7 +7,14 @@ from datetime import datetime, timezone
 import pytest
 
 from project import create_app, db
-from project.models import Exercise, ExerciseDefinition, Set, User, Workout
+from project.models import (
+    Exercise,
+    ExerciseCategory,
+    ExerciseDefinition,
+    Set,
+    User,
+    Workout,
+)
 from tests.test_config import TestConfig
 
 
@@ -399,6 +406,24 @@ def workout_template_with_two_exercises(app, user):
             .first()
         )
         yield template
+
+
+@pytest.fixture
+def exercise_categories(app):
+    """Create standard test categories: Cardio, Core, Upper Body."""
+    with app.app_context():
+        cats = [ExerciseCategory(name=n) for n in ["Cardio", "Core", "Upper Body"]]
+        for c in cats:
+            db.session.add(c)
+        db.session.commit()
+        cats = (
+            db.session.execute(
+                db.select(ExerciseCategory).order_by(ExerciseCategory.name)
+            )
+            .scalars()
+            .all()
+        )
+        yield cats
 
 
 @pytest.fixture
