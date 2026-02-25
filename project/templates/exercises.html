@@ -10,7 +10,7 @@
     <div class="btn-group mb-2 mr-2" role="group">
         <a href="{{ url_for('main.all_exercises', user='all', category=selected_category) }}"
            class="btn btn-sm {% if user_filter != 'mine' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-            Alle Athleten
+            Alle &Uuml;bungen
         </a>
         <a href="{{ url_for('main.all_exercises', user='mine', category=selected_category) }}"
            class="btn btn-sm {% if user_filter == 'mine' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
