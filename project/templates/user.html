@@ -30,7 +30,7 @@
             <div class="article-metadata">
               <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
             </div>
-            <h2><a class="article-title" href="{{ url_for('main.workouts', workout_id=workout.id) }}">{{ workout.title }}</a></h2>
+            <h2 class="article-title">{{ workout.title }}</h2>
             {% include '_workout.html' %}
           </div>
         </article>
