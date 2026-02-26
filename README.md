@@ -33,7 +33,6 @@ This project demonstrates the full stack of a production-ready Flask app: authen
 - Log workouts with multiple exercises, sets, and rep counts or duration values
 - Create and use workout templates
 - Select custom exercises with ordered progression levels (e.g. Tuck Planche → Straddle Planche → Full Planche)
-- Categorize individual exercises and filter them by category
 - Browse and copy exercises from other athletes
 - Select a progression level from a dropdown when logging a set
 - Edit and delete workouts
@@ -41,6 +40,7 @@ This project demonstrates the full stack of a production-ready Flask app: authen
 ### Exercise library
 
 - Create and manage your own exercise definitions with progression levels
+- Categorize individual exercises and filter them by category
 
 ### Social
 
