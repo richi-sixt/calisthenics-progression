@@ -67,7 +67,8 @@ $(document).ready(function() {
             // Store original options if not already stored
             storeOriginalOptions(select);
 
-            // Restore both optgroups from stored originals before re-applying filters
+            // Restore both optgroups from stored originalqs before re-applying applyExerciseFilter
+            var currentValue = select.val();
             var originalMyOptions = select.data("originalMyOptions");
             var originalOtherOptions = select.data("originalOtherOptions");
             if (originalMyOptions) {
@@ -76,6 +77,7 @@ $(document).ready(function() {
             if (originalOtherOptions) {
                 otherOptgroup.empty().append(originalOtherOptions.clone(true));
             }
+            if (currentValue !== null) {select.val(currentValue); }
 
             // Apply user filter: remove "other" options entirely
             if (showOnlyMine) {
