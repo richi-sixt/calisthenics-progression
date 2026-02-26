@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from flask import (
     abort,
@@ -217,16 +218,6 @@ def copy_exercise(exercises_id: int) -> ResponseReturnValue:
     )
 
 
-@bp.route("/workout/<int:workout_id>")
-@login_required
-@check_confirmed
-def workout(workout_id: int) -> ResponseReturnValue:
-    workout = db.session.get(Workout, workout_id)
-    if workout is None:
-        abort(404)
-    return render_template("workout.html", title=workout.title, workout=workout)
-
-
 @bp.route("/workout/<int:workout_id>/delete", methods=["POST"])
 @login_required
 @check_confirmed
@@ -280,7 +271,15 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
 
         db.session.commit()
         flash("Dein Workout wurde aktualisiert!", "success")
-        return redirect(url_for("main.workout", workout_id=workout.id))
+        next_url = request.args.get("next") or request.form.get("next")
+        if next_url:
+            next_url = next_url.replace(
+                "\\", ""
+            )  # This strips backslashes (prevents `\/evil.com`), then rejects any URL with a scheme (`http:`) or netloc (`evil.com`), only allowing app-local absolute paths like `/workouts`.
+            parsed = urlparse(next_url)
+            if not parsed.scheme and not parsed.netloc and next_url.startswith("/"):
+                return redirect(next_url)
+        return redirect(url_for("main.workouts"))
 
     # GET: build prefill data and exercise lists
     my_exercises, other_exercises, progression_map, category_map = (
@@ -666,7 +665,7 @@ def exercise(exercises_id: int) -> ResponseReturnValue:
 def all_exercises() -> str:
     page = request.args.get("page", 1, type=int)
     selected_categories = request.args.getlist("category", type=int)
-    user_filter = request.args.get("user", "all")  # "mine" or "all"
+    user_filter = request.args.get("user", "mine")  # "mine" or "all"
 
     query = (
         db.select(ExerciseDefinition)

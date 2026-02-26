@@ -20,9 +20,9 @@ class TestErrorHandlers:
             assert "nichts zu sehen" in html or "404" in html
 
     def test_404_for_nonexistent_workout(self, auth_client, app):
-        """Test 404 for non-existent workout."""
+        """Test 404 for non-existent workout URL."""
         with app.app_context():
-            response = auth_client.get(url_for("main.workout", workout_id=99999))
+            response = auth_client.get("/workout/99999")
             assert response.status_code == 404
 
     def test_404_for_nonexistent_exercise(self, auth_client, app):
@@ -104,7 +104,7 @@ class TestErrorHandlerContent:
     def test_404_page_for_known_route_pattern(self, auth_client, app):
         """Test 404 page for non-existent resource in known route."""
         with app.app_context():
-            response = auth_client.get(url_for("main.workout", workout_id=99999))
+            response = auth_client.get("/workout/99999")
             assert response.status_code == 404
             html = response.get_data(as_text=True)
             assert "nichts zu sehen" in html or "404" in html

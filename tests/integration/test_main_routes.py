@@ -57,17 +57,16 @@ class TestWorkoutsRoute:
             assert response.status_code == 302
 
     def test_workout_detail_page(self, auth_client, workout, app):
-        """Test workout detail page renders."""
+        """Test workout appears on workouts list page."""
         with app.app_context():
-            workout = db.session.execute(db.select(Workout)).scalars().first()
-            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
+            response = auth_client.get(url_for("main.workouts"))
             assert response.status_code == 200
             assert b"Morning Workout" in response.data
 
     def test_workout_not_found(self, auth_client, app):
-        """Test 404 for non-existent workout."""
+        """Test 404 for non-existent workout URL."""
         with app.app_context():
-            response = auth_client.get(url_for("main.workout", workout_id=99999))
+            response = auth_client.get("/workout/99999")
             assert response.status_code == 404
 
     def test_add_workout_page_renders(self, auth_client, app, exercise_definition):
@@ -772,36 +771,21 @@ class TestWorkoutWithDuration:
             assert sets[1].duration == 60
 
     def test_workout_detail_shows_duration(self, auth_client, duration_workout, app):
-        """Test workout detail page displays duration instead of reps."""
+        """Test workouts list displays duration instead of reps."""
         with app.app_context():
-            workout = (
-                db.session.execute(
-                    db.select(Workout).filter_by(title="Duration Workout")
-                )
-                .scalars()
-                .first()
-            )
-            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
+            response = auth_client.get(url_for("main.workouts"))
             assert response.status_code == 200
-            assert b"Dauer:" in response.data
             assert b"01:30" in response.data
-            # Should NOT show "Reps:" for a duration exercise
-            assert b"Reps:" not in response.data
+            # Should NOT show "Reps" for a duration-only workout
+            assert b"Reps" not in response.data
 
     def test_workout_detail_shows_reps(self, auth_client, workout, app):
-        """Test workout detail page displays reps for reps-based exercises."""
+        """Test workouts list displays reps for reps-based exercises."""
         with app.app_context():
-            workout = (
-                db.session.execute(
-                    db.select(Workout).filter_by(title="Morning Workout")
-                )
-                .scalars()
-                .first()
-            )
-            response = auth_client.get(url_for("main.workout", workout_id=workout.id))
+            response = auth_client.get(url_for("main.workouts"))
             assert response.status_code == 200
-            assert b"Reps:" in response.data
-            # Should NOT show "Dauer:" for a reps exercise
+            assert b"Reps" in response.data
+            # Should NOT show "Dauer:" for a reps-only workout
             assert b"Dauer:" not in response.data
 
     def test_add_workout_page_shows_counting_type_data(
@@ -1873,7 +1857,7 @@ class TestEditWorkout:
     def test_edit_workout_redirects_to_detail_on_success(
         self, auth_client, workout, exercise_definition, app
     ):
-        """Test that a successful POST redirects to the workout detail page."""
+        """Test that a successful POST redirects to the workouts list page."""
         with app.app_context():
             w = (
                 db.session.execute(
@@ -1901,41 +1885,27 @@ class TestEditWorkout:
                 follow_redirects=False,
             )
             assert response.status_code == 302
-            assert f"/workout/{w.id}" in response.headers["Location"]
+            assert "/workouts" in response.headers["Location"]
 
     def test_edit_workout_button_shown_to_owner(self, auth_client, workout, app):
-        """Test that the edit workout button appears on the detail page for the owner."""
+        """Test that the edit workout button appears on the workouts list for the owner."""
         with app.app_context():
-            w = (
-                db.session.execute(
-                    db.select(Workout).filter_by(title="Morning Workout")
-                )
-                .scalars()
-                .first()
-            )
-            response = auth_client.get(url_for("main.workout", workout_id=w.id))
+            response = auth_client.get(url_for("main.workouts"))
             assert response.status_code == 200
             assert "Workout bearbeiten" in response.get_data(as_text=True)
 
     def test_edit_workout_button_hidden_from_other(
         self, client, workout, second_user, app
     ):
-        """Test that the edit workout button is hidden for non-owners."""
+        """Test that a non-owner's workouts list does not show another user's workouts."""
         with app.app_context():
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(second_user.id)
                 sess["_fresh"] = True
 
-            w = (
-                db.session.execute(
-                    db.select(Workout).filter_by(title="Morning Workout")
-                )
-                .scalars()
-                .first()
-            )
-            response = client.get(url_for("main.workout", workout_id=w.id))
+            response = client.get(url_for("main.workouts"))
             assert response.status_code == 200
-            assert "Workout bearbeiten" not in response.get_data(as_text=True)
+            assert "Morning Workout" not in response.get_data(as_text=True)
 
 
 class TestWorkoutTemplatesRoutes:
@@ -2644,14 +2614,16 @@ class TestExerciseCategoryRoutes:
 
             # Filter by Upper Body AND Core — only Push-ups qualifies (has both)
             response = auth_client.get(
-                f"{url_for('main.all_exercises')}?category={upper_body.id}&category={core.id}"
+                f"{url_for('main.all_exercises')}?category={upper_body.id}&category={core.id}&user=all"
             )
             assert response.status_code == 200
             assert b"Push-ups" in response.data
             assert b"Plank" not in response.data  # Plank only has Core, not Upper Body
 
             # Filter by Core only — both exercises appear
-            response2 = auth_client.get(url_for("main.all_exercises", category=core.id))
+            response2 = auth_client.get(
+                url_for("main.all_exercises", category=core.id, user="all")
+            )
             assert response2.status_code == 200
             assert b"Push-ups" in response2.data
             assert b"Plank" in response2.data

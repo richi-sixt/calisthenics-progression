@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="content-section">
-    <form class="needs-validation" method="POST" action="{{ url_for('main.edit_workout', workout_id=workout.id) }}" id="workout" novalidate>
+    <form class="needs-validation" method="POST" action="{{ url_for('main.edit_workout', workout_id=workout.id, next=request.args.get('next', '')) }}" id="workout" novalidate>
         <label>Workout</label>
         <input type="text" class="form-control" name="wtitle" id="wtitle" placeholder="Workout Titel" maxlength="80" value="{{ workout.title }}" required>
         <div class="invalid-feedback">
