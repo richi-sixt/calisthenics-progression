@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from flask import (
     abort,
@@ -271,8 +272,13 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
         db.session.commit()
         flash("Dein Workout wurde aktualisiert!", "success")
         next_url = request.args.get("next") or request.form.get("next")
-        if next_url and next_url.startswith("/"):
-            return redirect(next_url)
+        if next_url:
+            next_url = next_url.replace(
+                "\\", ""
+            )  # This strips backslashes (prevents `\/evil.com`), then rejects any URL with a scheme (`http:`) or netloc (`evil.com`), only allowing app-local absolute paths like `/workouts`.
+            parsed = urlparse(next_url)
+            if not parsed.scheme and not parsed.netloc and next_url.startswith("/"):
+                return redirect(next_url)
         return redirect(url_for("main.workouts"))
 
     # GET: build prefill data and exercise lists
