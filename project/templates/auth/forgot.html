@@ -1,13 +1,12 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
     <div class="content-section">
         <form class="needs-validation" method="POST" action="" novalidate>
             {{ form.hidden_tag() }}
-            <fieldset class="form-group">
+            <fieldset class="mb-3">
                 <legend class="border-bottom mb-4">Passwort zurücksetzen</legend>
-                <div class="form-group">
+                <div class="mb-3">
                     {{ form.email.label(class="form-control-label") }}
                     {% if form.email.errors %}
                         {{ form.email(class="form-control form-control-lg is-invalid") }}
@@ -21,7 +20,7 @@
                     {% endif %}
                 </div>
             </fieldset>
-            <div class="form-group">
+            <div class="mb-3">
                 {{ form.submit(class="btn btn-outline-info") }}
             </div>
         </form>
