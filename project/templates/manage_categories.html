@@ -6,7 +6,7 @@
 
     {% if categories %}
     <table class="table table-sm table-hover">
-        <thead class="thead-light">
+        <thead class="table-light">
             <tr>
                 <th>Name</th>
                 <th class="text-center" style="width:90px;">&Uuml;bungen</th>
@@ -22,12 +22,12 @@
                            value="{{ cat.name }}"
                            style="max-width:220px; display:inline-block;"
                            aria-label="Neuer Name für {{ cat.name }}">
-                    <small class="cat-error text-danger d-none ml-1"></small>
+                    <small class="cat-error text-danger d-none ms-1"></small>
                 </td>
                 <td class="text-center">
                     {% set cnt = exercise_counts[cat.id] %}
                     {% if cnt > 0 %}
-                    <span class="badge badge-info">{{ cnt }}</span>
+                    <span class="badge bg-info">{{ cnt }}</span>
                     {% else %}
                     <span class="text-muted">0</span>
                     {% endif %}
@@ -66,9 +66,9 @@
 
     <hr>
     <h5>Neue Kategorie erstellen</h5>
-    <form method="POST" class="form-inline mt-2">
+    <form method="POST" class="d-flex mt-2">
         {{ form.hidden_tag() }}
-        <input type="text" name="name" class="form-control form-control-sm mr-2"
+        <input type="text" name="name" class="form-control form-control-sm me-2"
                placeholder="Kategoriename..." required
                style="max-width:240px;">
         <button type="submit" class="btn btn-sm btn-primary">Hinzufügen</button>

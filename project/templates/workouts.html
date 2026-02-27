@@ -5,9 +5,9 @@
     <hr>
     <p><a href="{{ url_for('main.add_workout') }}" class="btn btn-primary" role="button">Workout hinzuf&uuml;gen</a></p>
     {% for workout in workouts %}
-        <article id="workout-{{ workout.id }}" class="media content-section">
+        <article id="workout-{{ workout.id }}" class="d-flex content-section">
               <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlete.image_file) }}">
-              <div class="media-body">
+              <div class="flex-grow-1">
                 <div class="article-metadata d-flex justify-content-between align-items-start">
                   <a class="mb-1" href="{{ url_for('main.user', username=workout.athlete.username) }}">{{ workout.athlete.username }}</a>
                   <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y, %H:%M') }}</small>
@@ -18,7 +18,7 @@
                     <a href="{{ url_for('main.edit_workout', workout_id=workout.id, next=request.url + '#workout-' + workout.id|string) }}"
                        class="btn btn-sm btn-warning">Workout bearbeiten</a>
                     <form action="{{ url_for('main.delete_workout', workout_id=workout.id) }}"
-                          method="POST" class="d-inline ml-1"
+                          method="POST" class="d-inline ms-1"
                           onsubmit="return confirm('Workout wirklich löschen?');">
                       <button type="submit" class="btn btn-sm btn-danger">Workout l&ouml;schen</button>
                     </form>

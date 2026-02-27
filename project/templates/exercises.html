@@ -1,13 +1,12 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
-    <h2>&Uuml;bungen</h2>
+    <h4>&Uuml;bungen</h2>
     <hr>
     <p><a href="{{ url_for('main.add_exercise') }}" class="btn btn-primary" role="button">&Uuml;bung hinzuf&uuml;gen</a></p>
 
     <!-- User filter toggle -->
-    <div class="btn-group mb-2 mr-2" role="group">
+    <div class="btn-group mb-2 me-2" role="group">
         <a href="{{ url_for('main.all_exercises', user='all', category=selected_categories) }}"
            class="btn btn-sm {% if user_filter != 'mine' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
             Alle &Uuml;bungen
@@ -22,10 +21,10 @@
     {% if all_categories %}
     <div class="mb-3">
         <small class="text-muted d-block mb-1">Kategorie:</small>
-        <span class="badge {% if not selected_categories %}badge-secondary{% else %}badge-light{% endif %} mr-1 category-chip-page"
+        <span class="badge {% if not selected_categories %}bg-secondary{% else %}bg-light text-dark{% endif %} me-1 category-chip-page"
               data-cat-id="0" style="cursor:pointer;">Alle</span>
         {% for cat in all_categories %}
-        <span class="badge {% if cat.id in selected_categories %}badge-secondary{% else %}badge-light{% endif %} mr-1 category-chip-page"
+        <span class="badge {% if cat.id in selected_categories %}bg-secondary{% else %}bg-light text-dark{% endif %} me-1 category-chip-page"
               data-cat-id="{{ cat.id }}" style="cursor:pointer;">{{ cat.name }}</span>
         {% endfor %}
     </div>
@@ -51,21 +50,21 @@
     {% endblock scripts %}
 
     {% for exercises in exercises %}
-        <article class="media content-section">
+        <article class="d-flex content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercises.athlete.image_file) }}">
-          <div class="media-body">
+          <div class="flex-grow-1">
             <div class="article-metadata">
-              <a class="mr-2" href="{{ url_for('main.user', username=exercises.athlete.username) }}">{{ exercises.athlete.username }}</a>
+              <a class="me-2" href="{{ url_for('main.user', username=exercises.athlete.username) }}">{{ exercises.athlete.username }}</a>
                 <small class="text-muted">{{ exercises.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
                 {% if exercises.categories %}
-                <span class="ml-2">
+                <span class="ms-2">
                     {% for cat in exercises.categories %}
-                    <span class="badge badge-info">{{ cat.name }}</span>
+                    <span class="badge bg-info">{{ cat.name }}</span>
                     {% endfor %}
                 </span>
                 {% endif %}
             </div>
-            <h2><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h2>
+            <h4><a class="article-title" href="{{ url_for('main.exercise', exercises_id=exercises.id) }}">{{ exercises.title }}</a></h4>
             <!-- <p class="article-content">{{ exercises.description }}</p> -->
           </div>
         </article>

@@ -1,23 +1,22 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
-  <article class="media content-section">
+  <article class="d-flex content-section">
       <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercise.athlete.image_file) }}">
-      <div class="media-body">
+      <div class="flex-grow-1">
 
       <div class="article-metadata">
-        <a class="mr-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
+        <a class="me-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
         <small class="text-muted">{{ exercise.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
 
           {% if exercise.athlete == current_user %}
           <div>
-            <button type="button" class="btn btn-warning btn-sm m-1 float-right" data-toggle="modal" data-target="#deleteModal">Archivieren</button>
-            <a class="btn btn-secondary btn-sm m-1 float-right" href="{{ url_for('main.update_exercise', exercises_id=exercise.id) }}">Aktualisieren</a>
+            <button type="button" class="btn btn-warning btn-sm m-1 float-end" data-bs-toggle="modal" data-bs-target="#deleteModal">Archivieren</button>
+            <a class="btn btn-secondary btn-sm m-1 float-end" href="{{ url_for('main.update_exercise', exercises_id=exercise.id) }}">Aktualisieren</a>
           </div>
           {% endif %}
           <div>
-            <a class="btn btn-secondary btn-sm m-1 float-right" href="{{ url_for('main.all_exercises') }}">Zur&uuml;ck</a>
+            <a class="btn btn-secondary btn-sm m-1 float-end" href="{{ url_for('main.all_exercises') }}">Zur&uuml;ck</a>
           </div>         
       </div>
       <h2 class="article-title">{{ exercise.title }}</h2>
@@ -42,12 +41,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="deleteModalLabel">&Uuml;bung archivieren?</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schliessen</button>
           <form action="{{ url_for('main.delete_exercise', exercises_id=exercise.id) }}" method="POST">
             <input class="btn btn-warning" type="submit" value="Archivieren">
           </form>
@@ -56,5 +53,3 @@
     </div>
   </div>
 {% endblock content %}
-
-

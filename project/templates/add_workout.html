@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
 {% if templates %}
@@ -16,7 +15,7 @@
                 </option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-outline-info btn-sm ml-2">Laden</button>
+            <button type="submit" class="btn btn-outline-info btn-sm ms-2">Laden</button>
         </div>
     </form>
 </div>
@@ -41,9 +40,9 @@
         {% if all_categories %}
         <div class="mb-2" id="categoryFilterPanel">
             <small class="text-muted d-block mb-1">Nach Kategorie filtern:</small>
-            <span class="badge badge-secondary mr-1 category-chip" data-cat-id="0" style="cursor:pointer;">Alle</span>
+            <span class="badge bg-secondary me-1 category-chip" data-cat-id="0" style="cursor:pointer;">Alle</span>
             {% for cat in all_categories %}
-            <span class="badge badge-light mr-1 category-chip" data-cat-id="{{ cat.id }}" style="cursor:pointer;">{{ cat.name }}</span>
+            <span class="badge bg-light text-dark me-1 category-chip" data-cat-id="{{ cat.id }}" style="cursor:pointer;">{{ cat.name }}</span>
             {% endfor %}
         </div>
         {% endif %}
@@ -63,10 +62,10 @@
                     {% endfor %}
                 </optgroup>
             </select>
-            <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ml-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
-            <button type="button" class="btn btn-sm btn-outline-danger removeExercise ml-1" title="&Uuml;bung entfernen">&times;</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ms-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
+            <button type="button" class="btn btn-sm btn-outline-danger removeExercise ms-1" title="&Uuml;bung entfernen">&times;</button>
         </div>
-        <div class="form-group" id="exercise1">
+        <div class="mb-3" id="exercise1">
         </div>
         <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>
         </div>
@@ -74,7 +73,7 @@
         <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
         <input type="hidden" name="exercise_count" value="{{ prefill|length if prefill else 1 }}">
         <br><br>
-        <button type="submit" class="btn btn-primary btn-block">Workout hinzuf&uuml;gen</button>
+        <button type="submit" class="btn btn-primary w-100">Workout hinzuf&uuml;gen</button>
     </form>
 </div>
 
@@ -94,10 +93,10 @@
                 {% endfor %}
             </optgroup>
         </select>
-        <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ml-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
-        <button type="button" class="btn btn-sm btn-outline-danger removeExercise ml-1" title="&Uuml;bung entfernen">&times;</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary copy-exercise-btn ms-2" title="&Uuml;bung kopieren" style="display: none;">Kopieren</button>
+        <button type="button" class="btn btn-sm btn-outline-danger removeExercise ms-1" title="&Uuml;bung entfernen">&times;</button>
     </div>
-    <div class="form-group" id="exercise<%= exercise_num %>">
+    <div class="mb-3" id="exercise<%= exercise_num %>">
     </div>
     <button type="button" class="btn btn-info addSet" exercise="<%= exercise_num %>">Set hinzuf&uuml;gen</button>
     </div>
