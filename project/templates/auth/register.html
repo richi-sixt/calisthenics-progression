@@ -1,13 +1,12 @@
 {% extends "base.html" %}
-{% from "bootstrap5/form.html" import render_form %}
 
 {% block content %}
     <div class="content-section">
         <form class="needs-validation" method="POST" action="" novalidate>
             {{ form.hidden_tag() }}
-            <fieldset class="form-group">
+            <fieldset class="mb-3">
                 <legend class="border-bottom mb-4">Registrieren</legend>
-                <div class="form-group">
+                <div class="mb-3">
                     {{ form.username.label(class="form-control-label") }}
                     {% if form.username.errors %}
                         {{ form.username(class="form-control form-control-lg is-invalid") }}
@@ -20,7 +19,7 @@
                         {{ form.username(class="form-control form-control-lg") }}
                     {% endif %}
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     {{ form.email.label(class="form-control-label") }}
                     {% if form.email.errors %}
                         {{ form.email(class="form-control form-control-lg is-invalid") }}
@@ -34,16 +33,14 @@
                         {{ form.email(class="form-control form-control-lg") }}
                     {% endif %}
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     {{ form.password.label(class="form-control-label") }}
                     <div class="input-group">
                     {% if form.password.errors %}
                         {{ form.password(class="form-control form-control-lg is-invalid", id="reg_password") }}
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_password', this)">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_password', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
                         <div class="invalid-feedback">
                             {% for error in form.password.errors %}
                                 <span>{{ error }}</span>
@@ -51,24 +48,20 @@
                         </div>
                     {% else %}
                         {{ form.password(class="form-control form-control-lg", id="reg_password") }}
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_password', this)">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_password', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
                     {% endif %}
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     {{ form.repeat_password.label(class="form-control-label") }}
                     <div class="input-group">
                     {% if form.repeat_password.errors %}
                         {{ form.repeat_password(class="form-control form-control-lg is-invalid", id="reg_repeat_password") }}
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_repeat_password', this)">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_repeat_password', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
                         <div class="invalid-feedback">
                             {% for error in form.repeat_password.errors %}
                                 <span>Das Passwort stimmt nicht &uuml;berein.</span>
@@ -76,23 +69,21 @@
                         </div>
                     {% else %}
                         {{ form.repeat_password(class="form-control form-control-lg", id="reg_repeat_password") }}
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_repeat_password', this)">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('reg_repeat_password', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
                     {% endif %}
                     </div>
                 </div>
             </fieldset>
-            <div class="form-group">
+            <div class="mb-3">
                 {{ form.submit(class="btn btn-outline-info") }}
             </div>
         </form>
     </div>
     <div class="border-top pt-3">
         <small class="text-muted">
-            Bereits registriert? <a class="ml-2" href="{{ url_for('auth.login') }}">Anmelden</a>
+            Bereits registriert? <a class="ms-2" href="{{ url_for('auth.login') }}">Anmelden</a>
         </small>
     </div>
 {% endblock content %}

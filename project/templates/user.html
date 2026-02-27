@@ -2,9 +2,9 @@
 
 {% block content %}
     <div class="content-section">
-        <div class="media">
+        <div class="d-flex">
             <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + user.image_file) }}">
-            <div class="media-body">
+            <div class="flex-grow-1">
                 <h2 class="account-heading">{{ user.username }}</h2>
                     {% if user.about_me %}<hr><p>{{ user.about_me }}</p><hr>{% endif %}
                 <p>{{ user.followers.count() }} followers, {{ user.followed.count() }} following.</p>
@@ -25,8 +25,8 @@
         </div>
     </div>
     {% for workout in workouts %}
-    <article class="media content-section">
-          <div class="media-body">
+    <article class="d-flex content-section">
+          <div class="flex-grow-1">
             <div class="article-metadata">
               <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
             </div>

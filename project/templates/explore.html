@@ -4,9 +4,9 @@
     <h2>Workouts von anderen Athleten entdecken</h2>
     <hr>
     {% for workout in workouts %}
-    <article class="media content-section">
+    <article class="d-flex content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + workout.athlete.image_file) }}">
-          <div class="media-body">
+          <div class="flex-grow-1">
             <div class="article-metadata d-flex justify-content-between align-items-start">
               <a class="mb-1" href="{{ url_for('main.user', username=workout.athlete.username) }}">{{ workout.athlete.username }}</a>
               <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y, %H:%M') }}</small>

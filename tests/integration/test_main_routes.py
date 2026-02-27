@@ -2859,4 +2859,4 @@ class TestCategoryManagementRoutes:
             response = auth_client.get(url_for("main.manage_categories"))
             assert response.status_code == 200
             # The count badge for Upper Body should be visible
-            assert b"badge-info" in response.data
+            assert b"bg-info" in response.data
