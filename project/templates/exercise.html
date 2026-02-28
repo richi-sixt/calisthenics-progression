@@ -4,35 +4,51 @@
   <article class="d-flex content-section">
       <img class="rounded-circle article-img" src="{{ url_for('static', filename='profile_pics/' + exercise.athlete.image_file) }}">
       <div class="flex-grow-1">
-
-      <div class="article-metadata">
-        <a class="me-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
-        <small class="text-muted">{{ exercise.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
-
-          {% if exercise.athlete == current_user %}
-          <div>
-            <button type="button" class="btn btn-warning btn-sm m-1 float-end" data-bs-toggle="modal" data-bs-target="#deleteModal">Archivieren</button>
-            <a class="btn btn-secondary btn-sm m-1 float-end" href="{{ url_for('main.update_exercise', exercises_id=exercise.id) }}">Aktualisieren</a>
+        <div class="article-metadata d-flex justify-content-between align-items-start">
+          <a class="me-2" href="{{ url_for('main.user', username=exercise.athlete.username) }}">{{ exercise.athlete.username }}</a>
+          <small class="text-muted">{{ exercise.date_created.strftime('%d.%m.%Y, %H:%M') }}</small>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <h4 class="mb-1 article-title">{{ exercise.title }}</h4>
+          <div class="btn-group">
+            <a href="{{ url_for('main.all_exercises') }}" class="btn btn-sm btn-secondary" title="Zur&uuml;ck">
+              <i class="bi bi-arrow-left"></i>
+            </a>
+            {% if exercise.athlete == current_user %}
+            <a href="{{ url_for('main.update_exercise', exercises_id=exercise.id) }}"
+               class="btn btn-sm btn-secondary ms-1" title="Aktualisieren">
+              <i class="bi bi-pencil-square"></i>
+            </a>
+            <button type="button" class="btn btn-sm btn-warning ms-1"
+                    data-bs-toggle="modal" data-bs-target="#deleteModal" title="Archivieren">
+              <i class="bi bi-archive"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-2">
+          {% if exercise.categories %}
+          <div class="mb-2">
+            {% for cat in exercise.categories %}
+            <span class="badge bg-info">{{ cat.name }}</span>
+            {% endfor %}
           </div>
           {% endif %}
-          <div>
-            <a class="btn btn-secondary btn-sm m-1 float-end" href="{{ url_for('main.all_exercises') }}">Zur&uuml;ck</a>
-          </div>         
+          {% if exercise.description %}
+          <p class="article-content">{{ exercise.description }}</p>
+          {% endif %}
+          <p class="mb-1"><small class="text-muted">Typ: {{ 'Dauer' if exercise.counting_type == 'duration' else 'Reps' }}</small></p>
+          {% set levels = exercise.progression_levels.all() %}
+          {% if levels %}
+          <p class="mb-1"><strong>Progressionsstufen:</strong></p>
+          <ol>
+            {% for pl in levels %}
+            <li>{{ pl.name }}</li>
+            {% endfor %}
+          </ol>
+          {% endif %}
+        </div>
       </div>
-      <h2 class="article-title">{{ exercise.title }}</h2>
-       {% if exercise.description %}
-      <p class="article-content">{{ exercise.description }}</p>
-      {% endif %}
-      {% set levels = exercise.progression_levels.all() %}
-      {% if levels %}
-      <p><strong>Progressionsstufen:</strong></p>
-      <ol>
-        {% for pl in levels %}
-        <li>{{ pl.name }}</li>
-        {% endfor %}
-      </ol>
-      {% endif %}
-    </div>
   </article>
   
   <!-- Modal -->
@@ -53,3 +69,5 @@
     </div>
   </div>
 {% endblock content %}
+
+

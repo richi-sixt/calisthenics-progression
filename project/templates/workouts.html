@@ -16,11 +16,15 @@
                   <h4 class="mb-1">{{ workout.title }}</h4>
                   <div class="btn-group">
                     <a href="{{ url_for('main.edit_workout', workout_id=workout.id, next=request.url + '#workout-' + workout.id|string) }}"
-                       class="btn btn-sm btn-warning">Workout bearbeiten</a>
+                       class="btn btn-sm btn-warning" title="Workout bearbeiten">
+                      <i class="bi bi-pencil-square"></i>
+                    </a>
                     <form action="{{ url_for('main.delete_workout', workout_id=workout.id) }}"
                           method="POST" class="d-inline ms-1"
                           onsubmit="return confirm('Workout wirklich löschen?');">
-                      <button type="submit" class="btn btn-sm btn-danger">Workout l&ouml;schen</button>
+                      <button type="submit" class="btn btn-sm btn-danger" title="Workout l&ouml;schen">
+                        <i class="bi bi-trash"></i>
+                      </button>
                     </form>
                   </div>
                 </div>

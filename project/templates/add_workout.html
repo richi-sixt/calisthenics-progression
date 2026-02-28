@@ -69,15 +69,13 @@
         </div>
         <button type="button" class="btn btn-info addSet" exercise="1">Set hinzuf&uuml;gen</button>
         </div>
-        <br>
         <button type="button" id="addExercise" class="btn btn-success">&Uuml;bung hinzuf&uuml;gen</button>
         <input type="hidden" name="exercise_count" value="{{ prefill|length if prefill else 1 }}">
-        <br><br>
-        <button type="submit" class="btn btn-primary w-100">Workout hinzuf&uuml;gen</button>
+        <button type="submit" class="btn btn-primary w-100">Workout speichern</button>
     </form>
 </div>
 
-<script type="text/html" id="exercise_template"><br><br>
+<script type="text/html" id="exercise_template">
     <div class="exercise-block">
         <label><strong>&Uuml;bung</strong></label>
     <div class="exercise-select-wrapper">
