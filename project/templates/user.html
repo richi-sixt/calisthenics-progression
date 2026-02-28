@@ -10,7 +10,6 @@
                 <p>{{ user.followers.count() }} followers, {{ user.followed.count() }} following.</p>
                 {% if user == current_user %}
                 <p><a href="{{ url_for('auth.edit_profile') }}">Profil bearbeiten</a></p>
-                <p><a href="{{ url_for('auth.forgot') }}">Passwort zur&uuml;cksetzen</a></p>          
                 {% elif not current_user.is_following(user) %} 
                 <p><a href="{{ url_for('main.follow', username=user.username) }}">Follow</a></p>
                 {% else %}
@@ -20,19 +19,9 @@
                 <p>
                     <a href="{{ url_for('main.send_message', recipient=user.username) }}">{{ ('Private Nachricht senden') }}</a>
                </p>
+
                 {% endif %}
             </div>
         </div>
     </div>
-    {% for workout in workouts %}
-    <article class="d-flex content-section">
-          <div class="flex-grow-1">
-            <div class="article-metadata">
-              <small class="text-muted">{{ workout.timestamp.strftime('%d.%m.%Y') }}</small>
-            </div>
-            <h2 class="article-title">{{ workout.title }}</h2>
-            {% include '_workout.html' %}
-          </div>
-        </article>
-{% endfor %}
 {% endblock %}

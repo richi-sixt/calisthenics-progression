@@ -44,7 +44,7 @@ $(document).ready(function() {
         var ids = [];
         $(".category-chip").each(function() {
             var catId = parseInt($(this).data("cat-id"));
-            if (catId !== 0 && $(this).hasClass("badge-secondary")) {
+            if (catId !== 0 && $(this).hasClass("bg-secondary")) {
                 ids.push(catId);
             }
         });
@@ -157,16 +157,16 @@ $(document).ready(function() {
         var catId = parseInt($(this).data("cat-id"));
         if (catId === 0) {
             // "Alle": deactivate all specific category chips
-            $(".category-chip").removeClass("badge-secondary").addClass("badge-light");
-            $(this).addClass("badge-secondary").removeClass("badge-light");
+            $(".category-chip").removeClass("bg-secondary").addClass("bg-light");
+            $(this).addClass("bg-secondary").removeClass("bg-light");
         } else {
             // Deactivate "Alle" chip
-            $(".category-chip[data-cat-id='0']").removeClass("badge-secondary").addClass("badge-light");
+            $(".category-chip[data-cat-id='0']").removeClass("bg-secondary").addClass("bg-light");
             // Toggle this specific chip
-            $(this).toggleClass("badge-secondary badge-light");
+            $(this).toggleClass("bg-secondary bg-light");
             // If no specific chip is active, reactivate "Alle"
-            if ($(".category-chip:not([data-cat-id='0']).badge-secondary").length === 0) {
-                $(".category-chip[data-cat-id='0']").addClass("badge-secondary").removeClass("badge-light");
+            if ($(".category-chip:not([data-cat-id='0']).bg-secondary").length === 0) {
+                $(".category-chip[data-cat-id='0']").addClass("bg-secondary").removeClass("bg-light");
             }
         }
         applyExerciseFilter();
