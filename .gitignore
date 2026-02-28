@@ -8,6 +8,7 @@ migrations
 .coverage
 .flake8
 pyrightconfig.json
+SKILL.md
 
 
 
