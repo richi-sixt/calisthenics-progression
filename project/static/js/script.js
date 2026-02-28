@@ -1,9 +1,11 @@
 $(document).ready(function() {
 
+    // Only compile workout templates on pages that have them
+    if ($("#exercise_template").length) {
     exercise_template = _.template($("#exercise_template").html());
     set_reps_template = _.template($("#set_reps_template").html());
     set_duration_template = _.template($("#set_duration_template").html());
-
+  }
     // Get the counting type for an exercise select
     window.getCountingType = function(select) {
         var selectedOption = select.find("option:selected");
