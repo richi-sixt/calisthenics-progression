@@ -136,6 +136,7 @@ $(document).ready(function() {
         // Clear existing sets and re-add one
         setsContainer.empty();
         setsContainer.append(getSetTemplate(countingType, exerciseNum, levels));
+        renumberSets(setsContainer);
     }
 
     // Initial filter application
@@ -222,11 +223,28 @@ $(document).ready(function() {
         });
     });
 
+    // Renumber sets within an exercise container
+    window.renumberSets = function renumberSets(exerciseContainer) {
+        $(exerciseContainer).find(".set-row").each(function(idx) {
+            $(this).find(".set-label").text("Set " + (idx + 1));
+        });
+    };
+
+    // Renumber all sets across all exercises
+    window.renumberAllSets = function renumberAllSets() {
+        $(".exercise-block").each(function() {
+            var container = $(this).find("[id^='exercise']");
+            renumberSets(container);
+        });
+    };
+
     // Renumber exercises after one is removed
     function renumberExercises() {
         var count = 0;
         $(".exercise-block").each(function(idx) {
             count = idx + 1;
+            // Update exercise label
+            $(this).find(".exercise-label strong").text("\u00dcbung " + count);
             // Update select name
             $(this).find("select.exercise-select").attr("name", "exercise" + count);
             // Update sets container id
@@ -243,7 +261,9 @@ $(document).ready(function() {
 
     // Remove a single set
     $(document).on("click", ".removeSet", function() {
+        var container = $(this).closest("[id^='exercise']");
         $(this).closest(".set-row").remove();
+        renumberSets(container);
     });
 
     // Remove an entire exercise block
@@ -278,6 +298,7 @@ $(document).ready(function() {
         var levels = getLevelsForExercise(select);
         var set_compiled = getSetTemplate(countingType, exercise_num, levels);
         $("#exercise" + exercise_num).append(set_compiled);
+        renumberSets($("#exercise" + exercise_num));
     });
 
 });
