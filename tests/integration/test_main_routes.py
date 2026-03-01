@@ -1392,6 +1392,29 @@ class TestEditWorkout:
             assert '"reps": 10' in html
             assert '"progression": "Standard"' in html
 
+    def test_edit_workout_page_prefills_multiple_exercises(
+        self, auth_client, workout_with_two_exercises, app
+    ):
+        """Test that the edit page prefill JSON includes all exercises and sets."""
+        with app.app_context():
+            w = (
+                db.session.execute(
+                    db.select(Workout).filter_by(title="Two Exercise Workout")
+                )
+                .scalars()
+                .first()
+            )
+            response = auth_client.get(url_for("main.edit_workout", workout_id=w.id))
+            html = response.get_data(as_text=True)
+            assert response.status_code == 200
+            # prefill JSON should contain both exercises
+            assert '"reps": 10' in html
+            assert '"reps": 8' in html
+            assert '"duration": "01:00"' in html
+            assert '"duration": "01:30"' in html
+            # exercise_count hidden input should reflect 2 exercises
+            assert 'value="2"' in html
+
     def test_edit_workout_requires_login(self, client, workout, app):
         """Test that the edit workout page requires authentication."""
         with app.app_context():

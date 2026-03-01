@@ -47,8 +47,8 @@
         </div>
         {% endif %}
 
-        <label><strong>&Uuml;bung</strong></label>
         <div class="exercise-block">
+        <label class="exercise-label"><strong>&Uuml;bung 1</strong></label>
         <div class="exercise-select-wrapper">
             <select name="exercise1" class="form-control exercise-select" form="workout">
                 <optgroup label="Meine &Uuml;bungen" class="my-exercises">
@@ -77,7 +77,7 @@
 
 <script type="text/html" id="exercise_template">
     <div class="exercise-block">
-        <label><strong>&Uuml;bung</strong></label>
+        <label class="exercise-label"><strong>&Uuml;bung <%= exercise_num %></strong></label>
     <div class="exercise-select-wrapper">
         <select name="exercise<%= exercise_num %>" class="form-control exercise-select" form="workout">
             <optgroup label="Meine &Uuml;bungen" class="my-exercises">
@@ -101,10 +101,9 @@
 </script>
 
 <script type="text/html" id="set_reps_template">
-    <div class="set-row">
-    <br><br>
+    <div class="set-row mt-3">
     <div class="d-flex justify-content-between align-items-center mb-1">
-        <strong>Set</strong>
+        <strong class="set-label">Set</strong>
         <button type="button" class="btn btn-sm btn-outline-danger removeSet" title="Set entfernen">&times;</button>
     </div>
     <label>Progression</label>
@@ -126,10 +125,9 @@
 </script>
 
 <script type="text/html" id="set_duration_template">
-    <div class="set-row">
-    <br><br>
+    <div class="set-row mt-3">
     <div class="d-flex justify-content-between align-items-center mb-1">
-        <strong>Set</strong>
+        <strong class="set-label">Set</strong>
         <button type="button" class="btn btn-sm btn-outline-danger removeSet" title="Set entfernen">&times;</button>
     </div>
     <label>Progression</label>
@@ -197,6 +195,7 @@ $(document).ready(function() {
     });
 
     applyExerciseFilter();
+    renumberAllSets();
 });
 </script>
 {% endif %}
