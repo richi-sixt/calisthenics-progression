@@ -125,6 +125,21 @@ $(document).ready(function() {
         }
     };
 
+    // Renumber sets within an exercise container
+    window.renumberSets = function renumberSets(exerciseContainer) {
+        $(exerciseContainer).find(".set-row").each(function(idx) {
+            $(this).find(".set-label").text("Set " + (idx + 1));
+        });
+    };
+
+    // Renumber all sets across all exercises
+    window.renumberAllSets = function renumberAllSets() {
+        $(".exercise-block").each(function() {
+            var container = $(this).find("[id^='exercise']");
+            renumberSets(container);
+        });
+    };
+
      // Rebuild sets when exercise selection changes
     function rebuildSetsForExercise(select) {
         var exerciseName = select.attr("name");
@@ -222,21 +237,6 @@ $(document).ready(function() {
             }
         });
     });
-
-    // Renumber sets within an exercise container
-    window.renumberSets = function renumberSets(exerciseContainer) {
-        $(exerciseContainer).find(".set-row").each(function(idx) {
-            $(this).find(".set-label").text("Set " + (idx + 1));
-        });
-    };
-
-    // Renumber all sets across all exercises
-    window.renumberAllSets = function renumberAllSets() {
-        $(".exercise-block").each(function() {
-            var container = $(this).find("[id^='exercise']");
-            renumberSets(container);
-        });
-    };
 
     // Renumber exercises after one is removed
     function renumberExercises() {
