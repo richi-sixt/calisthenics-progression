@@ -199,6 +199,7 @@ class Workout(Base):
     is_template = db.Column(
         db.Boolean, nullable=False, default=False, server_default="0"
     )
+    is_done = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -211,11 +212,13 @@ class Workout(Base):
         user_id: int,
         timestamp: datetime | None = None,
         is_template: bool = False,
+        is_done: bool = False,
     ) -> None:
         """Initialize a workout session or template."""
         self.title = title
         self.user_id = user_id
         self.is_template = is_template
+        self.is_done = is_done
         if timestamp is not None:  # has a default
             self.timestamp = timestamp
 

@@ -2883,3 +2883,126 @@ class TestCategoryManagementRoutes:
             assert response.status_code == 200
             # The count badge for Upper Body should be visible
             assert b"bg-info" in response.data
+
+
+class TestToggleDoneRoute:
+    """Tests for the workout toggle_done route."""
+
+    def test_toggle_done_marks_workout_done(self, auth_client, workout, app):
+        """Test toggling a pending workout marks it as done."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            assert workout.is_done is False
+
+            response = auth_client.post(
+                url_for("main.toggle_done", workout_id=workout.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+            db.session.refresh(workout)
+            assert workout.is_done is True
+
+    def test_toggle_done_marks_workout_pending(self, auth_client, workout, app):
+        """Test toggling a done workout marks it as pending."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            workout.is_done = True
+            db.session.commit()
+
+            response = auth_client.post(
+                url_for("main.toggle_done", workout_id=workout.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+            db.session.refresh(workout)
+            assert workout.is_done is False
+
+    def test_toggle_done_not_found(self, auth_client, app):
+        """Test toggling a non-existent workout returns 404."""
+        with app.app_context():
+            response = auth_client.post(url_for("main.toggle_done", workout_id=99999))
+            assert response.status_code == 404
+
+    def test_toggle_done_others_forbidden(self, client, workout, second_user, app):
+        """Test user cannot toggle another user's workout."""
+        with app.app_context():
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(second_user.id)
+                sess["_fresh"] = True
+
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            response = client.post(
+                url_for("main.toggle_done", workout_id=workout.id),
+            )
+            assert response.status_code == 403
+
+    def test_toggle_done_requires_login(self, client, workout, app):
+        """Test toggle_done requires authentication."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            response = client.post(
+                url_for("main.toggle_done", workout_id=workout.id),
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+
+    def test_toggle_done_redirects_to_next(self, auth_client, workout, app):
+        """Test toggle_done respects next parameter for redirect."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            response = auth_client.post(
+                url_for("main.toggle_done", workout_id=workout.id),
+                data={"next": "/workouts#workout-" + str(workout.id)},
+                follow_redirects=False,
+            )
+            assert response.status_code == 302
+            assert "/workouts#workout-" in response.headers["Location"]
+
+    def test_workouts_shows_done_badge(self, auth_client, workout, app):
+        """Test workouts page shows erledigt badge for done workouts."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            workout.is_done = True
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.workouts"))
+            assert response.status_code == 200
+            assert "erledigt" in response.get_data(as_text=True)
+
+    def test_workouts_shows_pendent_badge(self, auth_client, workout, app):
+        """Test workouts page shows pendent badge for pending workouts."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workouts"))
+            assert response.status_code == 200
+            assert "pendent" in response.get_data(as_text=True)
+
+    def test_workouts_hide_done_filter(self, auth_client, workout, app):
+        """Test hide_done filter hides done workouts."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            workout.is_done = True
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.workouts", hide_done=1))
+            assert response.status_code == 200
+            assert b"Morning Workout" not in response.data
+
+    def test_workouts_hide_done_shows_pending(self, auth_client, workout, app):
+        """Test hide_done filter still shows pending workouts."""
+        with app.app_context():
+            response = auth_client.get(url_for("main.workouts", hide_done=1))
+            assert response.status_code == 200
+            assert b"Morning Workout" in response.data
+
+    def test_workouts_show_all_includes_done(self, auth_client, workout, app):
+        """Test default view (no filter) shows done workouts."""
+        with app.app_context():
+            workout = db.session.execute(db.select(Workout)).scalars().first()
+            workout.is_done = True
+            db.session.commit()
+
+            response = auth_client.get(url_for("main.workouts"))
+            assert response.status_code == 200
+            assert b"Morning Workout" in response.data

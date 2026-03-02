@@ -54,22 +54,28 @@ def index() -> ResponseReturnValue:
 @login_required
 def workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
+    hide_done = request.args.get("hide_done", 0, type=int)
+    query = db.select(Workout).filter(
+        Workout.user_id == current_user.get_id(),
+        Workout.is_template == False,  # noqa: E712
+    )
+    if hide_done:
+        query = query.filter(Workout.is_done == False)  # noqa: E712
     workouts = db.paginate(
-        db.select(Workout)
-        .filter(
-            Workout.user_id == current_user.get_id(),
-            Workout.is_template == False,  # noqa: E712
-        )
-        .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
+        query.order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
         error_out=False,
     )
     next_url = (
-        url_for("main.index", page=workouts.next_num) if workouts.has_next else None
+        url_for("main.workouts", page=workouts.next_num, hide_done=hide_done)
+        if workouts.has_next
+        else None
     )
     prev_url = (
-        url_for("main.index", page=workouts.prev_num) if workouts.has_prev else None
+        url_for("main.workouts", page=workouts.prev_num, hide_done=hide_done)
+        if workouts.has_prev
+        else None
     )
     return render_template(
         "workouts.html",
@@ -77,6 +83,7 @@ def workouts() -> ResponseReturnValue:
         workouts=workouts.items,
         next_url=next_url,
         prev_url=prev_url,
+        hide_done=hide_done,
     )
 
 
@@ -230,6 +237,26 @@ def delete_workout(workout_id: int) -> ResponseReturnValue:
     db.session.delete(workout)
     db.session.commit()
     flash("Dein Workout wurde gelöscht!", "success")
+    return redirect(url_for("main.workouts"))
+
+
+@bp.route("/workout/<int:workout_id>/toggle_done", methods=["POST"])
+@login_required
+@check_confirmed
+def toggle_done(workout_id: int) -> ResponseReturnValue:
+    workout = db.session.get(Workout, workout_id)
+    if workout is None:
+        abort(404)
+    if workout.user_id != current_user.id:
+        abort(403)
+    workout.is_done = not workout.is_done
+    db.session.commit()
+    next_url = request.form.get("next")
+    if next_url:
+        next_url = next_url.replace("\\", "")
+        parsed = urlparse(next_url)
+        if not parsed.scheme and not parsed.netloc and next_url.startswith("/"):
+            return redirect(next_url)
     return redirect(url_for("main.workouts"))
 
 

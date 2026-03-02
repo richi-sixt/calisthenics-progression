@@ -122,6 +122,11 @@ a.article-title:hover {
 .account-heading {
   font-size: 2.5rem;
 }
+
+.workout-done {
+  opacity: 0.6;
+}
+
 .exercise-block {
   margin-top: 1rem;
   margin-bottom: 1rem;
