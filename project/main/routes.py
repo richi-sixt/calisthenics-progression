@@ -32,6 +32,33 @@ from project.models import (
 
 
 # helper functions
+def _get_safe_next_url(raw_next: str | None) -> str | None:
+    """Validate a user-provided 'next' URL and return an internal redirect target or None.
+
+    Only allows URLs that:
+    - have no scheme (for example, not 'http:' or 'https:')
+    - have no netloc/host (for example, not 'evil.com')
+    - start with an app-local absolute path (for example, '/workouts')
+    """
+    if not raw_next:
+        return None
+
+    # Strip backslashes to avoid browser quirks treating them as slashes
+    cleaned = raw_next.replace("\\", "")
+    parsed = urlparse(cleaned)
+
+    # Reject any URL that specifies a scheme or host; allow only app-local absolute paths
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
+        return None
+
+    safe_url = parsed.path
+    if parsed.query:
+        safe_url += "?" + parsed.query
+    if parsed.fragment:
+        safe_url += "#" + parsed.fragment
+    return safe_url
+
+
 @bp.before_request
 def before_request() -> None:
     if current_user.is_authenticated:
@@ -303,19 +330,10 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
 
         db.session.commit()
         flash("Dein Workout wurde aktualisiert!", "success")
-        next_url = request.args.get("next") or request.form.get("next")
-        if next_url:
-            next_url = next_url.replace(
-                "\\", ""
-            )  # This strips backslashes (prevents `\/evil.com`), then rejects any URL with a scheme (`http:`) or netloc (`evil.com`), only allowing app-local absolute paths like `/workouts`.
-            parsed = urlparse(next_url)
-            if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
-                safe_url = parsed.path
-                if parsed.query:
-                    safe_url += "?" + parsed.query
-                if parsed.fragment:
-                    safe_url += "#" + parsed.fragment
-                return redirect(safe_url)
+        raw_next = request.args.get("next") or request.form.get("next")
+        next_url = _get_safe_next_url(raw_next)
+        if next_url is not None:
+            return redirect(next_url)
         return redirect(url_for("main.workouts"))
 
     # GET: build prefill data and exercise lists
