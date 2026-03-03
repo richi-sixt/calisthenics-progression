@@ -26,6 +26,29 @@ from project.models import ExerciseDefinition, Message, Notification, User, foll
 from project.token import confirm_token, generate_confirmation_token
 
 
+def _get_safe_next_url() -> str | None:
+    """
+    Return a safe relative URL from the `next` query parameter, or None if unsafe.
+
+    A URL is considered safe if it has no scheme, no netloc, and a path starting with "/".
+    Backslashes are stripped to avoid browser-specific handling that treats them as slashes.
+    """
+    next_page = request.args.get("next", "")
+    if not next_page:
+        return None
+    # Normalize and strip whitespace to avoid malformed URLs.
+    next_page = next_page.replace("\\", "").strip()
+    parsed = urlparse(next_page)
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
+        return None
+    safe_url = parsed.path
+    if parsed.query:
+        safe_url += "?" + parsed.query
+    if parsed.fragment:
+        safe_url += "#" + parsed.fragment
+    return safe_url
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login() -> ResponseReturnValue:
     if current_user.is_authenticated:
@@ -41,17 +64,9 @@ def login() -> ResponseReturnValue:
             flash("Ungültiger Benutzername oder Passwort")
             return redirect(url_for("auth.login"))
         login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get("next")
-        if next_page:
-            next_page = next_page.replace("\\", "")
-            parsed = urlparse(next_page)
-            if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
-                safe_url = parsed.path
-                if parsed.query:
-                    safe_url += "?" + parsed.query
-                if parsed.fragment:
-                    safe_url += "#" + parsed.fragment
-                return redirect(safe_url)
+        safe_next = _get_safe_next_url()
+        if safe_next is not None:
+            return redirect(safe_next)
         return redirect(url_for("main.index"))
     return render_template("auth/login.html", title="Anmelden", form=form)
 
