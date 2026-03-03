@@ -1,7 +1,7 @@
 import os
 import secrets
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
+from urllib.parse import urlparse
 
 from flask import abort, current_app, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
@@ -44,12 +44,10 @@ def login() -> ResponseReturnValue:
         next_page = request.args.get("next")
         if next_page:
             next_page = next_page.replace("\\", "")
-            parsed = urlsplit(next_page)
-            if parsed.netloc or parsed.scheme:
-                next_page = None
-        if not next_page:
-            next_page = url_for("main.index")
-        return redirect(next_page)
+            parsed = urlparse(next_page)
+            if not parsed.scheme or parsed.netloc and next_page.startswith("/"):
+                return redirect((next_page))
+        return redirect(url_for("main.index"))
     return render_template("auth/login.html", title="Anmelden", form=form)
 
 
