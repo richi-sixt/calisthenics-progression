@@ -255,8 +255,13 @@ def toggle_done(workout_id: int) -> ResponseReturnValue:
     if next_url:
         next_url = next_url.replace("\\", "")
         parsed = urlparse(next_url)
-        if not parsed.scheme and not parsed.netloc and next_url.startswith("/"):
-            return redirect(next_url)
+        if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
+            safe_url = parsed.path
+            if parsed.query:
+                safe_url += "?" + parsed.query
+            if parsed.fragment:
+                safe_url += "#" + parsed.fragment
+            return redirect(safe_url)
     return redirect(url_for("main.workouts"))
 
 
@@ -304,8 +309,13 @@ def edit_workout(workout_id: int) -> ResponseReturnValue:
                 "\\", ""
             )  # This strips backslashes (prevents `\/evil.com`), then rejects any URL with a scheme (`http:`) or netloc (`evil.com`), only allowing app-local absolute paths like `/workouts`.
             parsed = urlparse(next_url)
-            if not parsed.scheme and not parsed.netloc and next_url.startswith("/"):
-                return redirect(next_url)
+            if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
+                safe_url = parsed.path
+                if parsed.query:
+                    safe_url += "?" + parsed.query
+                if parsed.fragment:
+                    safe_url += "#" + parsed.fragment
+                return redirect(safe_url)
         return redirect(url_for("main.workouts"))
 
     # GET: build prefill data and exercise lists

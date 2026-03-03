@@ -45,8 +45,13 @@ def login() -> ResponseReturnValue:
         if next_page:
             next_page = next_page.replace("\\", "")
             parsed = urlparse(next_page)
-            if not parsed.scheme or parsed.netloc and next_page.startswith("/"):
-                return redirect((next_page))
+            if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
+                safe_url = parsed.path
+                if parsed.query:
+                    safe_url += "?" + parsed.query
+                if parsed.fragment:
+                    safe_url += "#" + parsed.fragment
+                return redirect(safe_url)
         return redirect(url_for("main.index"))
     return render_template("auth/login.html", title="Anmelden", form=form)
 
