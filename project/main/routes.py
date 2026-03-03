@@ -278,17 +278,10 @@ def toggle_done(workout_id: int) -> ResponseReturnValue:
         abort(403)
     workout.is_done = not workout.is_done
     db.session.commit()
-    next_url = request.form.get("next")
-    if next_url:
-        next_url = next_url.replace("\\", "")
-        parsed = urlparse(next_url)
-        if not parsed.scheme and not parsed.netloc and parsed.path.startswith("/"):
-            safe_url = parsed.path
-            if parsed.query:
-                safe_url += "?" + parsed.query
-            if parsed.fragment:
-                safe_url += "#" + parsed.fragment
-            return redirect(safe_url)
+    raw_next = request.form.get("next")
+    next_url = _get_safe_next_url(raw_next)
+    if next_url is not None:
+        return redirect(next_url)
     return redirect(url_for("main.workouts"))
 
 
