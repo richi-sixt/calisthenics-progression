@@ -1,15 +1,24 @@
-logs
+# Python
 __pycache__
+*.pyc
+.coverage
+
+# Environment
 .env
 .venv
+
+# IDE / OS
 .DS_Store
-instance
-migrations
-.coverage
-.flake8
+.mypy_cache
+.pytest_cache
+
+# Backend-specific (generated, not committed)
+backend/logs
+backend/instance
+backend/migrations
+backend/.flake8
+backend/pyrightconfig.json
+
+# Legacy root-level ignores
 pyrightconfig.json
 SKILL.md
-
-
-
-

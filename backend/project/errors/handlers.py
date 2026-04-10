@@ -1,9 +1,8 @@
 from flask import jsonify, render_template, request
 from flask.typing import ResponseReturnValue
-from werkzeug.exceptions import HTTPException
-
 from project import db
 from project.errors import bp
+from werkzeug.exceptions import HTTPException
 
 
 def _wants_json() -> bool:

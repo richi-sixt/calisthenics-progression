@@ -23,7 +23,7 @@ repos:
 
       - id: pytest
         name: pytest
-        entry: pytest
+        entry: bash -c 'cd backend && pytest'
         language: system
         pass_filenames: false
         always_run: true

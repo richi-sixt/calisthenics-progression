@@ -8,9 +8,8 @@ from time import time
 from typing import Any
 
 from flask_login import UserMixin
-from werkzeug.security import check_password_hash, generate_password_hash
-
 from project import Base, db, login
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # Followers association table for many-to-many relationship
 followers = db.Table(

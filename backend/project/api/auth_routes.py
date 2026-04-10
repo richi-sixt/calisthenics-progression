@@ -2,7 +2,6 @@
 
 from flask import g, jsonify, render_template, request
 from flask.typing import ResponseReturnValue
-
 from project import db
 from project.api import bp
 from project.api.auth_utils import (

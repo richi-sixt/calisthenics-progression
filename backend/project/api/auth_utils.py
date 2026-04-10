@@ -8,7 +8,6 @@ from typing import Any, Callable
 
 import jwt
 from flask import current_app, g, jsonify, request
-
 from project import db
 from project.models import User
 

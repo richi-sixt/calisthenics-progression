@@ -11,9 +11,8 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
-
 from project.config import Config
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -122,10 +121,13 @@ def _configure_logging(app: Flask) -> None:
 
     else:
         # Ensure logs directory exists
-        os.makedirs("logs", exist_ok=True)
+        logs_dir = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), "..", "logs"
+        )
+        os.makedirs(logs_dir, exist_ok=True)
 
         file_handler = RotatingFileHandler(
-            "logs/calisthenics-progression.log",
+            os.path.join(logs_dir, "calisthenics-progression.log"),
             maxBytes=10240,
             backupCount=10,
             encoding="utf-8",

@@ -51,4 +51,7 @@ class TestConfigureLogging:
         app = create_app(ProductionConfig)
         handler_types = [type(h) for h in app.logger.handlers]
         assert RotatingFileHandler in handler_types
-        mock_makedirs.assert_called_once_with("logs", exist_ok=True)
+        # logs dir is resolved as an absolute path relative to project/
+        args, kwargs = mock_makedirs.call_args
+        assert args[0].endswith("logs")
+        assert kwargs == {"exist_ok": True}

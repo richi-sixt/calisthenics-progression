@@ -4,8 +4,6 @@ import pytest
 
 __all__ = ("pytest",)
 from flask import url_for
-from sqlalchemy import func
-
 from project import db
 from project.models import (
     Exercise,
@@ -17,6 +15,7 @@ from project.models import (
     User,
     Workout,
 )
+from sqlalchemy import func
 
 
 class TestIndexRoute:

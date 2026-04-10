@@ -4,8 +4,6 @@ import pytest
 
 __all__ = ("pytest",)
 from flask import url_for
-from sqlalchemy import func
-
 from project import db
 from project.models import (
     Exercise,
@@ -18,6 +16,7 @@ from project.models import (
     followers,
 )
 from project.token import generate_confirmation_token
+from sqlalchemy import func
 
 
 class TestLoginRoute:

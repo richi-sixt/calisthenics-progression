@@ -13,7 +13,6 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
-
 from project import db
 from project.decorators import check_confirmed
 from project.main import bp

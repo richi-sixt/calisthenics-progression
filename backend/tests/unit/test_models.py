@@ -6,8 +6,6 @@ import pytest
 
 __all__ = ("pytest",)
 import sqlalchemy.exc
-from sqlalchemy import func
-
 from project import db
 from project.models import (
     Exercise,
@@ -21,6 +19,7 @@ from project.models import (
     Workout,
     followers,
 )
+from sqlalchemy import func
 
 
 class TestUserModel:

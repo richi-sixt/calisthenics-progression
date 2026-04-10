@@ -4,7 +4,6 @@ import pytest
 
 __all__ = ("pytest",)
 from flask import url_for
-
 from project import db
 
 

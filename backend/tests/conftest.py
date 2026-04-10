@@ -5,7 +5,6 @@ import os
 from datetime import datetime, timezone
 
 import pytest
-
 from project import create_app, db
 from project.api.auth_utils import generate_api_token
 from project.models import (

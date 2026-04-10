@@ -3,9 +3,10 @@ import os
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+backend_dir = os.path.abspath(os.path.join(basedir, ".."))
 # Load .env ONLY if no cPanel-ENV exists (Production fallback)
 if not os.environ.get("SECRET_KEY"):
-    load_dotenv(os.path.join(basedir, ".env"))
+    load_dotenv(os.path.join(backend_dir, ".env"))
 
 
 # main config
@@ -18,7 +19,7 @@ class Config(object):
     WORKOUTS_PER_PAGE = 100
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL"
-    ) or "sqlite:///" + os.path.join(basedir, "app.db")
+    ) or "sqlite:///" + os.path.join(backend_dir, "instance", "app.db")
     SQLALCHEMY_POOL_RECYCLE = 299
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
