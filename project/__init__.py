@@ -5,6 +5,7 @@ from typing import Type
 
 from flask import Flask
 from flask_bootstrap import Bootstrap5
+from flask_cors import CORS
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -66,6 +67,13 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     from project.main import bp as main_bp
 
     app.register_blueprint(main_bp)
+
+    from project.api import bp as api_bp
+
+    app.register_blueprint(api_bp, url_prefix="/api/v1")
+
+    # Enable CORS for API routes only
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Configure logging (production only)
     if not app.debug and not app.testing:

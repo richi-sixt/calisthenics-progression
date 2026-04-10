@@ -177,6 +177,23 @@ class User(UserMixin, Base):
         db.session.add(n)
         return n
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize user to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "about_me": self.about_me,
+            "image_file": self.image_file,
+            "confirmed": self.confirmed,
+            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
+            "registered_on": (
+                self.registered_on.isoformat() if self.registered_on else None
+            ),
+            "follower_count": self.followers.count(),
+            "following_count": self.followed.count(),
+        }
+
 
 # Load user for session
 @login.user_loader
@@ -225,6 +242,23 @@ class Workout(Base):
     def __repr__(self) -> str:
         """String representation of Workout."""
         return f"<Workout {self.title}>"
+
+    def to_dict(self, include_exercises: bool = False) -> dict[str, Any]:
+        """Serialize workout to dictionary for API responses."""
+        data: dict[str, Any] = {
+            "id": self.id,
+            "title": self.title,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "user_id": self.user_id,
+            "is_template": self.is_template,
+            "is_done": self.is_done,
+        }
+        if include_exercises:
+            data["exercises"] = [
+                ex.to_dict(include_sets=True)
+                for ex in self.exercises.order_by(Exercise.exercise_order).all()  # type: ignore[union-attr]
+            ]
+        return data
 
 
 class ExerciseDefinition(Base):
@@ -320,6 +354,24 @@ class ExerciseDefinition(Base):
         """String representation of Exercise definition."""
         return f"<ExerciseDefinition {self.title}>"
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize exercise definition to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "counting_type": self.counting_type,
+            "date_created": (
+                self.date_created.isoformat() if self.date_created else None
+            ),
+            "user_id": self.user_id,
+            "archived": self.archived,
+            "progression_levels": [
+                pl.to_dict() for pl in self.progression_levels.all()
+            ],
+            "category_ids": [c.id for c in self.categories],
+        }
+
 
 class Exercise(Base):
     """Exercise instance within a workout."""
@@ -350,6 +402,20 @@ class Exercise(Base):
     def __repr__(self) -> str:
         """String representation of Exercise instance."""
         return f"<Exercise {self.id}: Order {self.exercise_order}>"
+
+    def to_dict(self, include_sets: bool = False) -> dict[str, Any]:
+        """Serialize exercise instance to dictionary for API responses."""
+        data: dict[str, Any] = {
+            "id": self.id,
+            "exercise_order": self.exercise_order,
+            "workout_id": self.workout_id,
+            "exercise_definition_id": self.exercise_definition_id,
+        }
+        if include_sets:
+            data["sets"] = [
+                s.to_dict() for s in self.sets.order_by(Set.set_order).all()  # type: ignore[union-attr]
+            ]
+        return data
 
 
 class Set(Base):
@@ -392,6 +458,17 @@ class Set(Base):
         """String representation of Set."""
         return f"<Set {self.id}: {self.reps} reps>"
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize set to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "set_order": self.set_order,
+            "progression": self.progression,
+            "reps": self.reps,
+            "duration": self.duration,
+            "duration_formatted": self.duration_formatted,
+        }
+
 
 class ProgressionLevel(Base):
     """A named progression level belonging to an ExerciseDefinition.
@@ -425,6 +502,14 @@ class ProgressionLevel(Base):
         """String representation of ProgressionLevel."""
         return f"<ProgressionLevel {self.name} (order {self.level_order})>"
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize progression level to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "level_order": self.level_order,
+        }
+
 
 class ExerciseCategory(Base):
     """Global category for exercise definitions (e.g. 'Upper Body', 'Push').
@@ -445,6 +530,13 @@ class ExerciseCategory(Base):
     def __repr__(self) -> str:
         """String representation of ExerciseCategory."""
         return f"<ExerciseCategory {self.name}>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize category to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "name": self.name,
+        }
 
 
 class Message(Base):
@@ -477,6 +569,16 @@ class Message(Base):
     def __repr__(self) -> str:
         """String representation of Message."""
         return f"<Message {self.body}>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize message to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "sender_id": self.sender_id,
+            "recipient_id": self.recipient_id,
+            "body": self.body,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+        }
 
 
 class Notification(Base):
@@ -511,3 +613,12 @@ class Notification(Base):
     def __repr__(self) -> str:
         """String representation of Notification."""
         return f"<Notification {self.name}>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize notification to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "timestamp": self.timestamp,
+            "data": self.get_data() if self.payload_json else None,
+        }
