@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from project import create_app, db
+from project.api.auth_utils import generate_api_token
 from project.models import (
     Exercise,
     ExerciseCategory,
@@ -130,6 +131,39 @@ def unconfirmed_auth_client(client, unconfirmed_user, app):
             sess["_user_id"] = str(unconfirmed_user.id)
             sess["_fresh"] = True
     return client
+
+
+@pytest.fixture
+def api_headers(app, user):
+    """Return headers with a valid JWT for the confirmed test user."""
+    with app.app_context():
+        token = generate_api_token(user.id)
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+
+@pytest.fixture
+def api_headers_unconfirmed(app, unconfirmed_user):
+    """Return headers with a valid JWT for the unconfirmed test user."""
+    with app.app_context():
+        token = generate_api_token(unconfirmed_user.id)
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+
+@pytest.fixture
+def api_headers_second(app, second_user):
+    """Return headers with a valid JWT for the second test user."""
+    with app.app_context():
+        token = generate_api_token(second_user.id)
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
 
 
 @pytest.fixture
