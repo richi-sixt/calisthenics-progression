@@ -43,6 +43,7 @@ class User(UserMixin, Base):
 
     # Primary fields
     id = db.Column(db.Integer, primary_key=True)
+    supabase_uid = db.Column(db.String(36), unique=True, nullable=True, index=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(512))

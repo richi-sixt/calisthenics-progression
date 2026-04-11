@@ -20,6 +20,7 @@ class TestConfig(Config):
     SECRET_KEY = "test-secret-key-do-not-use-in-production"
     WTF_CSRF_SECRET_KEY = "test-csrf-key"
     SECURITY_PASSWORD_SALT = "test-password-salt"
+    SUPABASE_JWT_SECRET = "test-supabase-jwt-secret-for-testing-only"
 
     # Suppress mail sending during tests
     MAIL_SUPPRESS_SEND = True
