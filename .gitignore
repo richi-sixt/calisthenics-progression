@@ -15,7 +15,7 @@ __pycache__
 # Backend-specific (generated, not committed)
 backend/logs
 backend/instance
-backend/migrations
+backend/migrations/
 backend/.flake8
 backend/pyrightconfig.json
 
