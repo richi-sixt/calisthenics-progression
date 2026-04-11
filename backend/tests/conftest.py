@@ -2,11 +2,12 @@
 
 import glob
 import os
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timedelta, timezone
 
+import jwt as pyjwt
 import pytest
 from project import create_app, db
-from project.api.auth_utils import generate_api_token
 from project.models import (
     Exercise,
     ExerciseCategory,
@@ -16,6 +17,28 @@ from project.models import (
     Workout,
 )
 from tests.test_config import TestConfig
+
+
+def _make_supabase_jwt(supabase_uid: str, email: str, confirmed: bool = True) -> str:
+    """Generate a Supabase-shaped JWT for testing.
+
+    Mirrors the structure of real Supabase Auth JWTs.
+    """
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": supabase_uid,
+        "email": email,
+        "aud": "authenticated",
+        "role": "authenticated",
+        "iat": now,
+        "exp": now + timedelta(hours=1),
+    }
+    if confirmed:
+        payload["email_confirmed_at"] = now.isoformat()
+    else:
+        payload["email_confirmed_at"] = None
+
+    return pyjwt.encode(payload, TestConfig.SUPABASE_JWT_SECRET, algorithm="HS256")
 
 
 @pytest.fixture
@@ -44,8 +67,9 @@ def runner(app):
 
 @pytest.fixture
 def user(app):
-    """Create a confirmed test user."""
+    """Create a confirmed test user with a Supabase UID."""
     with app.app_context():
+        supabase_uid = str(uuid.uuid4())
         user = User(
             username="testuser",
             email="test@example.com",
@@ -53,11 +77,11 @@ def user(app):
             confirmed=True,
             confirmed_on=datetime.now(timezone.utc),
         )
+        user.supabase_uid = supabase_uid
         user.set_password("password123")
         db.session.add(user)
         db.session.commit()
 
-        # Re-query to get attached instance
         user = (
             db.session.execute(db.select(User).filter_by(username="testuser"))
             .scalars()
@@ -68,14 +92,16 @@ def user(app):
 
 @pytest.fixture
 def unconfirmed_user(app):
-    """Create an unconfirmed test user."""
+    """Create an unconfirmed test user with a Supabase UID."""
     with app.app_context():
+        supabase_uid = str(uuid.uuid4())
         user = User(
             username="unconfirmed",
             email="unconfirmed@example.com",
             admin=False,
             confirmed=False,
         )
+        user.supabase_uid = supabase_uid
         user.set_password("password123")
         db.session.add(user)
         db.session.commit()
@@ -92,6 +118,7 @@ def unconfirmed_user(app):
 def second_user(app):
     """Create a second confirmed test user for relationship testing."""
     with app.app_context():
+        supabase_uid = str(uuid.uuid4())
         user = User(
             username="seconduser",
             email="second@example.com",
@@ -99,6 +126,7 @@ def second_user(app):
             confirmed=True,
             confirmed_on=datetime.now(timezone.utc),
         )
+        user.supabase_uid = supabase_uid
         user.set_password("password456")
         db.session.add(user)
         db.session.commit()
@@ -134,9 +162,9 @@ def unconfirmed_auth_client(client, unconfirmed_user, app):
 
 @pytest.fixture
 def api_headers(app, user):
-    """Return headers with a valid JWT for the confirmed test user."""
+    """Return headers with a valid Supabase JWT for the confirmed test user."""
     with app.app_context():
-        token = generate_api_token(user.id)
+        token = _make_supabase_jwt(user.supabase_uid, user.email, confirmed=True)
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -145,9 +173,13 @@ def api_headers(app, user):
 
 @pytest.fixture
 def api_headers_unconfirmed(app, unconfirmed_user):
-    """Return headers with a valid JWT for the unconfirmed test user."""
+    """Return headers with a valid Supabase JWT for the unconfirmed test user."""
     with app.app_context():
-        token = generate_api_token(unconfirmed_user.id)
+        token = _make_supabase_jwt(
+            unconfirmed_user.supabase_uid,
+            unconfirmed_user.email,
+            confirmed=False,
+        )
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -156,9 +188,11 @@ def api_headers_unconfirmed(app, unconfirmed_user):
 
 @pytest.fixture
 def api_headers_second(app, second_user):
-    """Return headers with a valid JWT for the second test user."""
+    """Return headers with a valid Supabase JWT for the second test user."""
     with app.app_context():
-        token = generate_api_token(second_user.id)
+        token = _make_supabase_jwt(
+            second_user.supabase_uid, second_user.email, confirmed=True
+        )
         return {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",

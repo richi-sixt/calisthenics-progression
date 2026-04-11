@@ -24,6 +24,10 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
     JWT_EXPIRY_HOURS = int(os.environ.get("JWT_EXPIRY_HOURS", 24))
+
+    # Supabase Auth
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+    SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
     FLASK_ENV = os.environ.get("FLASK_ENV")
     LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")
     ADMINS = os.environ.get("ADMINS")
