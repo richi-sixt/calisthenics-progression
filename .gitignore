@@ -19,6 +19,12 @@ backend/migrations/__pycache__
 backend/.flake8
 backend/pyrightconfig.json
 
+# Node / Next.js
+node_modules
+web/.next
+web/out
+.env*.local
+
 # Legacy root-level ignores
 pyrightconfig.json
 SKILL.md
