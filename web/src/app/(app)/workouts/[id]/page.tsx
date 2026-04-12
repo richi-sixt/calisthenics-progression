@@ -42,11 +42,17 @@ export default function WorkoutDetailPage({
           <h1 className="text-2xl font-bold">{workout.title}</h1>
           {workout.timestamp && (
             <p className="mt-1 text-sm text-gray-500">
-              {format(new Date(workout.timestamp), "EEEE, MMM d, yyyy 'at' HH:mm")}
+              {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/workouts/${workoutId}/edit`}
+            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200"
+          >
+            Edit
+          </Link>
           <button
             onClick={() => toggleDone.mutate(workoutId)}
             disabled={toggleDone.isPending}
@@ -91,8 +97,9 @@ export default function WorkoutDetailPage({
                     <tr className="border-b text-left text-gray-500">
                       <th className="pb-2 font-medium">Set</th>
                       <th className="pb-2 font-medium">Progression</th>
-                      <th className="pb-2 font-medium">Reps</th>
-                      <th className="pb-2 font-medium">Duration</th>
+                      <th className="pb-2 font-medium">
+                        {exercise.counting_type === "duration" ? "Duration" : "Reps"}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -100,9 +107,10 @@ export default function WorkoutDetailPage({
                       <tr key={set.id} className="border-b last:border-0">
                         <td className="py-2 text-gray-600">{set.set_order}</td>
                         <td className="py-2">{set.progression ?? "-"}</td>
-                        <td className="py-2">{set.reps ?? "-"}</td>
                         <td className="py-2">
-                          {set.duration_formatted || (set.duration ? `${set.duration}s` : "-")}
+                          {exercise.counting_type === "duration"
+                            ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")
+                            : set.reps ?? "-"}
                         </td>
                       </tr>
                     ))}

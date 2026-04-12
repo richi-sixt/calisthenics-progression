@@ -1,8 +1,27 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useState, useMemo } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
-import type { Workout } from "@/types";
+import { useCategories } from "@/hooks/use-categories";
+import type { Workout, ExerciseDefinition } from "@/types";
+
+/** Convert total seconds to "mm:ss" string */
+function secondsToMmss(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(1, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+/** Convert "mm:ss" or "m:ss" string to total seconds. Returns null if invalid. */
+function mmssToSeconds(value: string): number | null {
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const mins = Number(match[1]);
+  const secs = Number(match[2]);
+  if (secs >= 60) return null;
+  return mins * 60 + secs;
+}
 
 interface SetData {
   progression: string;
@@ -31,8 +50,16 @@ export default function WorkoutExerciseForm({
   isPending: boolean;
   submitLabel?: string;
 }) {
-  const { data: exData } = useExercises(1, "mine");
+  // Exercise filtering state
+  const [showOnlyMine, setShowOnlyMine] = useState(true);
+  const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
+
+  const userFilter = showOnlyMine ? "mine" : "all";
+  const { data: exData } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
   const exerciseDefs = exData?.data ?? [];
+
+  const { data: catData } = useCategories();
+  const categories = catData?.data ?? [];
 
   const { register, handleSubmit, control } = useForm<WorkoutFormData>({
     defaultValues: {
@@ -44,7 +71,7 @@ export default function WorkoutExerciseForm({
             ex.sets?.map((s) => ({
               progression: s.progression ?? "",
               reps: s.reps != null ? String(s.reps) : "",
-              duration: s.duration != null ? String(s.duration) : "",
+              duration: s.duration != null ? secondsToMmss(s.duration) : "",
             })) ?? [{ progression: "", reps: "", duration: "" }],
         })) ?? [
           {
@@ -61,17 +88,30 @@ export default function WorkoutExerciseForm({
     remove: removeExercise,
   } = useFieldArray({ control, name: "exercises" });
 
+  // Build a lookup map from exercise definition id → definition
+  const exerciseDefMap = useMemo(() => {
+    const map = new Map<number, ExerciseDefinition>();
+    for (const def of exerciseDefs) {
+      map.set(def.id, def);
+    }
+    return map;
+  }, [exerciseDefs]);
+
+  const toggleCategory = (catId: number) => {
+    setSelectedCatIds((prev) =>
+      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
+    );
+  };
+
   const submit = (data: WorkoutFormData) => {
     onSubmit({
       title: data.title,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
-        sets: ex.sets
-          .filter((s) => s.reps || s.duration)
-          .map((s) => ({
+        sets: ex.sets.map((s) => ({
             progression: s.progression || null,
             reps: s.reps ? Number(s.reps) : null,
-            duration: s.duration ? Number(s.duration) : null,
+            duration: s.duration ? mmssToSeconds(s.duration) : null,
           })),
       })),
     });
@@ -88,6 +128,47 @@ export default function WorkoutExerciseForm({
         />
       </div>
 
+      {/* Exercise filter controls */}
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={showOnlyMine}
+            onChange={(e) => setShowOnlyMine(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show only my exercises
+        </label>
+
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => toggleCategory(cat.id)}
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  selectedCatIds.includes(cat.id)
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+            {selectedCatIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedCatIds([])}
+                className="rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-400 hover:text-gray-600"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Exercises</label>
         {exerciseFields.map((field, exIndex) => (
@@ -97,6 +178,7 @@ export default function WorkoutExerciseForm({
             register={register}
             control={control}
             exerciseDefs={exerciseDefs}
+            exerciseDefMap={exerciseDefMap}
             onRemove={() => removeExercise(exIndex)}
           />
         ))}
@@ -130,12 +212,14 @@ function ExerciseBlock({
   register,
   control,
   exerciseDefs,
+  exerciseDefMap,
   onRemove,
 }: {
   exIndex: number;
   register: ReturnType<typeof useForm<WorkoutFormData>>["register"];
   control: ReturnType<typeof useForm<WorkoutFormData>>["control"];
-  exerciseDefs: { id: number; title: string }[];
+  exerciseDefs: ExerciseDefinition[];
+  exerciseDefMap: Map<number, ExerciseDefinition>;
   onRemove: () => void;
 }) {
   const {
@@ -143,6 +227,17 @@ function ExerciseBlock({
     append: appendSet,
     remove: removeSet,
   } = useFieldArray({ control, name: `exercises.${exIndex}.sets` });
+
+  // Watch which exercise is selected to get its counting_type and progression_levels
+  const selectedDefId = useWatch({
+    control,
+    name: `exercises.${exIndex}.exercise_definition_id`,
+  });
+
+  const selectedDef = selectedDefId ? exerciseDefMap.get(Number(selectedDefId)) : undefined;
+  const countingType = selectedDef?.counting_type ?? "reps";
+  const progressionLevels = selectedDef?.progression_levels ?? [];
+  const hasProgressionLevels = progressionLevels.length > 0;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -164,31 +259,57 @@ function ExerciseBlock({
       </div>
 
       <div className="mt-3 space-y-2">
+        {/* Column headers — adapt to counting type */}
         <div className="grid grid-cols-4 gap-2 text-xs font-medium text-gray-500">
           <span>Progression</span>
-          <span>Reps</span>
-          <span>Duration (s)</span>
+          <span>{countingType === "duration" ? "Duration (s)" : "Reps"}</span>
+          <span>Set</span>
           <span></span>
         </div>
         {setFields.map((setField, setIndex) => (
-          <div key={setField.id} className="grid grid-cols-4 gap-2">
-            <input
-              {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
-              placeholder="e.g. Standard"
-            />
-            <input
-              {...register(`exercises.${exIndex}.sets.${setIndex}.reps`)}
-              type="number"
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
-              placeholder="0"
-            />
-            <input
-              {...register(`exercises.${exIndex}.sets.${setIndex}.duration`)}
-              type="number"
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
-              placeholder="0"
-            />
+          <div key={setField.id} className="grid grid-cols-4 gap-2 items-center">
+            {/* Progression: select if levels exist, text input otherwise */}
+            {hasProgressionLevels ? (
+              <select
+                {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+              >
+                <option value="">—</option>
+                {progressionLevels.map((level) => (
+                  <option key={level.id} value={level.name}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                placeholder="e.g. Standard"
+              />
+            )}
+
+            {/* Reps or Duration based on counting_type */}
+            {countingType === "duration" ? (
+              <input
+                {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
+                  pattern: /^\d{1,2}:\d{2}$/,
+                })}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                placeholder="0:00"
+              />
+            ) : (
+              <input
+                {...register(`exercises.${exIndex}.sets.${setIndex}.reps`)}
+                type="number"
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                placeholder="0"
+              />
+            )}
+
+            {/* Set number */}
+            <span className="text-xs text-gray-400 text-center">Set {setIndex + 1}</span>
+
             <button
               type="button"
               onClick={() => removeSet(setIndex)}

@@ -32,12 +32,13 @@ export default function Navbar() {
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/workouts" className="font-bold">
-              Calisthenics
+              Calisthenics Progression
             </Link>
             <div className="hidden items-center gap-4 text-sm sm:flex">
               <NavLink href="/workouts">Workouts</NavLink>
               <NavLink href="/templates">Templates</NavLink>
               <NavLink href="/exercises">Exercises</NavLink>
+              <NavLink href="/categories">Categories</NavLink>
               <NavLink href="/explore">Explore</NavLink>
             </div>
           </div>

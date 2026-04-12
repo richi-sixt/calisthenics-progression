@@ -4,14 +4,9 @@ import pytest
 
 __all__ = ("pytest",)
 
-from project.auth.forms import (
-    ChangePasswordForm,
-    EditProfileForm,
-    LoginForm,
-    RegistrationForm,
-    ResetPasswordForm,
-    ResetPasswordRequestForm,
-)
+from project.auth.forms import (ChangePasswordForm, EditProfileForm, LoginForm,
+                                RegistrationForm, ResetPasswordForm,
+                                ResetPasswordRequestForm)
 from project.main.forms import CreateExerciseForm, MessageForm
 
 

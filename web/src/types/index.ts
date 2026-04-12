@@ -34,6 +34,7 @@ export interface Exercise {
   workout_id: number;
   exercise_definition_id: number | null;
   exercise_definition_title: string | null;
+  counting_type: "reps" | "duration";
   sets?: WorkoutSet[];
 }
 

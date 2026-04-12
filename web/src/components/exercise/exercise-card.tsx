@@ -4,12 +4,22 @@ import Link from "next/link";
 import type { ExerciseDefinition } from "@/types";
 import { useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
+import { useCategories } from "@/hooks/use-categories";
+import { useMemo } from "react";
 
 export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
   const { data: profile } = useProfile();
+  const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
+
+  // Map category_ids to names
+  const categoryNames = useMemo(() => {
+    const allCats = catData?.data ?? [];
+    const catMap = new Map(allCats.map((c) => [c.id, c.name]));
+    return exercise.category_ids.map((id) => catMap.get(id)).filter(Boolean) as string[];
+  }, [catData, exercise.category_ids]);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -21,19 +31,31 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
           >
             {exercise.title}
           </Link>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex items-center gap-2 flex-wrap">
             <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
               {exercise.counting_type}
             </span>
-            {exercise.progression_levels.length > 0 && (
-              <span className="text-xs text-gray-400">
-                {exercise.progression_levels.length} levels
+            {categoryNames.map((name) => (
+              <span
+                key={name}
+                className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600"
+              >
+                {name}
               </span>
-            )}
+            ))}
           </div>
           {exercise.description && (
             <p className="mt-1 line-clamp-2 text-sm text-gray-500">
               {exercise.description}
+            </p>
+          )}
+          {exercise.progression_levels.length > 0 && (
+            <p className="mt-1 text-xs text-gray-400">
+              Progressions:{" "}
+              {exercise.progression_levels
+                .sort((a, b) => a.level_order - b.level_order)
+                .map((l) => l.name)
+                .join(" → ")}
             </p>
           )}
         </div>

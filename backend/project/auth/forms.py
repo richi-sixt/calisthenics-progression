@@ -6,8 +6,10 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField
 from project import db
 from project.models import User
-from wtforms import BooleanField, PasswordField, StringField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import (BooleanField, PasswordField, StringField, SubmitField,
+                     TextAreaField)
+from wtforms.validators import (DataRequired, Email, EqualTo, Length,
+                                ValidationError)
 
 
 class EditProfileForm(FlaskForm):

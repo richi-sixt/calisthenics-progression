@@ -71,7 +71,7 @@ def api_list_workouts() -> ResponseReturnValue:
     )
     return jsonify(
         {
-            "data": [w.to_dict() for w in pagination.items],
+            "data": [w.to_dict(include_exercises=True) for w in pagination.items],
             "meta": {
                 "page": pagination.page,
                 "per_page": pagination.per_page,

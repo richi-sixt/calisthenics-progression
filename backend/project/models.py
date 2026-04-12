@@ -412,9 +412,12 @@ class Exercise(Base):
             "workout_id": self.workout_id,
             "exercise_definition_id": self.exercise_definition_id,
             "exercise_definition_title": (
-                self.exercise_definition.title
+                self.exercise_definition.title if self.exercise_definition else None
+            ),
+            "counting_type": (
+                self.exercise_definition.counting_type
                 if self.exercise_definition
-                else None
+                else "reps"
             ),
         }
         if include_sets:

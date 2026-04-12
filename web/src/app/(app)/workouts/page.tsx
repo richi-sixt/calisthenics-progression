@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useWorkouts } from "@/hooks/use-workouts";
 import WorkoutCard from "@/components/workout/workout-card";
 
@@ -16,7 +17,8 @@ export default function WorkoutsPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Workouts</h1>
-        <label className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
           <input
             type="checkbox"
             checked={hideDone}
@@ -28,6 +30,13 @@ export default function WorkoutsPage() {
           />
           Hide completed
         </label>
+          <Link
+            href="/workouts/new"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            New Workout
+          </Link>
+        </div>
       </div>
 
       {isLoading && (
