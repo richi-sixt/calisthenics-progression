@@ -410,6 +410,11 @@ class Exercise(Base):
             "exercise_order": self.exercise_order,
             "workout_id": self.workout_id,
             "exercise_definition_id": self.exercise_definition_id,
+            "exercise_definition_title": (
+                self.exercise_definition.title
+                if self.exercise_definition
+                else None
+            ),
         }
         if include_sets:
             data["sets"] = [

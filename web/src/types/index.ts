@@ -32,6 +32,7 @@ export interface Exercise {
   exercise_order: number;
   workout_id: number;
   exercise_definition_id: number | null;
+  exercise_definition_title: string | null;
   sets?: WorkoutSet[];
 }
 

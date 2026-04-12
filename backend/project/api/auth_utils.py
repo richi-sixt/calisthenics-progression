@@ -8,38 +8,105 @@ from typing import Any, Callable
 
 import jwt
 from flask import current_app, g, jsonify, request
+from jwt import PyJWKClient
 from project import db
 from project.models import User
 from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
+# Cached JWKS client (singleton per process)
+_jwks_client: PyJWKClient | None = None
+
+
+def _get_jwks_client() -> PyJWKClient | None:
+    """Get or create a cached JWKS client for Supabase ES256 verification."""
+    global _jwks_client
+    if _jwks_client is not None:
+        return _jwks_client
+
+    supabase_url = current_app.config.get("SUPABASE_URL")
+    if not supabase_url:
+        return None
+
+    jwks_url = f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    _jwks_client = PyJWKClient(jwks_url, cache_keys=True)
+    return _jwks_client
+
 
 def _verify_supabase_jwt(token: str) -> dict[str, Any] | None:
     """Verify a Supabase-issued JWT and return the payload, or None on failure.
 
-    Supabase JWTs use HS256 with the project's JWT secret and contain:
+    Supports both:
+    - HS256: legacy Supabase JWTs signed with the project's JWT secret
+    - ES256: new Supabase JWTs signed with asymmetric keys (JWKS)
+
+    JWT payload contains:
     - sub: Supabase user UUID
     - email: user's email
-    - email_confirmed_at: ISO timestamp or None
+    - email_confirmed_at: ISO timestamp or None (HS256)
+    - user_metadata.email_verified: boolean (ES256)
     - aud: "authenticated"
     """
+    # Peek at the algorithm in the header without verifying
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.InvalidTokenError:
+        return None
+
+    alg = header.get("alg", "")
+
+    if alg == "HS256":
+        return _verify_hs256(token)
+    elif alg.startswith("ES"):
+        return _verify_es256(token)
+    else:
+        logger.warning("Unsupported JWT algorithm: %s", alg)
+        return None
+
+
+def _verify_hs256(token: str) -> dict[str, Any] | None:
+    """Verify a legacy HS256-signed Supabase JWT."""
     secret = current_app.config.get("SUPABASE_JWT_SECRET")
     if not secret:
         logger.error("SUPABASE_JWT_SECRET not configured")
         return None
 
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             secret,
             algorithms=["HS256"],
             audience="authenticated",
         )
-        return payload
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
+        return None
+
+
+def _verify_es256(token: str) -> dict[str, Any] | None:
+    """Verify an ES256-signed Supabase JWT using JWKS public keys."""
+    jwks_client = _get_jwks_client()
+    if jwks_client is None:
+        logger.error("SUPABASE_URL not configured — cannot verify ES256 JWT")
+        return None
+
+    try:
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        return jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["ES256"],
+            audience="authenticated",
+        )
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning("ES256 JWT verification failed: %s", e)
+        return None
+    except Exception as e:
+        logger.error("JWKS key fetch failed: %s", e)
         return None
 
 
@@ -55,7 +122,21 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         return None
 
     email = payload.get("email", "")
-    confirmed = payload.get("email_confirmed_at") is not None
+
+    # Supabase ES256 JWTs no longer include email_confirmed_at at the top level.
+    # Check multiple locations for email confirmation status.
+    user_meta = payload.get("user_metadata") or {}
+    app_meta = payload.get("app_metadata") or {}
+
+    confirmed = (
+        payload.get("email_confirmed_at") is not None
+        or user_meta.get("email_verified") is True
+        or app_meta.get("email_verified") is True
+        # If the user passed email OTP/link, amr contains "email" factor
+        or any(f.get("method") == "otp" for f in payload.get("amr", []))
+    )
+
+    logger.debug("JWT confirmed=%s", confirmed)
 
     # Look up existing user by supabase_uid
     user = db.session.execute(
