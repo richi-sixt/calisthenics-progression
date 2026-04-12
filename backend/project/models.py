@@ -250,6 +250,7 @@ class Workout(Base):
             "title": self.title,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "user_id": self.user_id,
+            "username": self.athlete.username if self.athlete else None,
             "is_template": self.is_template,
             "is_done": self.is_done,
         }
@@ -580,6 +581,7 @@ class Message(Base):
         return {
             "id": self.id,
             "sender_id": self.sender_id,
+            "sender_username": self.athlete.username if self.athlete else None,
             "recipient_id": self.recipient_id,
             "body": self.body,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
