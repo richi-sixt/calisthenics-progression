@@ -22,6 +22,7 @@ export interface Workout {
   title: string;
   timestamp: string | null;
   user_id: number;
+  username: string | null;
   is_template: boolean;
   is_done: boolean;
   exercises?: Exercise[];
@@ -71,6 +72,7 @@ export interface ExerciseCategory {
 export interface Message {
   id: number;
   sender_id: number;
+  sender_username: string | null;
   recipient_id: number;
   body: string | null;
   timestamp: string | null;
@@ -104,4 +106,11 @@ export interface PaginatedResponse<T> {
 
 export interface ApiError {
   error: string;
+}
+
+// ---- Composite response types ----
+
+export interface UserProfileResponse {
+  user: UserWithFollowing;
+  workouts: Workout[];
 }
