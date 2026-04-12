@@ -72,7 +72,12 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     app.register_blueprint(api_bp, url_prefix="/api/v1")
 
     # Enable CORS for API routes only
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": "*"}},
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    )
 
     # Configure logging (production only)
     if not app.debug and not app.testing:
