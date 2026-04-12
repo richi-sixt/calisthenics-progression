@@ -3,24 +3,20 @@ import secrets
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from flask import (abort, current_app, flash, redirect, render_template,
+                   request, url_for)
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required, login_user, logout_user
 from PIL import Image
 from project import db
 from project.auth import bp
-from project.auth.forms import (
-    ChangePasswordForm,
-    DeleteAccountForm,
-    EditProfileForm,
-    LoginForm,
-    RegistrationForm,
-    ResetPasswordForm,
-    ResetPasswordRequestForm,
-)
+from project.auth.forms import (ChangePasswordForm, DeleteAccountForm,
+                                EditProfileForm, LoginForm, RegistrationForm,
+                                ResetPasswordForm, ResetPasswordRequestForm)
 from project.decorators import check_confirmed
 from project.email import send_email
-from project.models import ExerciseDefinition, Message, Notification, User, followers
+from project.models import (ExerciseDefinition, Message, Notification, User,
+                            followers)
 from project.token import confirm_token, generate_confirmation_token
 from werkzeug.datastructures import FileStorage
 

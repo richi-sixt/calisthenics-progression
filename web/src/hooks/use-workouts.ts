@@ -44,4 +44,26 @@ export function useDeleteWorkout() {
   });
 }
 
+export function useCreateWorkout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title: string; exercises: unknown[] }) =>
+      api.post<ApiResponse<Workout>>("/workouts", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+    },
+  });
+}
+
+export function useUpdateWorkout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; title?: string; exercises?: unknown[] }) =>
+      api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+    },
+  });
+}
+
 export { ApiError };

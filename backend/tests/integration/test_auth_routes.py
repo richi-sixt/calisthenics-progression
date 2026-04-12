@@ -5,16 +5,8 @@ import pytest
 __all__ = ("pytest",)
 from flask import url_for
 from project import db
-from project.models import (
-    Exercise,
-    ExerciseDefinition,
-    Message,
-    Notification,
-    Set,
-    User,
-    Workout,
-    followers,
-)
+from project.models import (Exercise, ExerciseDefinition, Message,
+                            Notification, Set, User, Workout, followers)
 from project.token import generate_confirmation_token
 from sqlalchemy import func
 

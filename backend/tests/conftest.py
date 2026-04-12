@@ -8,14 +8,8 @@ from datetime import datetime, timedelta, timezone
 import jwt as pyjwt
 import pytest
 from project import create_app, db
-from project.models import (
-    Exercise,
-    ExerciseCategory,
-    ExerciseDefinition,
-    Set,
-    User,
-    Workout,
-)
+from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
+                            Set, User, Workout)
 from tests.test_config import TestConfig
 
 

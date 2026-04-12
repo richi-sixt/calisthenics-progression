@@ -5,16 +5,8 @@ import pytest
 __all__ = ("pytest",)
 from flask import url_for
 from project import db
-from project.models import (
-    Exercise,
-    ExerciseCategory,
-    ExerciseDefinition,
-    Message,
-    ProgressionLevel,
-    Set,
-    User,
-    Workout,
-)
+from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
+                            Message, ProgressionLevel, Set, User, Workout)
 from sqlalchemy import func
 
 

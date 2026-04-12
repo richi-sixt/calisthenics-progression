@@ -36,7 +36,7 @@ export function useCreateExercise() {
       title: string;
       description?: string;
       counting_type: string;
-      progression_levels?: { name: string; level_order: number }[];
+      progression_levels?: string[];
       category_ids?: number[];
     }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),

@@ -5,7 +5,8 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import ExerciseCategory, ExerciseDefinition, ProgressionLevel
+from project.models import (ExerciseCategory, ExerciseDefinition,
+                            ProgressionLevel)
 
 
 @bp.route("/exercises", methods=["GET"])

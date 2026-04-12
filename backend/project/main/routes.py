@@ -1,33 +1,18 @@
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from flask import (
-    abort,
-    current_app,
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
+from flask import (abort, current_app, flash, jsonify, redirect,
+                   render_template, request, url_for)
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from project import db
 from project.decorators import check_confirmed
 from project.main import bp
-from project.main.forms import CreateExerciseForm, ManageCategoriesForm, MessageForm
-from project.models import (
-    Exercise,
-    ExerciseCategory,
-    ExerciseDefinition,
-    Message,
-    Notification,
-    ProgressionLevel,
-    Set,
-    User,
-    Workout,
-)
+from project.main.forms import (CreateExerciseForm, ManageCategoriesForm,
+                                MessageForm)
+from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
+                            Message, Notification, ProgressionLevel, Set, User,
+                            Workout)
 
 
 # helper functions
