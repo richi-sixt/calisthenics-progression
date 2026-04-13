@@ -83,6 +83,25 @@ export const api = {
     });
     return handleResponse<T>(response);
   },
+
+  async upload<T>(path: string, formData: FormData): Promise<T> {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const headers: Record<string, string> = {};
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+    // No Content-Type — browser sets multipart/form-data with boundary
+    const response = await fetch(`${API_URL}${path}`, {
+      method: "PUT",
+      headers,
+      body: formData,
+    });
+    return handleResponse<T>(response);
+  },
 };
 
 export { ApiError };

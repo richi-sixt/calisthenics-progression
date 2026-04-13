@@ -12,3 +12,22 @@ export function useUpdateProfile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
   });
 }
+
+export function useUploadProfilePicture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("picture", file);
+      return api.upload<ApiResponse<User>>("/auth/profile/picture", formData);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: () =>
+      api.delete<ApiResponse<{ message: string }>>("/auth/account"),
+  });
+}

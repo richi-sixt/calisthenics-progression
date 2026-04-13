@@ -251,6 +251,7 @@ class Workout(Base):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "user_id": self.user_id,
             "username": self.athlete.username if self.athlete else None,
+            "user_image_file": self.athlete.image_file if self.athlete else None,
             "is_template": self.is_template,
             "is_done": self.is_done,
         }

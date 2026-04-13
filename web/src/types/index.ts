@@ -23,6 +23,7 @@ export interface Workout {
   timestamp: string | null;
   user_id: number;
   username: string | null;
+  user_image_file: string | null;
   is_template: boolean;
   is_done: boolean;
   exercises?: Exercise[];
