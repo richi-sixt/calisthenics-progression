@@ -13,13 +13,13 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 dark:bg-gray-950">
       <div className="w-full max-w-md space-y-8 text-center">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">
+          <h1 className="text-4xl font-bold tracking-tight dark:text-gray-100">
             Calisthenics Progression
           </h1>
-          <p className="mt-3 text-lg text-gray-600">
+          <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
             Track your workouts, manage exercises, and progress your skills.
           </p>
         </div>
@@ -33,7 +33,7 @@ export default async function Home() {
           </Link>
           <Link
             href="/register"
-            className="rounded-lg bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="rounded-lg bg-white dark:bg-gray-800 px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Create Account
           </Link>

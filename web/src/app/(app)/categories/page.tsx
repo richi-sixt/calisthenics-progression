@@ -8,10 +8,12 @@ import {
   useDeleteCategory,
 } from "@/hooks/use-categories";
 import PageHeader from "@/components/ui/page-header";
-import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
+import { useTranslation } from "@/i18n";
+import { CardListSkeleton, CategorySkeleton } from "@/components/ui/skeleton";
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useCategories();
   const categories = data?.data ?? [];
 
@@ -53,7 +55,7 @@ export default function CategoriesPage() {
     deleteCategory.mutate(id, {
       onError: (err) => {
         setDeleteError(
-          err instanceof Error ? err.message : "Cannot delete: category is in use."
+          err instanceof Error ? err.message : t("categories.cannotDelete")
         );
       },
     });
@@ -61,35 +63,35 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <PageHeader title="Categories" />
+      <PageHeader title={t("categories.title")} />
 
       {/* Create new category */}
       <form onSubmit={handleCreate} className="mt-4 flex items-center gap-2">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          placeholder="New category name"
+          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          placeholder={t("categories.newPlaceholder")}
         />
         <button
           type="submit"
           disabled={createCategory.isPending || !newName.trim()}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {createCategory.isPending ? "Adding..." : "Add"}
+          {createCategory.isPending ? t("common.adding") : t("common.add")}
         </button>
       </form>
 
-      {isLoading && <Loading text="Loading categories..." />}
+      {isLoading && <CardListSkeleton count={4} Card={CategorySkeleton} />}
       {error && <ErrorMessage error={error} />}
 
       {deleteError && (
-        <p className="mt-3 text-sm text-red-600">{deleteError}</p>
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{deleteError}</p>
       )}
 
       {!isLoading && !error && categories.length === 0 && (
-        <p className="mt-6 text-sm text-gray-500">
-          No categories yet. Create one above.
+        <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+          {t("categories.empty")}
         </p>
       )}
 
@@ -98,14 +100,14 @@ export default function CategoriesPage() {
           {categories.map((cat) => (
             <div
               key={cat.id}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3"
             >
               {editingId === cat.id ? (
                 <div className="flex flex-1 items-center gap-2">
                   <input
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
-                    className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                    className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleRename();
@@ -118,34 +120,34 @@ export default function CategoriesPage() {
                     disabled={renameCategory.isPending}
                     className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
-                    Save
+                    {t("common.save")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingId(null)}
-                    className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </div>
               ) : (
                 <>
-                  <span className="text-sm text-gray-900">{cat.name}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{cat.name}</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => startEditing(cat.id, cat.name)}
-                      className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                      className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
-                      Rename
+                      {t("categories.rename")}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(cat.id)}
                       disabled={deleteCategory.isPending}
-                      className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </div>
                 </>

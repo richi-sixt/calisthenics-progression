@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import { useTranslation } from "@/i18n";
 import type { Workout, ExerciseDefinition } from "@/types";
 
 /** Convert total seconds to "mm:ss" string */
@@ -50,6 +51,8 @@ export default function WorkoutExerciseForm({
   isPending: boolean;
   submitLabel?: string;
 }) {
+  const { t } = useTranslation();
+
   // Exercise filtering state
   const [showOnlyMine, setShowOnlyMine] = useState(true);
   const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
@@ -88,7 +91,7 @@ export default function WorkoutExerciseForm({
     remove: removeExercise,
   } = useFieldArray({ control, name: "exercises" });
 
-  // Build a lookup map from exercise definition id → definition
+  // Build a lookup map from exercise definition id -> definition
   const exerciseDefMap = useMemo(() => {
     const map = new Map<number, ExerciseDefinition>();
     for (const def of exerciseDefs) {
@@ -120,24 +123,24 @@ export default function WorkoutExerciseForm({
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.title")}</label>
         <input
           {...register("title", { required: true })}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          placeholder="Workout title"
+          className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          placeholder={t("workoutForm.titlePlaceholder")}
         />
       </div>
 
       {/* Exercise filter controls */}
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <input
             type="checkbox"
             checked={showOnlyMine}
             onChange={(e) => setShowOnlyMine(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-gray-300 dark:border-gray-600"
           />
-          Show only my exercises
+          {t("workoutForm.showOnlyMine")}
         </label>
 
         {categories.length > 0 && (
@@ -149,8 +152,8 @@ export default function WorkoutExerciseForm({
                 onClick={() => toggleCategory(cat.id)}
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
                   selectedCatIds.includes(cat.id)
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               >
                 {cat.name}
@@ -160,9 +163,9 @@ export default function WorkoutExerciseForm({
               <button
                 type="button"
                 onClick={() => setSelectedCatIds([])}
-                className="rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-400 hover:text-gray-600"
+                className="rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                Clear
+                {t("common.clear")}
               </button>
             )}
           </div>
@@ -170,7 +173,7 @@ export default function WorkoutExerciseForm({
       </div>
 
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">Exercises</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.exercises")}</label>
         {exerciseFields.map((field, exIndex) => (
           <ExerciseBlock
             key={field.id}
@@ -192,7 +195,7 @@ export default function WorkoutExerciseForm({
           }
           className="text-sm text-blue-600 hover:text-blue-800"
         >
-          + Add exercise
+          {t("workoutForm.addExercise")}
         </button>
       </div>
 
@@ -201,7 +204,7 @@ export default function WorkoutExerciseForm({
         disabled={isPending}
         className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        {isPending ? "Saving..." : submitLabel}
+        {isPending ? t("common.saving") : submitLabel}
       </button>
     </form>
   );
@@ -222,6 +225,7 @@ function ExerciseBlock({
   exerciseDefMap: Map<number, ExerciseDefinition>;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const {
     fields: setFields,
     append: appendSet,
@@ -240,13 +244,13 @@ function ExerciseBlock({
   const hasProgressionLevels = progressionLevels.length > 0;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
       <div className="flex items-center justify-between">
         <select
           {...register(`exercises.${exIndex}.exercise_definition_id`, { required: true })}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
         >
-          <option value="">Select exercise...</option>
+          <option value="">{t("workoutForm.selectExercise")}</option>
           {exerciseDefs.map((def) => (
             <option key={def.id} value={def.id}>
               {def.title}
@@ -254,27 +258,30 @@ function ExerciseBlock({
           ))}
         </select>
         <button type="button" onClick={onRemove} className="text-sm text-red-500 hover:text-red-700">
-          Remove
+          {t("common.remove")}
         </button>
       </div>
 
       <div className="mt-3 space-y-2">
-        {/* Column headers — adapt to counting type */}
-        <div className="grid grid-cols-4 gap-2 text-xs font-medium text-gray-500">
-          <span>Progression</span>
-          <span>{countingType === "duration" ? "Duration (s)" : "Reps"}</span>
-          <span>Set</span>
+        {/* Column headers -- adapt to counting type */}
+        <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          <span>{t("workouts.set")}</span>
+          <span>{t("workouts.progression")}</span>
+          <span>{countingType === "duration" ? t("workouts.durationSeconds") : t("workouts.reps")}</span>
           <span></span>
         </div>
         {setFields.map((setField, setIndex) => (
-          <div key={setField.id} className="grid grid-cols-4 gap-2 items-center">
+          <div key={setField.id} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center">
+            {/* Set number */}
+            <span className="text-xs text-gray-400 dark:text-gray-500 w-10">{t("workouts.set")} {setIndex + 1}</span>
+
             {/* Progression: select if levels exist, text input otherwise */}
             {hasProgressionLevels ? (
               <select
                 {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
               >
-                <option value="">—</option>
+                <option value="">---</option>
                 {progressionLevels.map((level) => (
                   <option key={level.id} value={level.name}>
                     {level.name}
@@ -284,7 +291,7 @@ function ExerciseBlock({
             ) : (
               <input
                 {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
                 placeholder="e.g. Standard"
               />
             )}
@@ -295,21 +302,19 @@ function ExerciseBlock({
                 {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
                   pattern: /^\d{1,2}:\d{2}$/,
                 })}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
                 placeholder="0:00"
               />
             ) : (
               <input
                 {...register(`exercises.${exIndex}.sets.${setIndex}.reps`)}
                 type="number"
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
                 placeholder="0"
               />
             )}
 
-            {/* Set number */}
-            <span className="text-xs text-gray-400 text-center">Set {setIndex + 1}</span>
-
+            {/* Remove button */}
             <button
               type="button"
               onClick={() => removeSet(setIndex)}
@@ -324,7 +329,7 @@ function ExerciseBlock({
           onClick={() => appendSet({ progression: "", reps: "", duration: "" })}
           className="text-xs text-blue-600 hover:text-blue-800"
         >
-          + Add set
+          {t("workoutForm.addSet")}
         </button>
       </div>
     </div>

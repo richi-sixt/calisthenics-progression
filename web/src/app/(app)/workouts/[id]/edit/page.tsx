@@ -7,6 +7,7 @@ import { useWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
 import WorkoutExerciseForm from "@/components/workout/workout-exercise-form";
 import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
+import { useTranslation } from "@/i18n";
 
 export default function EditWorkoutPage({
   params,
@@ -16,18 +17,19 @@ export default function EditWorkoutPage({
   const { id } = use(params);
   const workoutId = Number(id);
   const router = useRouter();
+  const { t } = useTranslation();
   const { data, isLoading, error } = useWorkout(workoutId);
   const updateWorkout = useUpdateWorkout();
 
-  if (isLoading) return <Loading text="Loading workout..." />;
+  if (isLoading) return <Loading text={t("workouts.loading")} />;
   if (error || !data) return <ErrorMessage error={error} />;
 
   return (
     <div>
-      <Link href="/workouts" className="text-sm text-gray-500 hover:text-gray-700">
-        &larr; Back to workouts
+      <Link href="/workouts" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: t("nav.workouts").toLowerCase() })}
       </Link>
-      <h1 className="mt-4 text-2xl font-bold">Edit Workout</h1>
+      <h1 className="mt-4 text-2xl font-bold">{t("workouts.editTitle")}</h1>
       <div className="mt-6">
         <WorkoutExerciseForm
           defaultValues={data.data}

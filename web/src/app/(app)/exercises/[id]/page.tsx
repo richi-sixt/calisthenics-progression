@@ -1,18 +1,20 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useRouter } from "next/navigation";
-import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
+import { useTranslation } from "@/i18n";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 export default function ExerciseDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t } = useTranslation();
   const { id } = use(params);
   const exerciseId = Number(id);
   const router = useRouter();
@@ -20,8 +22,17 @@ export default function ExerciseDetailPage({
   const { data: profile } = useProfile();
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
-  if (isLoading) return <Loading text="Loading exercise..." />;
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="h-8 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="h-4 w-full max-w-md animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+      </div>
+    );
+  }
   if (error || !data) return <ErrorMessage error={error} />;
 
   const exercise = data.data;
@@ -29,14 +40,14 @@ export default function ExerciseDetailPage({
 
   return (
     <div>
-      <Link href="/exercises" className="text-sm text-gray-500 hover:text-gray-700">
-        &larr; Back to exercises
+      <Link href="/exercises" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: t("nav.exercises").toLowerCase() })}
       </Link>
 
       <div className="mt-4 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{exercise.title}</h1>
-          <span className="mt-1 inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+          <h1 className="text-2xl font-bold dark:text-gray-100">{exercise.title}</h1>
+          <span className="mt-1 inline-flex rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
             {exercise.counting_type}
           </span>
         </div>
@@ -45,48 +56,56 @@ export default function ExerciseDetailPage({
             <>
               <Link
                 href={`/exercises/${exercise.id}/edit`}
-                className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200"
+                className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
               >
-                Edit
+                {t("common.edit")}
               </Link>
               <button
-                onClick={() => {
-                  if (confirm("Archive this exercise?")) {
-                    deleteExercise.mutate(exerciseId, {
-                      onSuccess: () => router.push("/exercises"),
-                    });
-                  }
-                }}
-                className="rounded-md px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                onClick={() => setShowArchiveConfirm(true)}
+                className="rounded-md px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                Archive
+                {t("exercises.archive")}
               </button>
             </>
           ) : (
             <button
               onClick={() => copyExercise.mutate(exerciseId)}
               disabled={copyExercise.isPending}
-              className="rounded-md bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+              className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30"
             >
-              {copyExercise.isPending ? "Copying..." : "Copy to My Exercises"}
+              {copyExercise.isPending ? t("exercises.copying") : t("exercises.copyToMine")}
             </button>
           )}
         </div>
       </div>
 
+      <ConfirmDialog
+        open={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={() => {
+          deleteExercise.mutate(exerciseId, {
+            onSuccess: () => router.push("/exercises"),
+          });
+        }}
+        title={t("exercises.archiveConfirmTitle")}
+        message={t("exercises.archiveConfirmMessage")}
+        confirmLabel={t("exercises.archive")}
+        variant="danger"
+      />
+
       {exercise.description && (
-        <p className="mt-4 text-gray-600">{exercise.description}</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">{exercise.description}</p>
       )}
 
       {exercise.progression_levels.length > 0 && (
         <div className="mt-6">
-          <h2 className="text-sm font-semibold text-gray-700">Progression Levels</h2>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</h2>
           <ol className="mt-2 space-y-1">
             {exercise.progression_levels
               .sort((a, b) => a.level_order - b.level_order)
               .map((level) => (
-                <li key={level.id} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-xs font-medium">
+                <li key={level.id} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium">
                     {level.level_order}
                   </span>
                   {level.name}

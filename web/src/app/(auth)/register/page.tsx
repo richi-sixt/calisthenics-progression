@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/i18n";
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,12 +19,12 @@ export default function RegisterPage() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("profile.passwordMismatch"));
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("profile.passwordTooShort"));
       return;
     }
 
@@ -50,16 +52,15 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="text-center">
-        <h2 className="text-xl font-semibold">Check your email</h2>
-        <p className="mt-3 text-gray-600">
-          We sent a confirmation link to <strong>{email}</strong>. Click the
-          link to activate your account.
+        <h2 className="text-xl font-semibold dark:text-gray-100">{t("auth.checkEmail")}</h2>
+        <p className="mt-3 text-gray-600 dark:text-gray-400">
+          {t("auth.confirmationSent", { email })}
         </p>
         <Link
           href="/login"
           className="mt-6 inline-block text-sm text-blue-600 hover:text-blue-500"
         >
-          Back to Login
+          {t("auth.backToLogin")}
         </Link>
       </div>
     );
@@ -67,11 +68,11 @@ export default function RegisterPage() {
 
   return (
     <div>
-      <h2 className="text-center text-xl font-semibold">Create Account</h2>
+      <h2 className="text-center text-xl font-semibold dark:text-gray-100">{t("auth.createAccount")}</h2>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
@@ -79,9 +80,9 @@ export default function RegisterPage() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Email
+            {t("auth.email")}
           </label>
           <input
             id="email"
@@ -89,16 +90,16 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Password
+            {t("auth.password")}
           </label>
           <input
             id="password"
@@ -107,16 +108,16 @@ export default function RegisterPage() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         <div>
           <label
             htmlFor="confirm-password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Confirm Password
+            {t("auth.confirmPassword")}
           </label>
           <input
             id="confirm-password"
@@ -125,7 +126,7 @@ export default function RegisterPage() {
             minLength={6}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
@@ -134,14 +135,14 @@ export default function RegisterPage() {
           disabled={loading}
           className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
         >
-          {loading ? "Creating account..." : "Register"}
+          {loading ? t("auth.creatingAccount") : t("auth.register")}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
-        Already have an account?{" "}
+      <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        {t("auth.haveAccount")}{" "}
         <Link href="/login" className="text-blue-600 hover:text-blue-500">
-          Login
+          {t("auth.login")}
         </Link>
       </p>
     </div>

@@ -1,20 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { ExerciseDefinition } from "@/types";
 import { useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useMemo } from "react";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
+  const { t } = useTranslation();
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
   const { data: profile } = useProfile();
   const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
   // Map category_ids to names
   const categoryNames = useMemo(() => {
@@ -28,7 +33,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
     : null;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between">
         <div className="flex min-w-0 flex-1 gap-3">
           {exercise.username && (
@@ -40,7 +45,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
                   className="h-10 w-10 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-500">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-sm font-bold text-gray-500 dark:text-gray-400">
                   {exercise.username[0]?.toUpperCase() ?? "?"}
                 </div>
               )}
@@ -49,7 +54,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
           <div className="min-w-0 flex-1">
             <Link
               href={`/exercises/${exercise.id}`}
-              className="text-lg font-semibold text-gray-900 hover:text-blue-600"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600"
             >
               {exercise.title}
             </Link>
@@ -62,26 +67,26 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
                   {exercise.username}
                 </Link>
               )}
-              <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+              <span className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                 {exercise.counting_type}
               </span>
               {categoryNames.map((name) => (
                 <span
                   key={name}
-                  className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600"
+                  className="inline-flex rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400"
                 >
                   {name}
                 </span>
               ))}
             </div>
             {exercise.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+              <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
                 {exercise.description}
               </p>
             )}
             {exercise.progression_levels.length > 0 && (
-              <p className="mt-1 text-xs text-gray-400">
-                Progressions:{" "}
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                {t("exercises.progressions")}{" "}
                 {exercise.progression_levels
                   .sort((a, b) => a.level_order - b.level_order)
                   .map((l) => l.name)
@@ -95,31 +100,38 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
             <>
               <Link
                 href={`/exercises/${exercise.id}/edit`}
-                className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
               >
-                Edit
+                {t("common.edit")}
               </Link>
               <button
-                onClick={() => {
-                  if (confirm("Archive this exercise?")) deleteExercise.mutate(exercise.id);
-                }}
+                onClick={() => setShowArchiveDialog(true)}
                 disabled={deleteExercise.isPending}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                Archive
+                {t("exercises.archive")}
               </button>
             </>
           ) : (
             <button
               onClick={() => copyExercise.mutate(exercise.id)}
               disabled={copyExercise.isPending}
-              className="rounded-md bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-100"
+              className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/30"
             >
-              Copy
+              {t("common.copy")}
             </button>
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={showArchiveDialog}
+        onClose={() => setShowArchiveDialog(false)}
+        onConfirm={() => deleteExercise.mutate(exercise.id)}
+        title={t("exercises.archive")}
+        message={t("exercises.archiveConfirmMessage")}
+        confirmLabel={t("exercises.archive")}
+        variant="danger"
+      />
     </div>
   );
 }

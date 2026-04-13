@@ -30,8 +30,8 @@ export default function CategoryFilter({
           onClick={() => toggle(cat.id)}
           className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
             selectedIds.includes(cat.id)
-              ? "bg-blue-100 text-blue-700"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
           }`}
         >
           {cat.name}
