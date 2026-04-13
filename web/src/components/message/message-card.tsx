@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
 import type { Message } from "@/types";
+import { useTranslation } from "@/i18n";
 
 export default function MessageCard({ message }: { message: Message }) {
+  const { formatDate } = useTranslation();
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between">
@@ -20,7 +21,7 @@ export default function MessageCard({ message }: { message: Message }) {
             )}
             {message.timestamp && (
               <span className="text-xs text-gray-400 dark:text-gray-500">
-                {format(new Date(message.timestamp), "MMM d, yyyy 'at' HH:mm")}
+                {formatDate(message.timestamp, "dateTime")}
               </span>
             )}
           </div>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 import type { Workout } from "@/types";
 import { useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -30,7 +29,7 @@ function formatSetSummary(exercise: import("@/types").Exercise, t: (key: Transla
 }
 
 export default function WorkoutCard({ workout }: { workout: Workout }) {
-  const { t } = useTranslation();
+  const { t, formatDate } = useTranslation();
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -57,7 +56,7 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
         </div>
         {workout.timestamp && (
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
+            {formatDate(workout.timestamp, "dateTime")}
           </p>
         )}
 

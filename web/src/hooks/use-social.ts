@@ -11,13 +11,12 @@ export function useExplore(page: number = 1) {
   });
 }
 
-export function useUserProfile(username: string, page: number = 1) {
+export function useUserProfile(username: string) {
   return useQuery({
-    queryKey: ["user", username, page],
+    queryKey: ["user", username],
     queryFn: () =>
       api.get<{ data: UserProfileResponse; meta: import("@/types").PaginationMeta }>(
-        `/users/${username}`,
-        { page: String(page) }
+        `/users/${username}`
       ),
   });
 }

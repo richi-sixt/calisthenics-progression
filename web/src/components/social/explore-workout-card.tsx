@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
 import type { Workout } from "@/types";
 import { useTranslation } from "@/i18n";
 
@@ -22,7 +21,7 @@ function ProfilePic({ imageFile, username }: { imageFile: string | null; usernam
 }
 
 export default function ExploreWorkoutCard({ workout }: { workout: Workout }) {
-  const { t } = useTranslation();
+  const { t, formatDate } = useTranslation();
   const exerciseCount = workout.exercises?.length ?? 0;
 
   return (
@@ -50,7 +49,7 @@ export default function ExploreWorkoutCard({ workout }: { workout: Workout }) {
               )}
               {workout.timestamp && (
                 <time dateTime={workout.timestamp}>
-                  {format(new Date(workout.timestamp), "MMM d, yyyy")}
+                  {formatDate(workout.timestamp)}
                 </time>
               )}
               <span>

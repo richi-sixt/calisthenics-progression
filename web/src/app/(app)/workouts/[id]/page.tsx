@@ -2,7 +2,6 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 import { useWorkout, useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
@@ -13,7 +12,7 @@ export default function WorkoutDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { t } = useTranslation();
+  const { t, formatDate } = useTranslation();
   const { id } = use(params);
   const workoutId = Number(id);
   const router = useRouter();
@@ -46,7 +45,7 @@ export default function WorkoutDetailPage({
           <h1 className="text-2xl font-bold dark:text-gray-100">{workout.title}</h1>
           {workout.timestamp && (
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
+              {formatDate(workout.timestamp, "dateTime")}
             </p>
           )}
         </div>
