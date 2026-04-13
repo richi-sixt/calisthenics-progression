@@ -26,6 +26,7 @@ repos:
         name: pytest
         entry: bash -c 'cd backend && pytest'
         language: system
+        files: \.py$
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
