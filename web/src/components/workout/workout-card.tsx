@@ -37,48 +37,47 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/workouts/${workout.id}`}
-              className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600"
-            >
-              {workout.title}
-            </Link>
-            {workout.is_done ? (
-              <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
-                {t("workouts.done")}
-              </span>
-            ) : (
-              <span className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-400">
-                {t("workouts.pendent")}
-              </span>
-            )}
-          </div>
-          {workout.timestamp && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
-            </p>
-          )}
-
-          {/* Exercise detail list */}
-          {workout.exercises && workout.exercises.length > 0 && (
-            <div className="mt-2 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
-              {workout.exercises.map((ex, i) => (
-                <p key={ex.id}>
-                  <span className="text-gray-400 dark:text-gray-500">{i + 1}.</span>{" "}
-                  <span className="font-medium">
-                    {ex.exercise_definition_title ?? t("workouts.exercise")}
-                  </span>
-                  <span className="text-gray-400 dark:text-gray-500"> — </span>
-                  <span>{formatSetSummary(ex, t)}</span>
-                </p>
-              ))}
-            </div>
+      <div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/workouts/${workout.id}`}
+            className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600"
+          >
+            {workout.title}
+          </Link>
+          {workout.is_done ? (
+            <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+              {t("workouts.done")}
+            </span>
+          ) : (
+            <span className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-400">
+              {t("workouts.pendent")}
+            </span>
           )}
         </div>
-        <div className="ml-4 flex items-center gap-2">
+        {workout.timestamp && (
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
+          </p>
+        )}
+
+        {/* Exercise detail list */}
+        {workout.exercises && workout.exercises.length > 0 && (
+          <div className="mt-2 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
+            {workout.exercises.map((ex, i) => (
+              <p key={ex.id}>
+                <span className="text-gray-400 dark:text-gray-500">{i + 1}.</span>{" "}
+                <span className="font-medium">
+                  {ex.exercise_definition_title ?? t("workouts.exercise")}
+                </span>
+                <span className="text-gray-400 dark:text-gray-500"> — </span>
+                <span>{formatSetSummary(ex, t)}</span>
+              </p>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => toggleDone.mutate(workout.id)}
             disabled={toggleDone.isPending}

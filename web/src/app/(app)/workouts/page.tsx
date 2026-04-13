@@ -18,21 +18,21 @@ export default function WorkoutsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold dark:text-gray-100">{t("workouts.title")}</h1>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <input
-            type="checkbox"
-            checked={hideDone}
-            onChange={(e) => {
-              setHideDone(e.target.checked);
-              setPage(1);
-            }}
-            className="rounded"
-          />
-          {t("workouts.hideCompleted")}
-        </label>
+            <input
+              type="checkbox"
+              checked={hideDone}
+              onChange={(e) => {
+                setHideDone(e.target.checked);
+                setPage(1);
+              }}
+              className="rounded"
+            />
+            {t("workouts.hideCompleted")}
+          </label>
           <Link
             href="/workouts/new"
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"

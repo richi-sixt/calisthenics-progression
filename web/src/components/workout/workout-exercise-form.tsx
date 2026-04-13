@@ -263,62 +263,77 @@ function ExerciseBlock({
       </div>
 
       <div className="mt-3 space-y-2">
-        {/* Column headers -- adapt to counting type */}
-        <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          <span>{t("workouts.set")}</span>
+        {/* Column headers -- desktop only */}
+        <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          <span className="w-10">{t("workouts.set")}</span>
           <span>{t("workouts.progression")}</span>
           <span>{countingType === "duration" ? t("workouts.durationSeconds") : t("workouts.reps")}</span>
           <span></span>
         </div>
         {setFields.map((setField, setIndex) => (
-          <div key={setField.id} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center">
-            {/* Set number */}
-            <span className="text-xs text-gray-400 dark:text-gray-500 w-10">{t("workouts.set")} {setIndex + 1}</span>
-
-            {/* Progression: select if levels exist, text input otherwise */}
-            {hasProgressionLevels ? (
-              <select
-                {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+          <div key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2 sm:border-0 sm:p-0 sm:grid sm:grid-cols-[auto_1fr_1fr_auto] sm:gap-2 sm:items-center">
+            {/* Mobile: set label + remove in a row */}
+            <div className="flex items-center justify-between sm:hidden mb-1.5">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")} {setIndex + 1}</span>
+              <button
+                type="button"
+                onClick={() => removeSet(setIndex)}
+                className="text-xs text-red-400 hover:text-red-600"
               >
-                <option value="">---</option>
-                {progressionLevels.map((level) => (
-                  <option key={level.id} value={level.name}>
-                    {level.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
-                placeholder="e.g. Standard"
-              />
-            )}
+                x
+              </button>
+            </div>
 
-            {/* Reps or Duration based on counting_type */}
-            {countingType === "duration" ? (
-              <input
-                {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
-                  pattern: /^\d{1,2}:\d{2}$/,
-                })}
-                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
-                placeholder="0:00"
-              />
-            ) : (
-              <input
-                {...register(`exercises.${exIndex}.sets.${setIndex}.reps`)}
-                type="number"
-                className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
-                placeholder="0"
-              />
-            )}
+            {/* Desktop: set number */}
+            <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 w-10">{t("workouts.set")} {setIndex + 1}</span>
 
-            {/* Remove button */}
+            {/* Progression + Reps/Duration — stack on mobile, inline on desktop */}
+            <div className="grid grid-cols-2 gap-2 sm:contents">
+              {/* Progression */}
+              {hasProgressionLevels ? (
+                <select
+                  {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
+                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                >
+                  <option value="">---</option>
+                  {progressionLevels.map((level) => (
+                    <option key={level.id} value={level.name}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
+                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                  placeholder="e.g. Standard"
+                />
+              )}
+
+              {/* Reps or Duration */}
+              {countingType === "duration" ? (
+                <input
+                  {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
+                    pattern: /^\d{1,2}:\d{2}$/,
+                  })}
+                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                  placeholder="0:00"
+                />
+              ) : (
+                <input
+                  {...register(`exercises.${exIndex}.sets.${setIndex}.reps`)}
+                  type="number"
+                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                  placeholder="0"
+                />
+              )}
+            </div>
+
+            {/* Desktop: remove button */}
             <button
               type="button"
               onClick={() => removeSet(setIndex)}
-              className="text-xs text-red-400 hover:text-red-600"
+              className="hidden sm:block text-xs text-red-400 hover:text-red-600"
             >
               x
             </button>
