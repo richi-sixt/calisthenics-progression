@@ -245,10 +245,10 @@ function ExerciseBlock({
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
         <select
           {...register(`exercises.${exIndex}.exercise_definition_id`, { required: true })}
-          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
         >
           <option value="">{t("workoutForm.selectExercise")}</option>
           {exerciseDefs.map((def) => (
@@ -257,7 +257,7 @@ function ExerciseBlock({
             </option>
           ))}
         </select>
-        <button type="button" onClick={onRemove} className="text-sm text-red-500 hover:text-red-700">
+        <button type="button" onClick={onRemove} className="shrink-0 text-sm text-red-500 hover:text-red-700">
           {t("common.remove")}
         </button>
       </div>
