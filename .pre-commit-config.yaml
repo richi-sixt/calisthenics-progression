@@ -28,5 +28,4 @@ repos:
         language: system
         files: \.py$
         pass_filenames: false
-        always_run: true
         stages: [pre-commit]
