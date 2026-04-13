@@ -55,6 +55,8 @@ export interface ExerciseDefinition {
   counting_type: "reps" | "duration";
   date_created: string | null;
   user_id: number;
+  username: string | null;
+  user_image_file: string | null;
   archived: boolean;
   progression_levels: ProgressionLevel[];
   category_ids: number[];

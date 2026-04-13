@@ -367,6 +367,8 @@ class ExerciseDefinition(Base):
                 self.date_created.isoformat() if self.date_created else None
             ),
             "user_id": self.user_id,
+            "username": self.athlete.username if self.athlete else None,
+            "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
             "progression_levels": [
                 pl.to_dict() for pl in self.progression_levels.all()

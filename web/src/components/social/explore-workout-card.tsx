@@ -56,12 +56,33 @@ export default function ExploreWorkoutCard({ workout }: { workout: Workout }) {
               </span>
             </div>
             {workout.exercises && workout.exercises.length > 0 && (
-              <p className="mt-1 text-xs text-gray-400">
-                {workout.exercises
-                  .map((e) => e.exercise_definition_title)
-                  .filter(Boolean)
-                  .join(", ")}
-              </p>
+              <div className="mt-2 space-y-0.5 text-sm text-gray-600">
+                {workout.exercises.map((ex, i) => {
+                  const sets = ex.sets ?? [];
+                  const setDetails = sets.length > 0
+                    ? sets.map((s) => {
+                        if (s.reps != null) return `${s.reps ?? "None"} Reps`;
+                        if (s.duration != null) return s.duration_formatted || "00:00";
+                        return ex.counting_type === "duration" ? "00:00" : "None Reps";
+                      }).join(" , ")
+                    : null;
+                  return (
+                    <p key={ex.id}>
+                      <span className="text-gray-400">{i + 1}.</span>{" "}
+                      <span className="font-medium">
+                        {ex.exercise_definition_title ?? "Exercise"}
+                      </span>
+                      <span className="text-gray-400"> — </span>
+                      <span>
+                        {sets.length} {sets.length === 1 ? "Set" : "Sets"}
+                        {setDetails && (
+                          <span className="text-gray-400"> ( {setDetails} )</span>
+                        )}
+                      </span>
+                    </p>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
