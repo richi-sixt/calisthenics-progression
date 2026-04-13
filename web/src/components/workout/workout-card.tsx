@@ -1,21 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { Workout } from "@/types";
 import { useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useTranslation, type TranslationKey } from "@/i18n";
 
-function formatSetSummary(exercise: import("@/types").Exercise): string {
+function formatSetSummary(exercise: import("@/types").Exercise, t: (key: TranslationKey) => string): string {
   const sets = exercise.sets ?? [];
-  if (sets.length === 0) return "No sets";
+  if (sets.length === 0) return t("workouts.noSets");
 
   const totalReps = sets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
   const totalDuration = sets.reduce((sum, s) => sum + (s.duration ?? 0), 0);
 
-  const parts: string[] = [`${sets.length} ${sets.length === 1 ? "Set" : "Sets"}`];
+  const parts: string[] = [`${sets.length} ${sets.length === 1 ? t("workouts.set") : t("workouts.sets")}`];
 
   if (totalReps > 0) {
-    parts.push(`${totalReps} Reps`);
+    parts.push(`${totalReps} ${t("workouts.reps")}`);
   }
   if (totalDuration > 0) {
     const mins = Math.floor(totalDuration / 60);
@@ -27,47 +30,49 @@ function formatSetSummary(exercise: import("@/types").Exercise): string {
 }
 
 export default function WorkoutCard({ workout }: { workout: Workout }) {
+  const { t } = useTranslation();
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Link
               href={`/workouts/${workout.id}`}
-              className="text-lg font-semibold text-gray-900 hover:text-blue-600"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600"
             >
               {workout.title}
             </Link>
             {workout.is_done ? (
-              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                done
+              <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                {t("workouts.done")}
               </span>
             ) : (
-              <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
-                pendent
+              <span className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-400">
+                {t("workouts.pendent")}
               </span>
             )}
           </div>
           {workout.timestamp && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {format(new Date(workout.timestamp), "dd.MM.yyyy, HH:mm")}
             </p>
           )}
 
           {/* Exercise detail list */}
           {workout.exercises && workout.exercises.length > 0 && (
-            <div className="mt-2 space-y-0.5 text-sm text-gray-600">
+            <div className="mt-2 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
               {workout.exercises.map((ex, i) => (
                 <p key={ex.id}>
-                  <span className="text-gray-400">{i + 1}.</span>{" "}
+                  <span className="text-gray-400 dark:text-gray-500">{i + 1}.</span>{" "}
                   <span className="font-medium">
-                    {ex.exercise_definition_title ?? "Exercise"}
+                    {ex.exercise_definition_title ?? t("workouts.exercise")}
                   </span>
-                  <span className="text-gray-400"> — </span>
-                  <span>{formatSetSummary(ex)}</span>
+                  <span className="text-gray-400 dark:text-gray-500"> — </span>
+                  <span>{formatSetSummary(ex, t)}</span>
                 </p>
               ))}
             </div>
@@ -79,31 +84,36 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
             disabled={toggleDone.isPending}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               workout.is_done
-                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800/40"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
             }`}
           >
-            {workout.is_done ? "Done" : "Mark done"}
+            {workout.is_done ? t("workouts.done") : t("workouts.markDone")}
           </button>
           <Link
             href={`/workouts/${workout.id}/edit`}
-            className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200"
+            className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            Edit
+            {t("common.edit")}
           </Link>
           <button
-            onClick={() => {
-              if (confirm("Delete this workout?")) {
-                deleteWorkout.mutate(workout.id);
-              }
-            }}
+            onClick={() => setShowDeleteDialog(true)}
             disabled={deleteWorkout.isPending}
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => deleteWorkout.mutate(workout.id)}
+        title={t("common.delete")}
+        message={t("workouts.deleteConfirmMessage")}
+        confirmLabel={t("common.delete")}
+        variant="danger"
+      />
     </div>
   );
 }

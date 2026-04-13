@@ -2,10 +2,12 @@
 
 import type { UserWithFollowing } from "@/types";
 import { useFollow, useUnfollow } from "@/hooks/use-social";
+import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export default function UserProfileHeader({ user }: { user: UserWithFollowing }) {
+  const { t } = useTranslation();
   const follow = useFollow();
   const unfollow = useUnfollow();
 
@@ -14,7 +16,7 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
     : null;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           {profilePicUrl ? (
@@ -24,28 +26,28 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
               className="h-16 w-16 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-xl font-bold text-gray-500">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-xl font-bold text-gray-500 dark:text-gray-400">
               {user.username?.[0]?.toUpperCase() ?? "?"}
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">@{user.username}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">@{user.username}</h1>
             {user.about_me && (
-              <p className="mt-2 text-sm text-gray-600">{user.about_me}</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{user.about_me}</p>
             )}
-            <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
+            <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
               <span>
-                <strong className="text-gray-900">{user.follower_count}</strong>{" "}
-                {user.follower_count === 1 ? "follower" : "followers"}
+                <strong className="text-gray-900 dark:text-gray-100">{user.follower_count}</strong>{" "}
+                {t("profile.followers")}
               </span>
               <span>
-                <strong className="text-gray-900">{user.following_count}</strong>{" "}
-                following
+                <strong className="text-gray-900 dark:text-gray-100">{user.following_count}</strong>{" "}
+                {t("profile.following")}
               </span>
             </div>
             {user.last_seen && (
-              <p className="mt-1 text-xs text-gray-400">
-                Last seen: {new Date(user.last_seen).toLocaleDateString()}
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                {t("profile.lastSeen")} {new Date(user.last_seen).toLocaleDateString()}
               </p>
             )}
           </div>
@@ -55,9 +57,9 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
             <button
               onClick={() => unfollow.mutate(user.username)}
               disabled={unfollow.isPending}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
             >
-              {unfollow.isPending ? "Unfollowing..." : "Unfollow"}
+              {unfollow.isPending ? t("social.unfollowing") : t("social.unfollow")}
             </button>
           ) : (
             <button
@@ -65,7 +67,7 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
               disabled={follow.isPending}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {follow.isPending ? "Following..." : "Follow"}
+              {follow.isPending ? t("social.following") : t("social.follow")}
             </button>
           )}
         </div>
