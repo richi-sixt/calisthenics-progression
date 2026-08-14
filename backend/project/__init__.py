@@ -109,7 +109,7 @@ def _configure_logging(app: Flask) -> None:
 
         mail_handler = SMTPHandler(
             mailhost=(app.config["MAIL_SERVER"], app.config["MAIL_PORT"]),
-            fromaddr=f"no-reply@{app.config['MAIL_SERVER']}",
+            fromaddr=app.config.get("MAIL_DEFAULT_SENDER", "no-reply@sixt.services"),
             toaddrs=app.config["ADMINS"],
             subject="Calisthenics-Progression Failure",
             credentials=auth,
