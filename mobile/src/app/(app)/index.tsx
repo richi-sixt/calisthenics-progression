@@ -1,5 +1,6 @@
 import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, Pressable, Text } from 'react-native';
+import { supabase } from "@/lib/supabase/client";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
@@ -8,7 +9,6 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { Text } from 'react-native';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -43,6 +43,12 @@ export default function HomeScreen() {
         <ThemedText type="code" style={styles.code}>
           get started
         </ThemedText>
+        <Pressable
+          className="bg-gray-200 rounded-lg py-3 px-6 items-center mt-6"
+          onPress={() => supabase.auth.signOut()}
+        >
+          <Text className="font-semibold">Sign out</Text>
+        </Pressable>
 
         <ThemedView type="backgroundElement" style={styles.stepContainer}>
           <HintRow
