@@ -11,16 +11,16 @@ install();
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecovery } = useAuth();
 
   if (loading) return null;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!!session}>
+      <Stack.Protected guard={!!session && !passwordRecovery}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
-      <Stack.Protected guard={!session}>
+      <Stack.Protected guard={!session || passwordRecovery}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
