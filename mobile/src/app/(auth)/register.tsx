@@ -28,16 +28,21 @@ export default function RegisterScreen() {
     setSubmitted(true);
   };
 
-  if (submitted) {
-    return (
-      <View className="flex-1 justify-center items-center px-6 bg-white">
-        <Text className="text-xl font-bold text-center mb-2">Check your email</Text>
-        <Text className="text-center text-gray-600">
-          We sent a confirmation link — tap it to activate your account.
-        </Text>
-      </View>
-    );
-  }
+if (submitted) {
+  return (
+    <View className="flex-1 justify-center items-center px-6 bg-white">
+      <Text className="text-xl font-bold text-center mb-2">Check your email</Text>
+      <Text className="text-center text-gray-600 mb-6">
+        We sent a confirmation link — tap it to activate your account.
+      </Text>
+      <Link href="/login" asChild>
+        <Pressable>
+          <Text className="text-center text-blue-600">Back to login</Text>
+        </Pressable>
+      </Link>
+    </View>
+  );
+}
 
   return (
     <View className="flex-1 justify-center px-6 bg-white">
