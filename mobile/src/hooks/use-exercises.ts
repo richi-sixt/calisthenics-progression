@@ -19,3 +19,42 @@ export function useExercise(id: number) {
     queryFn: () => api.get<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`),
   });
 }
+
+export function useCreateExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      counting_type: string;
+      progression_levels?: string[];
+      category_ids?: number[];
+    }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+  });
+}
+
+export function useUpdateExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; [key: string]: unknown }) =>
+      api.put<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+  });
+}
+
+export function useDeleteExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete<ApiResponse<{ message: string }>>(`/exercises/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+  });
+}
+
+export function useCopyExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.post<ApiResponse<ExerciseDefinition>>(`/exercises/${id}/copy`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+  });
+}
