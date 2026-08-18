@@ -18,7 +18,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.mobile"
     },
     "web": {
       "output": "static",
@@ -35,7 +39,13 @@
         }
       ],
       "expo-secure-store",
-      "react-native-quick-crypto"
+      "react-native-quick-crypto",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos so you can set a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

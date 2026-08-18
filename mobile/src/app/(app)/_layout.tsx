@@ -15,6 +15,8 @@ export default function AppLayout() {
       <Stack.Screen name="templates/index" options={{ title: "Templates" }} />
       <Stack.Screen name="templates/new" options={{ title: "New Template" }} />
       <Stack.Screen name="templates/[id]/edit" options={{ title: "Edit Template" }} />
+      <Stack.Screen name="users/[username]" options={{ title: "Profile" }} />
+      <Stack.Screen name="messages/new" options={{ title: "New Message" }} />
     </Stack>
   );
 }

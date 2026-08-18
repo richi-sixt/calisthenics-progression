@@ -4,7 +4,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useWorkouts } from "@/hooks/use-workouts";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
-import { supabase } from "@/lib/supabase/client";
 import type { Workout } from "@/types";
 
 export default function WorkoutsScreen() {
@@ -82,13 +81,6 @@ export default function WorkoutsScreen() {
             </Pressable>
           </View>
         )}
-
-        <Pressable
-          onPress={() => supabase.auth.signOut()}
-          className="items-center rounded-lg bg-gray-100 py-3 mb-4"
-        >
-          <Text className="font-semibold text-gray-600">Sign out</Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
