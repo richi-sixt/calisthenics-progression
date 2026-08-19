@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, Pressable, ActivityIndicator, Switch } from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, Switch, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useWorkouts } from "@/hooks/use-workouts";
@@ -10,7 +10,7 @@ export default function WorkoutsScreen() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [hideDone, setHideDone] = useState(false);
-  const { data, isLoading, error } = useWorkouts(page, hideDone);
+  const { data, isLoading, error, refetch, isRefetching } = useWorkouts(page, hideDone);
 
   const workouts = data?.data ?? [];
   const meta = data?.meta;
@@ -50,7 +50,7 @@ export default function WorkoutsScreen() {
         {!isLoading && !error && workouts.length === 0 && (
           <Text className="mt-6 text-gray-500">No workouts yet.</Text>
         )}
-
+        
         <FlatList
           className="flex-1"
           data={workouts}
@@ -58,6 +58,7 @@ export default function WorkoutsScreen() {
           renderItem={({ item }) => <WorkoutCard workout={item} />}
           ItemSeparatorComponent={() => <View className="h-3" />}
           contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         />
 
         {meta && (meta.has_prev || meta.has_next) && (

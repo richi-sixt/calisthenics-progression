@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { useTemplates } from "@/hooks/use-templates";
 import { TemplateCard } from "@/components/template/TemplateCard";
@@ -6,7 +6,7 @@ import type { Workout } from "@/types";
 
 export default function TemplatesScreen() {
   const router = useRouter();
-  const { data, isLoading, error } = useTemplates();
+  const { data, isLoading, error, refetch, isRefetching } = useTemplates();
   const templates = data?.data ?? [];
 
   return (
@@ -29,6 +29,7 @@ export default function TemplatesScreen() {
         renderItem={({ item }) => <TemplateCard template={item} />}
         ItemSeparatorComponent={() => <View className="h-3" />}
         contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       />
     </View>
   );

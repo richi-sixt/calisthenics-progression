@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useMessages } from "@/hooks/use-messages";
@@ -9,7 +9,7 @@ import type { Message } from "@/types";
 export default function MessagesScreen() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useMessages(page);
+  const { data, isLoading, error, refetch, isRefetching } = useMessages(page);
   const messages = data?.data ?? [];
 
   return (
@@ -33,8 +33,22 @@ export default function MessagesScreen() {
           renderItem={({ item }) => <MessageCard message={item} />}
           ItemSeparatorComponent={() => <View className="h-3" />}
           contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         />
       </View>
+      {data?.meta && (data.meta.has_prev || data.meta.has_next) && (
+        <View className="flex-row items-center justify-between py-4">
+          <Pressable onPress={() => setPage((p) => p - 1)} disabled={!data.meta.has_prev} className="rounded-md bg-gray-100 px-4 py-2">
+            <Text className="text-sm font-medium text-gray-700">Previous</Text>
+          </Pressable>
+          <Text className="text-sm text-gray-500">
+            Page {data.meta.page} of {Math.ceil(data.meta.total / data.meta.per_page)}
+          </Text>
+          <Pressable onPress={() => setPage((p) => p + 1)} disabled={!data.meta.has_next} className="rounded-md bg-gray-100 px-4 py-2">
+            <Text className="text-sm font-medium text-gray-700">Next</Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

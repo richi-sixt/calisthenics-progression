@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, FlatList, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, FlatList, Alert, RefreshControl } from "react-native";
 import {
   useCategories,
   useCreateCategory,
@@ -9,7 +9,7 @@ import {
 import type { ExerciseCategory } from "@/types";
 
 export default function CategoriesScreen() {
-  const { data, isLoading, error } = useCategories();
+  const { data, isLoading, error, refetch, isRefetching } = useCategories();
   const categories = data?.data ?? [];
 
   const createCategory = useCreateCategory();
@@ -87,6 +87,7 @@ export default function CategoriesScreen() {
         data={categories}
         keyExtractor={(item: ExerciseCategory) => String(item.id)}
         ItemSeparatorComponent={() => <View className="h-2" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         renderItem={({ item: cat }) => (
           <View className="flex-row items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             {editingId === cat.id ? (

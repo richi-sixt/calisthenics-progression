@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
@@ -11,7 +11,7 @@ export default function ExercisesScreen() {
   const [page, setPage] = useState(1);
   const [userFilter, setUserFilter] = useState<"mine" | "all">("mine");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const { data, isLoading, error } = useExercises(page, userFilter, categoryIds);
+  const { data, isLoading, error, refetch, isRefetching } = useExercises(page, userFilter, categoryIds);
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
@@ -60,6 +60,7 @@ export default function ExercisesScreen() {
         renderItem={({ item }) => <ExerciseCard exercise={item} />}
         ItemSeparatorComponent={() => <View className="h-3" />}
         contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       />
 
       {meta && (meta.has_prev || meta.has_next) && (
