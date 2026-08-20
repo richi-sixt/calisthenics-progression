@@ -111,14 +111,14 @@ export function WorkoutForm({
   return (
     <View className="gap-6">
       <View>
-        <Text className="text-sm font-medium text-gray-700">Title</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</Text>
         <Controller
           control={control}
           name="title"
           rules={{ required: true }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
-              className="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
               placeholder="e.g. Push day"
               onBlur={onBlur}
               onChangeText={onChange}
@@ -131,7 +131,7 @@ export function WorkoutForm({
       <View className="gap-2">
         <View className="flex-row items-center gap-2">
           <Switch value={showOnlyMine} onValueChange={setShowOnlyMine} />
-          <Text className="text-sm text-gray-600">Show only mine</Text>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">Show only mine</Text>
         </View>
 
         {categories.length > 0 && (
@@ -140,16 +140,16 @@ export function WorkoutForm({
               <Pressable
                 key={cat.id}
                 onPress={() => toggleCategory(cat.id)}
-                className={`rounded-full px-2.5 py-1 ${selectedCatIds.includes(cat.id) ? "bg-blue-100" : "bg-gray-100"}`}
+                className={`rounded-full px-2.5 py-1 ${selectedCatIds.includes(cat.id) ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
               >
-                <Text className={`text-xs font-medium ${selectedCatIds.includes(cat.id) ? "text-blue-700" : "text-gray-600"}`}>
+                <Text className={`text-xs font-medium ${selectedCatIds.includes(cat.id) ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>
                   {cat.name}
                 </Text>
               </Pressable>
             ))}
             {selectedCatIds.length > 0 && (
               <Pressable onPress={() => setSelectedCatIds([])} className="px-2.5 py-1">
-                <Text className="text-xs font-medium text-gray-400">Clear</Text>
+                <Text className="text-xs font-medium text-gray-400 dark:text-gray-500">Clear</Text>
               </Pressable>
             )}
           </View>
@@ -157,7 +157,7 @@ export function WorkoutForm({
       </View>
 
       <View className="gap-4">
-        <Text className="text-sm font-medium text-gray-700">Exercises</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Exercises</Text>
         {exerciseFields.map((field, exIndex) => (
           <ExerciseBlock
             key={field.id}
@@ -173,7 +173,7 @@ export function WorkoutForm({
             appendExercise({ exercise_definition_id: "", sets: [{ progression: "", reps: "", duration: "" }] })
           }
         >
-          <Text className="text-sm text-blue-600">+ Add exercise</Text>
+          <Text className="text-sm text-blue-600 dark:text-blue-400">+ Add exercise</Text>
         </Pressable>
       </View>
 
@@ -214,9 +214,9 @@ function ExerciseBlock({
   const hasProgressionLevels = progressionLevels.length > 0;
 
   return (
-    <View className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
       <View className="flex-row items-center gap-2">
-        <View className="flex-1 rounded-md border border-gray-300 bg-white">
+        <View className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
           <Controller
             control={control}
             name={`exercises.${exIndex}.exercise_definition_id`}
@@ -232,23 +232,23 @@ function ExerciseBlock({
           />
         </View>
         <Pressable onPress={onRemove}>
-          <Text className="text-sm text-red-500">Remove</Text>
+          <Text className="text-sm text-red-500 dark:text-red-400">Remove</Text>
         </Pressable>
       </View>
 
       <View className="mt-3 gap-2">
         {setFields.map((setField, setIndex) => (
-          <View key={setField.id} className="rounded-md border border-gray-200 p-2">
+          <View key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2">
             <View className="mb-1.5 flex-row items-center justify-between">
-              <Text className="text-xs font-medium text-gray-500">Set {setIndex + 1}</Text>
+              <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">Set {setIndex + 1}</Text>
               <Pressable onPress={() => removeSet(setIndex)}>
-                <Text className="text-xs text-red-400">Remove</Text>
+                <Text className="text-xs text-red-400 dark:text-red-400">Remove</Text>
               </Pressable>
             </View>
 
             <View className="flex-row gap-2">
               {hasProgressionLevels ? (
-                <View className="flex-1 rounded border border-gray-300 bg-white">
+                <View className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                   <Controller
                     control={control}
                     name={`exercises.${exIndex}.sets.${setIndex}.progression`}
@@ -268,7 +268,7 @@ function ExerciseBlock({
                   name={`exercises.${exIndex}.sets.${setIndex}.progression`}
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
                       placeholder="e.g. Standard"
                       onChangeText={onChange}
                       value={value}
@@ -283,7 +283,7 @@ function ExerciseBlock({
                   name={`exercises.${exIndex}.sets.${setIndex}.duration`}
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
                       placeholder="0:00"
                       onChangeText={onChange}
                       value={value}
@@ -296,7 +296,7 @@ function ExerciseBlock({
                   name={`exercises.${exIndex}.sets.${setIndex}.reps`}
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
                       placeholder="0"
                       keyboardType="number-pad"
                       onChangeText={onChange}
@@ -309,7 +309,7 @@ function ExerciseBlock({
           </View>
         ))}
         <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "" })}>
-          <Text className="text-xs text-blue-600">+ Add set</Text>
+          <Text className="text-xs text-blue-600 dark:text-blue-400">+ Add set</Text>
         </Pressable>
       </View>
     </View>

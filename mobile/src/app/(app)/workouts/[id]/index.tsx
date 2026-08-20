@@ -12,7 +12,7 @@ export default function WorkoutDetailScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
         <ActivityIndicator />
       </View>
     );
@@ -20,8 +20,8 @@ export default function WorkoutDetailScreen() {
 
   if (error || !data) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-4">
-        <Text className="text-red-600">Failed to load workout.</Text>
+      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900 p-4">
+        <Text className="text-red-600 dark:text-red-400">Failed to load workout.</Text>
       </View>
     );
   }
@@ -40,10 +40,10 @@ export default function WorkoutDetailScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 16 }}>
-      <Text className="text-2xl font-bold">{workout.title}</Text>
+    <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16 }}>
+      <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{workout.title}</Text>
       {workout.timestamp && (
-        <Text className="mt-1 text-sm text-gray-500">
+        <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {new Date(workout.timestamp).toLocaleString()}
         </Text>
       )}
@@ -51,46 +51,46 @@ export default function WorkoutDetailScreen() {
       <View className="mt-3 flex-row flex-wrap gap-2">
         <Pressable
           onPress={() => router.push(`/workouts/${workoutId}/edit`)}
-          className="rounded-md bg-gray-100 px-4 py-2"
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
         >
-          <Text className="text-sm font-medium text-gray-600">Edit</Text>
+          <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">Edit</Text>
         </Pressable>
         <Pressable
           onPress={() => toggleDone.mutate(workoutId)}
           disabled={toggleDone.isPending}
-          className={`rounded-md px-4 py-2 ${workout.is_done ? "bg-green-100" : "bg-gray-100"}`}
+          className={`rounded-md px-4 py-2 ${workout.is_done ? "bg-green-100 dark:bg-green-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
         >
-          <Text className={`text-sm font-medium ${workout.is_done ? "text-green-700" : "text-gray-600"}`}>
+          <Text className={`text-sm font-medium ${workout.is_done ? "text-green-700 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`}>
             {workout.is_done ? "Completed" : "Mark as done"}
           </Text>
         </Pressable>
         <Pressable onPress={confirmDelete} disabled={deleteWorkout.isPending} className="rounded-md px-4 py-2">
-          <Text className="text-sm font-medium text-red-600">Delete</Text>
+          <Text className="text-sm font-medium text-red-600 dark:text-red-400">Delete</Text>
         </Pressable>
       </View>
 
       {workout.exercises && workout.exercises.length > 0 ? (
         <View className="mt-6 gap-4">
           {workout.exercises.map((exercise) => (
-            <View key={exercise.id} className="rounded-lg border border-gray-200 bg-white p-4">
-              <Text className="font-semibold text-gray-900">
+            <View key={exercise.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <Text className="font-semibold text-gray-900 dark:text-gray-100">
                 {exercise.exercise_definition_title ?? `Exercise #${exercise.exercise_order}`}
               </Text>
 
               {exercise.sets && exercise.sets.length > 0 ? (
                 <View className="mt-3">
-                  <View className="flex-row border-b border-gray-200 pb-2">
-                    <Text className="flex-1 text-xs font-medium text-gray-500">Set</Text>
-                    <Text className="flex-1 text-xs font-medium text-gray-500">Progression</Text>
-                    <Text className="flex-1 text-xs font-medium text-gray-500">
+                  <View className="flex-row border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">Set</Text>
+                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">Progression</Text>
+                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                       {exercise.counting_type === "duration" ? "Duration" : "Reps"}
                     </Text>
                   </View>
                   {exercise.sets.map((set) => (
-                    <View key={set.id} className="flex-row border-b border-gray-100 py-2">
-                      <Text className="flex-1 text-sm text-gray-600">{set.set_order}</Text>
-                      <Text className="flex-1 text-sm text-gray-700">{set.progression ?? "-"}</Text>
-                      <Text className="flex-1 text-sm text-gray-700">
+                    <View key={set.id} className="flex-row border-b border-gray-100 dark:border-gray-700 py-2">
+                      <Text className="flex-1 text-sm text-gray-600 dark:text-gray-400">{set.set_order}</Text>
+                      <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">{set.progression ?? "-"}</Text>
+                      <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">
                         {exercise.counting_type === "duration"
                           ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")
                           : (set.reps ?? "-")}
@@ -99,13 +99,13 @@ export default function WorkoutDetailScreen() {
                   ))}
                 </View>
               ) : (
-                <Text className="mt-2 text-sm text-gray-400">No sets recorded.</Text>
+                <Text className="mt-2 text-sm text-gray-400 dark:text-gray-500">No sets recorded.</Text>
               )}
             </View>
           ))}
         </View>
       ) : (
-        <Text className="mt-6 text-gray-500">No exercises in this workout.</Text>
+        <Text className="mt-6 text-gray-500 dark:text-gray-400">No exercises in this workout.</Text>
       )}
     </ScrollView>
   );

@@ -28,8 +28,8 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center px-6 bg-white">
-      <Text className="text-2xl font-bold mb-6">Set a new password</Text>
+    <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
+      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Set a new password</Text>
 
       <Controller
         control={control}
@@ -38,19 +38,19 @@ export default function ResetPasswordScreen() {
         render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
           <View className="mb-4">
             <TextInput
-              className="border border-gray-300 rounded-lg px-4 py-3"
+              className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
               placeholder="New password"
               secureTextEntry
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
             />
-            {error && <Text className="text-red-500 text-sm mt-1">{error.message}</Text>}
+            {error && <Text className="text-red-500 dark:text-red-400 text-sm mt-1">{error.message}</Text>}
           </View>
         )}
       />
 
-      {error && <Text className="text-red-500 mb-4">{error}</Text>}
+      {error && <Text className="text-red-500 dark:text-red-400 mb-4">{error}</Text>}
 
       <Pressable
         className="bg-blue-600 rounded-lg py-3 items-center"

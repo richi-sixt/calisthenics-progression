@@ -33,18 +33,18 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
   };
 
   return (
-    <View className="rounded-lg border border-gray-200 bg-white p-4">
+    <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <Pressable onPress={() => router.push(`/workouts/${workout.id}`)}>
         <View className="flex-row items-center gap-2 flex-wrap">
-          <Text className="text-lg font-semibold text-gray-900">{workout.title}</Text>
-          <View className={`rounded-full px-2 py-0.5 ${workout.is_done ? "bg-green-100" : "bg-yellow-100"}`}>
-            <Text className={`text-xs font-medium ${workout.is_done ? "text-green-700" : "text-yellow-700"}`}>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{workout.title}</Text>
+          <View className={`rounded-full px-2 py-0.5 ${workout.is_done ? "bg-green-100 dark:bg-green-900/30" : "bg-yellow-100 dark:bg-yellow-900/30"}`}>
+            <Text className={`text-xs font-medium ${workout.is_done ? "text-green-700 dark:text-green-400" : "text-yellow-700 dark:text-yellow-400"}`}>
               {workout.is_done ? "Done" : "Pending"}
             </Text>
           </View>
         </View>
         {workout.timestamp && (
-          <Text className="mt-1 text-sm text-gray-500">
+          <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {new Date(workout.timestamp).toLocaleString()}
           </Text>
         )}
@@ -53,10 +53,10 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
       {workout.exercises && workout.exercises.length > 0 && (
         <View className="mt-2 gap-0.5">
           {workout.exercises.map((ex, i) => (
-            <Text key={ex.id} className="text-sm text-gray-600">
-              <Text className="text-gray-400">{i + 1}. </Text>
+            <Text key={ex.id} className="text-sm text-gray-600 dark:text-gray-400">
+              <Text className="text-gray-400 dark:text-gray-500">{i + 1}. </Text>
               <Text className="font-medium">{ex.exercise_definition_title ?? "Exercise"}</Text>
-              <Text className="text-gray-400"> — </Text>
+              <Text className="text-gray-400 dark:text-gray-500"> — </Text>
               {formatSetSummary(ex)}
             </Text>
           ))}
@@ -67,20 +67,20 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
         <Pressable
           onPress={() => toggleDone.mutate(workout.id)}
           disabled={toggleDone.isPending}
-          className={`rounded-md px-3 py-1.5 ${workout.is_done ? "bg-green-100" : "bg-gray-100"}`}
+          className={`rounded-md px-3 py-1.5 ${workout.is_done ? "bg-green-100 dark:bg-green-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
         >
-          <Text className={`text-xs font-medium ${workout.is_done ? "text-green-700" : "text-gray-600"}`}>
+          <Text className={`text-xs font-medium ${workout.is_done ? "text-green-700 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`}>
             {workout.is_done ? "Done" : "Mark done"}
           </Text>
         </Pressable>
         <Pressable
           onPress={() => router.push(`/workouts/${workout.id}/edit`)}
-          className="rounded-md bg-gray-100 px-3 py-1.5"
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
         >
-          <Text className="text-xs font-medium text-gray-600">Edit</Text>
+          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Edit</Text>
         </Pressable>
         <Pressable onPress={confirmDelete} disabled={deleteWorkout.isPending} className="rounded-md px-3 py-1.5">
-          <Text className="text-xs font-medium text-red-600">Delete</Text>
+          <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
         </Pressable>
       </View>
     </View>

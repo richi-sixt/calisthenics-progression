@@ -25,7 +25,36 @@ export function useToggleDone() {
   return useMutation({
     mutationFn: (id: number) =>
       api.post<ApiResponse<Workout>>(`/workouts/${id}/toggle-done`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ["workouts"] });
+      const previous = queryClient.getQueriesData<PaginatedResponse<Workout> | ApiResponse<Workout>>({
+        queryKey: ["workouts"],
+      });
+
+      queryClient.setQueriesData<PaginatedResponse<Workout> | ApiResponse<Workout>>(
+        { queryKey: ["workouts"] },
+        (old) => {
+          if (!old) return old;
+          // useWorkouts (list) caches { data: Workout[] }; useWorkout (single) caches { data: Workout }.
+          // Both share the "workouts" key prefix, so this has to handle both shapes.
+          if (Array.isArray(old.data)) {
+            return { ...old, data: old.data.map((w) => (w.id === id ? { ...w, is_done: !w.is_done } : w)) };
+          }
+          if (old.data.id === id) {
+            return { ...old, data: { ...old.data, is_done: !old.data.is_done } };
+          }
+          return old;
+        }
+      );
+
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      context?.previous.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
   });
 }
 

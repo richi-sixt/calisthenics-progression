@@ -32,9 +32,9 @@ export default function ForgotPasswordScreen() {
 
   if (submitted) {
     return (
-      <View className="flex-1 justify-center items-center px-6 bg-white">
-        <Text className="text-xl font-bold text-center mb-2">Check your email</Text>
-        <Text className="text-center text-gray-600">
+      <View className="flex-1 justify-center items-center px-6 bg-white dark:bg-gray-900">
+        <Text className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">Check your email</Text>
+        <Text className="text-center text-gray-600 dark:text-gray-400">
           We sent a password reset link — open it on this device to continue.
         </Text>
       </View>
@@ -42,8 +42,8 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <View className="flex-1 justify-center px-6 bg-white">
-      <Text className="text-2xl font-bold mb-6">Reset password</Text>
+    <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
+      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Reset password</Text>
 
       <Controller
         control={control}
@@ -52,7 +52,7 @@ export default function ForgotPasswordScreen() {
         render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
           <View className="mb-4">
             <TextInput
-              className="border border-gray-300 rounded-lg px-4 py-3"
+              className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
               placeholder="Email"
               autoCapitalize="none"
               keyboardType="email-address"
@@ -60,12 +60,12 @@ export default function ForgotPasswordScreen() {
               onChangeText={onChange}
               value={value}
             />
-            {error && <Text className="text-red-500 text-sm mt-1">{error.message}</Text>}
+            {error && <Text className="text-red-500 dark:text-red-400 text-sm mt-1">{error.message}</Text>}
           </View>
         )}
       />
 
-      {error && <Text className="text-red-500 mb-4">{error}</Text>}
+      {error && <Text className="text-red-500 dark:text-red-400 mb-4">{error}</Text>}
 
       <Pressable
         className="bg-blue-600 rounded-lg py-3 items-center"
@@ -81,7 +81,7 @@ export default function ForgotPasswordScreen() {
 
       <Link href="/login" asChild>
         <Pressable className="mt-4">
-          <Text className="text-center text-blue-600">Back to login</Text>
+          <Text className="text-center text-blue-600 dark:text-blue-400">Back to login</Text>
         </Pressable>
       </Link>
     </View>

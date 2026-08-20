@@ -8,7 +8,7 @@ export default function NewWorkoutScreen() {
   const createWorkout = useCreateWorkout();
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 16 }}>
+    <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16 }}>
       <WorkoutForm
         isPending={createWorkout.isPending}
         submitLabel="Create Workout"

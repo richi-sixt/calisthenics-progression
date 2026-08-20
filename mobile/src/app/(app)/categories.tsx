@@ -56,12 +56,12 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white p-4">
+    <View className="flex-1 bg-white dark:bg-gray-900 p-4">
       <View className="flex-row items-center gap-2">
         <TextInput
           value={newName}
           onChangeText={setNewName}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
           placeholder="New category name"
         />
         <Pressable
@@ -76,10 +76,10 @@ export default function CategoriesScreen() {
       </View>
 
       {isLoading && <ActivityIndicator className="mt-6" />}
-      {error && <Text className="mt-6 text-red-600">Failed to load categories.</Text>}
-      {deleteError && <Text className="mt-3 text-sm text-red-600">{deleteError}</Text>}
+      {error && <Text className="mt-6 text-red-600 dark:text-red-400">Failed to load categories.</Text>}
+      {deleteError && <Text className="mt-3 text-sm text-red-600 dark:text-red-400">{deleteError}</Text>}
       {!isLoading && !error && categories.length === 0 && (
-        <Text className="mt-6 text-gray-500">No categories yet.</Text>
+        <Text className="mt-6 text-gray-500 dark:text-gray-400">No categories yet.</Text>
       )}
 
       <FlatList
@@ -89,14 +89,14 @@ export default function CategoriesScreen() {
         ItemSeparatorComponent={() => <View className="h-2" />}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         renderItem={({ item: cat }) => (
-          <View className="flex-row items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+          <View className="flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
             {editingId === cat.id ? (
               <View className="flex-1 flex-row items-center gap-2">
                 <TextInput
                   value={editingName}
                   onChangeText={setEditingName}
                   autoFocus
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                  className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm"
                 />
                 <Pressable
                   onPress={handleRename}
@@ -107,27 +107,27 @@ export default function CategoriesScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => setEditingId(null)}
-                  className="rounded-md border border-gray-300 px-3 py-1.5"
+                  className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5"
                 >
-                  <Text className="text-xs font-medium text-gray-600">Cancel</Text>
+                  <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Cancel</Text>
                 </Pressable>
               </View>
             ) : (
               <>
-                <Text className="text-sm text-gray-900">{cat.name}</Text>
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{cat.name}</Text>
                 <View className="flex-row items-center gap-2">
                   <Pressable
                     onPress={() => startEditing(cat.id, cat.name)}
-                    className="rounded-md bg-gray-100 px-3 py-1.5"
+                    className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
                   >
-                    <Text className="text-xs font-medium text-gray-600">Rename</Text>
+                    <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Rename</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => confirmDelete(cat.id)}
                     disabled={deleteCategory.isPending}
                     className="rounded-md px-3 py-1.5"
                   >
-                    <Text className="text-xs font-medium text-red-600">Delete</Text>
+                    <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
                   </Pressable>
                 </View>
               </>

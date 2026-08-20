@@ -8,7 +8,7 @@ export default function NewExerciseScreen() {
   const createExercise = useCreateExercise();
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 16 }}>
+    <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16 }}>
       <ExerciseForm
         isPending={createExercise.isPending}
         onSubmit={(data) => {

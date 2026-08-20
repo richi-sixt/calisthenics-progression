@@ -11,13 +11,13 @@ export default function ExploreScreen() {
   const workouts = data?.data ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <View className="flex-1 px-4">
-        <Text className="py-4 text-2xl font-bold">Explore</Text>
+        <Text className="py-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Explore</Text>
 
         {isLoading && <ActivityIndicator className="mt-6" />}
-        {error && <Text className="mt-6 text-red-600">Failed to load.</Text>}
-        {!isLoading && !error && workouts.length === 0 && <Text className="mt-6 text-gray-500">Nothing to explore yet.</Text>}
+        {error && <Text className="mt-6 text-red-600 dark:text-red-400">Failed to load.</Text>}
+        {!isLoading && !error && workouts.length === 0 && <Text className="mt-6 text-gray-500 dark:text-gray-400">Nothing to explore yet.</Text>}
 
         <FlatList
           className="flex-1"
@@ -31,14 +31,14 @@ export default function ExploreScreen() {
       </View>
       {data?.meta && (data.meta.has_prev || data.meta.has_next) && (
         <View className="flex-row items-center justify-between py-4">
-          <Pressable onPress={() => setPage((p) => p - 1)} disabled={!data.meta.has_prev} className="rounded-md bg-gray-100 px-4 py-2">
-            <Text className="text-sm font-medium text-gray-700">Previous</Text>
+          <Pressable onPress={() => setPage((p) => p - 1)} disabled={!data.meta.has_prev} className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Previous</Text>
           </Pressable>
-          <Text className="text-sm text-gray-500">
+          <Text className="text-sm text-gray-500 dark:text-gray-400">
             Page {data.meta.page} of {Math.ceil(data.meta.total / data.meta.per_page)}
           </Text>
-          <Pressable onPress={() => setPage((p) => p + 1)} disabled={!data.meta.has_next} className="rounded-md bg-gray-100 px-4 py-2">
-            <Text className="text-sm font-medium text-gray-700">Next</Text>
+          <Pressable onPress={() => setPage((p) => p + 1)} disabled={!data.meta.has_next} className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2">
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Next</Text>
           </Pressable>
         </View>
       )}

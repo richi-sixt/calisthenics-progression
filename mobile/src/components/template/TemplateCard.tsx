@@ -38,16 +38,16 @@ export function TemplateCard({ template }: { template: Workout }) {
   };
 
   return (
-    <View className="rounded-lg border border-gray-200 bg-white p-4">
-      <Text className="text-lg font-semibold text-gray-900">{template.title}</Text>
+    <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{template.title}</Text>
 
       {template.exercises && template.exercises.length > 0 && (
         <View className="mt-2 gap-0.5">
           {template.exercises.map((ex, i) => (
-            <Text key={ex.id} className="text-sm text-gray-600">
-              <Text className="text-gray-400">{i + 1}. </Text>
+            <Text key={ex.id} className="text-sm text-gray-600 dark:text-gray-400">
+              <Text className="text-gray-400 dark:text-gray-500">{i + 1}. </Text>
               <Text className="font-medium">{ex.exercise_definition_title ?? "Exercise"}</Text>
-              <Text className="text-gray-400"> — </Text>
+              <Text className="text-gray-400 dark:text-gray-500"> — </Text>
               {formatTemplateSets(ex)}
             </Text>
           ))}
@@ -62,17 +62,17 @@ export function TemplateCard({ template }: { template: Workout }) {
             })
           }
           disabled={useTemplate.isPending}
-          className="rounded-md bg-green-100 px-3 py-1.5"
+          className="rounded-md bg-green-100 dark:bg-green-900/30 px-3 py-1.5"
         >
-          <Text className="text-xs font-medium text-green-700">
+          <Text className="text-xs font-medium text-green-700 dark:text-green-400">
             {useTemplate.isPending ? "Creating..." : "Start workout"}
           </Text>
         </Pressable>
-        <Pressable onPress={() => router.push(`/templates/${template.id}/edit`)} className="rounded-md bg-gray-100 px-3 py-1.5">
-          <Text className="text-xs font-medium text-gray-600">Edit</Text>
+        <Pressable onPress={() => router.push(`/templates/${template.id}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
+          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Edit</Text>
         </Pressable>
         <Pressable onPress={confirmDelete} disabled={deleteTemplate.isPending} className="rounded-md px-3 py-1.5">
-          <Text className="text-xs font-medium text-red-600">Delete</Text>
+          <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
         </Pressable>
       </View>
     </View>
