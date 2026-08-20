@@ -1,8 +1,20 @@
 import { View, Text, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
-import type { Workout } from "@/types";
+import type { Workout, Exercise } from "@/types";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
+
+function formatSetDetails(exercise: Exercise): string | null {
+  const sets = exercise.sets ?? [];
+  if (sets.length === 0) return null;
+  return sets
+    .map((s) => {
+      if (s.reps != null) return `${s.reps} reps`;
+      if (s.duration != null) return s.duration_formatted || "00:00";
+      return exercise.counting_type === "duration" ? "00:00" : "0 reps";
+    })
+    .join(", ");
+}
 
 export function ExploreWorkoutCard({ workout }: { workout: Workout }) {
   const router = useRouter();
@@ -39,12 +51,16 @@ export function ExploreWorkoutCard({ workout }: { workout: Workout }) {
               <View className="mt-2 gap-0.5">
                 {workout.exercises.map((ex, i) => {
                   const sets = ex.sets ?? [];
+                  const setDetails = formatSetDetails(ex);
                   return (
                     <Text key={ex.id} className="text-sm text-gray-600 dark:text-gray-400">
                       <Text className="text-gray-400 dark:text-gray-500">{i + 1}. </Text>
                       <Text className="font-medium">{ex.exercise_definition_title ?? "Exercise"}</Text>
                       <Text className="text-gray-400 dark:text-gray-500"> — </Text>
                       {sets.length} {sets.length === 1 ? "set" : "sets"}
+                      {setDetails && (
+                        <Text className="text-gray-400 dark:text-gray-500"> ( {setDetails} )</Text>
+                      )}
                     </Text>
                   );
                 })}
