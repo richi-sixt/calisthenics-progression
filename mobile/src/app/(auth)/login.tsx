@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { useForm, Controller } from "react-hook-form";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase/client";
+import { useTranslation } from "@/i18n";
 
 type LoginForm = {
   email: string;
@@ -10,6 +11,7 @@ type LoginForm = {
 };
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const {
     control,
@@ -28,7 +30,7 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
-      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Log in</Text>
+      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t("auth.login")}</Text>
 
       <Controller
         control={control}
@@ -38,7 +40,7 @@ export default function LoginScreen() {
           <View className="mb-4">
             <TextInput
               className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
-              placeholder="Email"
+              placeholder={t("auth.email")}
               autoCapitalize="none"
               keyboardType="email-address"
               onBlur={onBlur}
@@ -58,7 +60,7 @@ export default function LoginScreen() {
           <View className="mb-4">
             <TextInput
               className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
-              placeholder="Password"
+              placeholder={t("auth.password")}
               secureTextEntry
               onBlur={onBlur}
               onChangeText={onChange}
@@ -79,18 +81,20 @@ export default function LoginScreen() {
         {isSubmitting ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text className="text-white font-semibold">Log in</Text>
+          <Text className="text-white font-semibold">{t("auth.login")}</Text>
         )}
       </Pressable>
 
       <Link href="/register" asChild>
         <Pressable className="mt-4">
-          <Text className="text-center text-blue-600 dark:text-blue-400">Don&apos;t have an account? Register</Text>
+          <Text className="text-center text-blue-600 dark:text-blue-400">
+            {t("auth.noAccount")} {t("auth.register")}
+          </Text>
         </Pressable>
       </Link>
       <Link href="/forgot-password" asChild>
         <Pressable className="mt-2">
-          <Text className="text-center text-blue-600 dark:text-blue-400">Forgot password?</Text>
+          <Text className="text-center text-blue-600 dark:text-blue-400">{t("auth.forgotPassword")}</Text>
         </Pressable>
       </Link>
     </View>

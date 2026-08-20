@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, Image, ActivityIndicator, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateProfile, useUploadProfilePicture, useDeleteAccount } from "@/hooks/use-update-profile";
 import { supabase } from "@/lib/supabase/client";
+import { ProfileSkeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export default function ProfileScreen() {
+  const { t, locale, setLocale, formatDate } = useTranslation();
   const { data, isLoading, error } = useProfile();
   const updateProfile = useUpdateProfile();
   const uploadPicture = useUploadProfilePicture();
@@ -27,7 +30,13 @@ export default function ProfileScreen() {
   const [passwordPending, setPasswordPending] = useState(false);
 
   if (isLoading) {
-    return <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900"><ActivityIndicator /></View>;
+    return (
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+        <View className="px-4 pt-4">
+          <ProfileSkeleton />
+        </View>
+      </SafeAreaView>
+    );
   }
   if (error || !data) {
     return <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900 p-4"><Text className="text-red-600 dark:text-red-400">Failed to load profile.</Text></View>;
@@ -56,7 +65,7 @@ export default function ProfileScreen() {
         setEmailMessage({ type: "error", text: emailError.message });
         return;
       }
-      setEmailMessage({ type: "success", text: "Check your new email to confirm the change." });
+      setEmailMessage({ type: "success", text: t("profile.emailConfirmNote") });
     }
 
     updateProfile.mutate(
@@ -97,11 +106,11 @@ export default function ProfileScreen() {
     setPasswordMessage(null);
 
     if (newPassword.length < 6) {
-      setPasswordMessage({ type: "error", text: "Password must be at least 6 characters." });
+      setPasswordMessage({ type: "error", text: t("profile.passwordTooShort") });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: "error", text: "Passwords don't match." });
+      setPasswordMessage({ type: "error", text: t("profile.passwordMismatch") });
       return;
     }
 
@@ -111,7 +120,7 @@ export default function ProfileScreen() {
       if (error) {
         setPasswordMessage({ type: "error", text: error.message });
       } else {
-        setPasswordMessage({ type: "success", text: "Password changed." });
+        setPasswordMessage({ type: "success", text: t("profile.passwordChanged") });
         setNewPassword("");
         setConfirmPassword("");
       }
@@ -122,12 +131,12 @@ export default function ProfileScreen() {
 
   const confirmDeleteAccount = () => {
     Alert.alert(
-      "Delete account",
-      "This permanently deletes your account and all your data. This cannot be undone.",
+      t("profile.deleteAccount"),
+      t("profile.deleteConfirm"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("profile.deleteConfirmButton"),
           style: "destructive",
           onPress: () => {
             deleteAccount.mutate(undefined, { onSuccess: () => supabase.auth.signOut() });
@@ -140,7 +149,23 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 32 }}>
-        <Text className="py-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Profile</Text>
+        <View className="flex-row items-center justify-between py-4">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t("profile.title")}</Text>
+          <View className="flex-row rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+            <Pressable
+              onPress={() => setLocale("en")}
+              className={`px-3 py-1.5 ${locale === "en" ? "bg-blue-600" : "bg-transparent"}`}
+            >
+              <Text className={`text-xs font-medium ${locale === "en" ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>EN</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setLocale("de")}
+              className={`px-3 py-1.5 ${locale === "de" ? "bg-blue-600" : "bg-transparent"}`}
+            >
+              <Text className={`text-xs font-medium ${locale === "de" ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>DE</Text>
+            </Pressable>
+          </View>
+        </View>
 
         <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <View className="flex-row items-center gap-4">
@@ -166,53 +191,53 @@ export default function ProfileScreen() {
             <>
               <View className="mt-6 gap-4">
                 <View>
-                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">About me</Text>
-                  <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{user.about_me || "Not set"}</Text>
+                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("profile.aboutMe")}</Text>
+                  <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{user.about_me || t("profile.notSet")}</Text>
                 </View>
                 <View>
-                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">Stats</Text>
-                  <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{user.follower_count} followers · {user.following_count} following</Text>
+                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("profile.stats")}</Text>
+                  <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{user.follower_count} {t("profile.followers")} · {user.following_count} {t("profile.following")}</Text>
                 </View>
                 {user.registered_on && (
                   <View>
-                    <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">Member since</Text>
-                    <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{new Date(user.registered_on).toLocaleDateString()}</Text>
+                    <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("profile.memberSince")}</Text>
+                    <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{formatDate(user.registered_on)}</Text>
                   </View>
                 )}
               </View>
               <View className="mt-6 flex-row gap-3">
                 <Pressable onPress={startEditing} className="rounded-md bg-blue-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-white">Edit profile</Text>
+                  <Text className="text-sm font-medium text-white">{t("profile.editProfile")}</Text>
                 </Pressable>
                 <Pressable onPress={() => supabase.auth.signOut()} className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Sign out</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.signOut")}</Text>
                 </Pressable>
               </View>
             </>
           ) : (
             <View className="mt-6 gap-4">
               <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.username")}</Text>
                 <TextInput value={username} onChangeText={setUsername} className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
               </View>
               <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.email")}</Text>
                 <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
-                {email !== user.email && <Text className="mt-1 text-xs text-gray-500 dark:text-gray-400">You&apos;ll need to confirm this change via email.</Text>}
+                {email !== user.email && <Text className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("profile.emailConfirmNote")}</Text>}
                 {emailMessage && (
                   <Text className={`mt-1 text-xs ${emailMessage.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{emailMessage.text}</Text>
                 )}
               </View>
               <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">About me</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.aboutMe")}</Text>
                 <TextInput value={aboutMe} onChangeText={setAboutMe} multiline numberOfLines={3} className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
               </View>
               <View className="flex-row gap-3">
                 <Pressable onPress={handleSave} disabled={updateProfile.isPending} className="rounded-md bg-blue-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-white">{updateProfile.isPending ? "Saving..." : "Save"}</Text>
+                  <Text className="text-sm font-medium text-white">{updateProfile.isPending ? t("common.saving") : t("common.save")}</Text>
                 </Pressable>
                 <Pressable onPress={() => setEditing(false)} className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Cancel</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("common.cancel")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -220,19 +245,19 @@ export default function ProfileScreen() {
         </View>
 
         <View className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change password</Text>
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t("profile.changePassword")}</Text>
           {!showPassword ? (
             <Pressable onPress={() => setShowPassword(true)} className="mt-3 self-start rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2">
-              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Change password</Text>
+              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.changePassword")}</Text>
             </Pressable>
           ) : (
             <View className="mt-4 gap-4">
               <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">New password</Text>
-                <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder="At least 6 characters" className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.newPassword")}</Text>
+                <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder={t("profile.minChars")} className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
               </View>
               <View>
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm password</Text>
+                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("profile.confirmPassword")}</Text>
                 <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm" />
               </View>
               {passwordMessage && (
@@ -240,10 +265,10 @@ export default function ProfileScreen() {
               )}
               <View className="flex-row gap-3">
                 <Pressable onPress={handleChangePassword} disabled={passwordPending} className="rounded-md bg-blue-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-white">{passwordPending ? "Changing..." : "Change password"}</Text>
+                  <Text className="text-sm font-medium text-white">{passwordPending ? t("profile.changing") : t("profile.changePassword")}</Text>
                 </Pressable>
                 <Pressable onPress={() => { setShowPassword(false); setNewPassword(""); setConfirmPassword(""); setPasswordMessage(null); }} className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2">
-                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Cancel</Text>
+                  <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("common.cancel")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -251,10 +276,10 @@ export default function ProfileScreen() {
         </View>
 
         <View className="mt-6 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800 p-4">
-          <Text className="text-lg font-semibold text-red-600 dark:text-red-400">Danger zone</Text>
-          <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">Permanently delete your account and all your data.</Text>
+          <Text className="text-lg font-semibold text-red-600 dark:text-red-400">{t("profile.dangerZone")}</Text>
+          <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t("profile.dangerDescription")}</Text>
           <Pressable onPress={confirmDeleteAccount} disabled={deleteAccount.isPending} className="mt-4 self-start rounded-md border border-red-300 dark:border-red-700 px-4 py-2">
-            <Text className="text-sm font-medium text-red-600 dark:text-red-400">{deleteAccount.isPending ? "Deleting..." : "Delete account"}</Text>
+            <Text className="text-sm font-medium text-red-600 dark:text-red-400">{deleteAccount.isPending ? t("profile.deleting") : t("profile.deleteAccount")}</Text>
           </Pressable>
         </View>
       </ScrollView>

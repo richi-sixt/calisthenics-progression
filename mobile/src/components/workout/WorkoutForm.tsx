@@ -4,6 +4,7 @@ import { useForm, useFieldArray, useWatch, Controller, type Control } from "reac
 import { Picker } from "@react-native-picker/picker";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import { useTranslation, type TranslationKey } from "@/i18n";
 import type { Workout, ExerciseDefinition } from "@/types";
 
 function secondsToMmss(totalSeconds: number): string {
@@ -41,13 +42,14 @@ export function WorkoutForm({
   defaultValues,
   onSubmit,
   isPending,
-  submitLabel = "Save",
+  submitLabel,
 }: {
   defaultValues?: Partial<Workout>;
   onSubmit: (data: { title: string; exercises: unknown[] }) => void;
   isPending: boolean;
   submitLabel?: string;
 }) {
+  const { t } = useTranslation();
   const [showOnlyMine, setShowOnlyMine] = useState(true);
   const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
 
@@ -111,7 +113,7 @@ export function WorkoutForm({
   return (
     <View className="gap-6">
       <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.title")}</Text>
         <Controller
           control={control}
           name="title"
@@ -119,7 +121,7 @@ export function WorkoutForm({
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-              placeholder="e.g. Push day"
+              placeholder={t("workoutForm.titlePlaceholder")}
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
@@ -131,7 +133,7 @@ export function WorkoutForm({
       <View className="gap-2">
         <View className="flex-row items-center gap-2">
           <Switch value={showOnlyMine} onValueChange={setShowOnlyMine} />
-          <Text className="text-sm text-gray-600 dark:text-gray-400">Show only mine</Text>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">{t("workoutForm.showOnlyMine")}</Text>
         </View>
 
         {categories.length > 0 && (
@@ -149,7 +151,7 @@ export function WorkoutForm({
             ))}
             {selectedCatIds.length > 0 && (
               <Pressable onPress={() => setSelectedCatIds([])} className="px-2.5 py-1">
-                <Text className="text-xs font-medium text-gray-400 dark:text-gray-500">Clear</Text>
+                <Text className="text-xs font-medium text-gray-400 dark:text-gray-500">{t("common.clear")}</Text>
               </Pressable>
             )}
           </View>
@@ -157,7 +159,7 @@ export function WorkoutForm({
       </View>
 
       <View className="gap-4">
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Exercises</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.exercises")}</Text>
         {exerciseFields.map((field, exIndex) => (
           <ExerciseBlock
             key={field.id}
@@ -173,7 +175,7 @@ export function WorkoutForm({
             appendExercise({ exercise_definition_id: "", sets: [{ progression: "", reps: "", duration: "" }] })
           }
         >
-          <Text className="text-sm text-blue-600 dark:text-blue-400">+ Add exercise</Text>
+          <Text className="text-sm text-blue-600 dark:text-blue-400">{t("workoutForm.addExercise")}</Text>
         </Pressable>
       </View>
 
@@ -182,7 +184,7 @@ export function WorkoutForm({
         disabled={isPending}
         className="items-center rounded-md bg-blue-600 py-3"
       >
-        {isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">{submitLabel}</Text>}
+        {isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">{submitLabel ?? t("workoutForm.save")}</Text>}
       </Pressable>
     </View>
   );
@@ -201,6 +203,7 @@ function ExerciseBlock({
   exerciseDefMap: Map<number, ExerciseDefinition>;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const {
     fields: setFields,
     append: appendSet,
@@ -223,7 +226,7 @@ function ExerciseBlock({
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
               <Picker selectedValue={value} onValueChange={onChange}>
-                <Picker.Item label="Select exercise..." value="" />
+                <Picker.Item label={t("workoutForm.selectExercise")} value="" />
                 {exerciseDefs.map((def) => (
                   <Picker.Item key={def.id} label={def.title} value={String(def.id)} />
                 ))}
@@ -232,7 +235,7 @@ function ExerciseBlock({
           />
         </View>
         <Pressable onPress={onRemove}>
-          <Text className="text-sm text-red-500 dark:text-red-400">Remove</Text>
+          <Text className="text-sm text-red-500 dark:text-red-400">{t("common.remove")}</Text>
         </Pressable>
       </View>
 
@@ -240,9 +243,9 @@ function ExerciseBlock({
         {setFields.map((setField, setIndex) => (
           <View key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2">
             <View className="mb-1.5 flex-row items-center justify-between">
-              <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">Set {setIndex + 1}</Text>
+              <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")} {setIndex + 1}</Text>
               <Pressable onPress={() => removeSet(setIndex)}>
-                <Text className="text-xs text-red-400 dark:text-red-400">Remove</Text>
+                <Text className="text-xs text-red-400 dark:text-red-400">{t("common.remove")}</Text>
               </Pressable>
             </View>
 
@@ -309,7 +312,7 @@ function ExerciseBlock({
           </View>
         ))}
         <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "" })}>
-          <Text className="text-xs text-blue-600 dark:text-blue-400">+ Add set</Text>
+          <Text className="text-xs text-blue-600 dark:text-blue-400">{t("workoutForm.addSet")}</Text>
         </Pressable>
       </View>
     </View>

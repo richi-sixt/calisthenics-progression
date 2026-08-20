@@ -1,11 +1,13 @@
 import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useWorkout, useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
+import { useTranslation } from "@/i18n";
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workoutId = Number(id);
   const router = useRouter();
+  const { t, formatDate } = useTranslation();
   const { data, isLoading, error } = useWorkout(workoutId);
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
@@ -21,7 +23,7 @@ export default function WorkoutDetailScreen() {
   if (error || !data) {
     return (
       <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900 p-4">
-        <Text className="text-red-600 dark:text-red-400">Failed to load workout.</Text>
+        <Text className="text-red-600 dark:text-red-400">{t("workouts.loadError")}</Text>
       </View>
     );
   }
@@ -29,10 +31,10 @@ export default function WorkoutDetailScreen() {
   const workout = data.data;
 
   const confirmDelete = () => {
-    Alert.alert("Delete workout", "Are you sure you want to delete this workout?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("workouts.deleteConfirmTitle"), t("workouts.deleteConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("common.delete"),
         style: "destructive",
         onPress: () => deleteWorkout.mutate(workoutId, { onSuccess: () => router.back() }),
       },
@@ -44,7 +46,7 @@ export default function WorkoutDetailScreen() {
       <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{workout.title}</Text>
       {workout.timestamp && (
         <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {new Date(workout.timestamp).toLocaleString()}
+          {formatDate(workout.timestamp, "dateTime")}
         </Text>
       )}
 
@@ -53,7 +55,7 @@ export default function WorkoutDetailScreen() {
           onPress={() => router.push(`/workouts/${workoutId}/edit`)}
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
         >
-          <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">Edit</Text>
+          <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
         </Pressable>
         <Pressable
           onPress={() => toggleDone.mutate(workoutId)}
@@ -61,11 +63,11 @@ export default function WorkoutDetailScreen() {
           className={`rounded-md px-4 py-2 ${workout.is_done ? "bg-green-100 dark:bg-green-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
         >
           <Text className={`text-sm font-medium ${workout.is_done ? "text-green-700 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`}>
-            {workout.is_done ? "Completed" : "Mark as done"}
+            {workout.is_done ? t("workouts.completed") : t("workouts.markAsDone")}
           </Text>
         </Pressable>
         <Pressable onPress={confirmDelete} disabled={deleteWorkout.isPending} className="rounded-md px-4 py-2">
-          <Text className="text-sm font-medium text-red-600 dark:text-red-400">Delete</Text>
+          <Text className="text-sm font-medium text-red-600 dark:text-red-400">{t("common.delete")}</Text>
         </Pressable>
       </View>
 
@@ -74,16 +76,16 @@ export default function WorkoutDetailScreen() {
           {workout.exercises.map((exercise) => (
             <View key={exercise.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
               <Text className="font-semibold text-gray-900 dark:text-gray-100">
-                {exercise.exercise_definition_title ?? `Exercise #${exercise.exercise_order}`}
+                {exercise.exercise_definition_title ?? `${t("workouts.exercise")} #${exercise.exercise_order}`}
               </Text>
 
               {exercise.sets && exercise.sets.length > 0 ? (
                 <View className="mt-3">
                   <View className="flex-row border-b border-gray-200 dark:border-gray-700 pb-2">
-                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">Set</Text>
-                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">Progression</Text>
+                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")}</Text>
+                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.progression")}</Text>
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {exercise.counting_type === "duration" ? "Duration" : "Reps"}
+                      {exercise.counting_type === "duration" ? t("workouts.duration") : t("workouts.reps")}
                     </Text>
                   </View>
                   {exercise.sets.map((set) => (
@@ -99,13 +101,13 @@ export default function WorkoutDetailScreen() {
                   ))}
                 </View>
               ) : (
-                <Text className="mt-2 text-sm text-gray-400 dark:text-gray-500">No sets recorded.</Text>
+                <Text className="mt-2 text-sm text-gray-400 dark:text-gray-500">{t("workouts.noSetsRecorded")}</Text>
               )}
             </View>
           ))}
         </View>
       ) : (
-        <Text className="mt-6 text-gray-500 dark:text-gray-400">No exercises in this workout.</Text>
+        <Text className="mt-6 text-gray-500 dark:text-gray-400">{t("workouts.noExercises")}</Text>
       )}
     </ScrollView>
   );

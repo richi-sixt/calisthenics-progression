@@ -45,7 +45,8 @@
         {
           "photosPermission": "Allow access to your photos so you can set a profile picture."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

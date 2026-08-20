@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { useForm, Controller } from "react-hook-form";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase/client";
+import { useTranslation } from "@/i18n";
 
 type RegisterForm = {
   email: string;
@@ -10,8 +11,10 @@ type RegisterForm = {
 };
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -25,19 +28,20 @@ export default function RegisterScreen() {
       setError(error.message);
       return;
     }
+    setSubmittedEmail(data.email);
     setSubmitted(true);
   };
 
 if (submitted) {
   return (
     <View className="flex-1 justify-center items-center px-6 bg-white dark:bg-gray-900">
-      <Text className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">Check your email</Text>
+      <Text className="text-xl font-bold text-center mb-2 text-gray-900 dark:text-gray-100">{t("auth.checkEmail")}</Text>
       <Text className="text-center text-gray-600 dark:text-gray-400 mb-6">
-        We sent a confirmation link — tap it to activate your account.
+        {t("auth.confirmationSent", { email: submittedEmail ?? "" })}
       </Text>
       <Link href="/login" asChild>
         <Pressable>
-          <Text className="text-center text-blue-600 dark:text-blue-400">Back to login</Text>
+          <Text className="text-center text-blue-600 dark:text-blue-400">{t("auth.backToLogin")}</Text>
         </Pressable>
       </Link>
     </View>
@@ -46,7 +50,7 @@ if (submitted) {
 
   return (
     <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
-      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Create account</Text>
+      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t("auth.createAccount")}</Text>
 
       <Controller
         control={control}
@@ -56,7 +60,7 @@ if (submitted) {
           <View className="mb-4">
             <TextInput
               className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
-              placeholder="Email"
+              placeholder={t("auth.email")}
               autoCapitalize="none"
               keyboardType="email-address"
               onBlur={onBlur}
@@ -76,7 +80,7 @@ if (submitted) {
           <View className="mb-4">
             <TextInput
               className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
-              placeholder="Password"
+              placeholder={t("auth.password")}
               secureTextEntry
               onBlur={onBlur}
               onChangeText={onChange}
@@ -97,13 +101,15 @@ if (submitted) {
         {isSubmitting ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text className="text-white font-semibold">Create account</Text>
+          <Text className="text-white font-semibold">{t("auth.createAccount")}</Text>
         )}
       </Pressable>
 
       <Link href="/login" asChild>
         <Pressable className="mt-4">
-          <Text className="text-center text-blue-600 dark:text-blue-400">Already have an account? Log in</Text>
+          <Text className="text-center text-blue-600 dark:text-blue-400">
+            {t("auth.haveAccount")} {t("auth.login")}
+          </Text>
         </Pressable>
       </Link>
     </View>

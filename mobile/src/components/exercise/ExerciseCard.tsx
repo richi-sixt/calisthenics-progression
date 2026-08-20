@@ -5,11 +5,13 @@ import type { ExerciseDefinition } from "@/types";
 import { useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
+import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
   const { data: profile } = useProfile();
@@ -27,9 +29,9 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
     : null;
 
   const confirmArchive = () => {
-    Alert.alert("Archive exercise", "Are you sure you want to archive this exercise?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Archive", style: "destructive", onPress: () => deleteExercise.mutate(exercise.id) },
+    Alert.alert(t("exercises.archiveConfirmTitle"), t("exercises.archiveConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("exercises.archive"), style: "destructive", onPress: () => deleteExercise.mutate(exercise.id) },
     ]);
   };
 
@@ -65,7 +67,7 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
           )}
           {exercise.progression_levels.length > 0 && (
             <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              Progressions:{" "}
+              {t("exercises.progressions")}{" "}
               {exercise.progression_levels
                 .slice()
                 .sort((a, b) => a.level_order - b.level_order)
@@ -80,15 +82,15 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
         {isOwner ? (
           <>
             <Pressable onPress={() => router.push(`/exercises/${exercise.id}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
-              <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Edit</Text>
+              <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
             </Pressable>
             <Pressable onPress={confirmArchive} disabled={deleteExercise.isPending} className="rounded-md px-3 py-1.5">
-              <Text className="text-xs font-medium text-red-600 dark:text-red-400">Archive</Text>
+              <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>
             </Pressable>
           </>
         ) : (
           <Pressable onPress={() => copyExercise.mutate(exercise.id)} disabled={copyExercise.isPending} className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5">
-            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">Copy</Text>
+            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{t("common.copy")}</Text>
           </Pressable>
         )}
       </View>

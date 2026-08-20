@@ -2,15 +2,16 @@ import { View, Text, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import type { Workout, Exercise } from "@/types";
 import { useDeleteTemplate, useUseTemplate } from "@/hooks/use-templates";
+import { useTranslation, type TranslationKey } from "@/i18n";
 
-function formatTemplateSets(exercise: Exercise): string {
+function formatTemplateSets(exercise: Exercise, t: (key: TranslationKey) => string): string {
   const sets = exercise.sets ?? [];
-  if (sets.length === 0) return "No sets";
+  if (sets.length === 0) return t("workouts.noSets");
 
-  const parts: string[] = [`${sets.length} set${sets.length === 1 ? "" : "s"}`];
+  const parts: string[] = [`${sets.length} ${sets.length === 1 ? t("workouts.set") : t("workouts.sets")}`];
   const setDetails = sets
     .map((s) => {
-      if (s.reps != null && s.reps > 0) return `${s.reps} reps`;
+      if (s.reps != null && s.reps > 0) return `${s.reps} ${t("workouts.reps")}`;
       if (s.duration != null && s.duration > 0) {
         const mins = Math.floor(s.duration / 60);
         const secs = s.duration % 60;
@@ -27,13 +28,14 @@ function formatTemplateSets(exercise: Exercise): string {
 
 export function TemplateCard({ template }: { template: Workout }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const deleteTemplate = useDeleteTemplate();
   const useTemplate = useUseTemplate();
 
   const confirmDelete = () => {
-    Alert.alert("Delete template", "Are you sure you want to delete this template?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteTemplate.mutate(template.id) },
+    Alert.alert(t("templates.deleteConfirmTitle"), t("templates.deleteConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deleteTemplate.mutate(template.id) },
     ]);
   };
 
@@ -46,9 +48,9 @@ export function TemplateCard({ template }: { template: Workout }) {
           {template.exercises.map((ex, i) => (
             <Text key={ex.id} className="text-sm text-gray-600 dark:text-gray-400">
               <Text className="text-gray-400 dark:text-gray-500">{i + 1}. </Text>
-              <Text className="font-medium">{ex.exercise_definition_title ?? "Exercise"}</Text>
+              <Text className="font-medium">{ex.exercise_definition_title ?? t("workouts.exercise")}</Text>
               <Text className="text-gray-400 dark:text-gray-500"> — </Text>
-              {formatTemplateSets(ex)}
+              {formatTemplateSets(ex, t)}
             </Text>
           ))}
         </View>
@@ -65,14 +67,14 @@ export function TemplateCard({ template }: { template: Workout }) {
           className="rounded-md bg-green-100 dark:bg-green-900/30 px-3 py-1.5"
         >
           <Text className="text-xs font-medium text-green-700 dark:text-green-400">
-            {useTemplate.isPending ? "Creating..." : "Start workout"}
+            {useTemplate.isPending ? t("templates.creating") : t("templates.startWorkout")}
           </Text>
         </Pressable>
         <Pressable onPress={() => router.push(`/templates/${template.id}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
-          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Edit</Text>
+          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
         </Pressable>
         <Pressable onPress={confirmDelete} disabled={deleteTemplate.isPending} className="rounded-md px-3 py-1.5">
-          <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
+          <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("common.delete")}</Text>
         </Pressable>
       </View>
     </View>

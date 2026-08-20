@@ -1,6 +1,7 @@
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
+import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition } from "@/types";
 
 interface ExerciseFormData {
@@ -20,6 +21,7 @@ export function ExerciseForm({
   onSubmit: (data: ExerciseFormData) => void;
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
@@ -46,7 +48,7 @@ export function ExerciseForm({
   return (
     <View className="gap-6">
       <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.title")}</Text>
         <Controller
           control={control}
           name="title"
@@ -54,7 +56,7 @@ export function ExerciseForm({
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-              placeholder="e.g. Planche"
+              placeholder={t("exerciseForm.titlePlaceholder")}
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
@@ -64,14 +66,14 @@ export function ExerciseForm({
       </View>
 
       <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.description")}</Text>
         <Controller
           control={control}
           name="description"
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-              placeholder="Optional description"
+              placeholder={t("exerciseForm.descriptionPlaceholder")}
               multiline
               numberOfLines={3}
               onBlur={onBlur}
@@ -83,7 +85,7 @@ export function ExerciseForm({
       </View>
 
       <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Counting type</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.countingType")}</Text>
         <Controller
           control={control}
           name="counting_type"
@@ -91,11 +93,11 @@ export function ExerciseForm({
             <View className="mt-1 flex-row gap-4">
               <Pressable className="flex-row items-center gap-2" onPress={() => onChange("reps")}>
                 <View className={`h-4 w-4 rounded-full border ${value === "reps" ? "border-blue-600 bg-blue-600" : "border-gray-400 dark:border-gray-500"}`} />
-                <Text className="text-sm text-gray-900 dark:text-gray-100">Reps</Text>
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{t("exerciseForm.reps")}</Text>
               </Pressable>
               <Pressable className="flex-row items-center gap-2" onPress={() => onChange("duration")}>
                 <View className={`h-4 w-4 rounded-full border ${value === "duration" ? "border-blue-600 bg-blue-600" : "border-gray-400 dark:border-gray-500"}`} />
-                <Text className="text-sm text-gray-900 dark:text-gray-100">Duration</Text>
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{t("exerciseForm.duration")}</Text>
               </Pressable>
             </View>
           )}
@@ -103,7 +105,7 @@ export function ExerciseForm({
       </View>
 
       <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Progression levels</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.progressionLevels")}</Text>
         <View className="mt-2 gap-2">
           {fields.map((field, index) => (
             <View key={field.id} className="flex-row items-center gap-2">
@@ -115,26 +117,26 @@ export function ExerciseForm({
                 render={({ field: { onChange, value } }) => (
                   <TextInput
                     className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm"
-                    placeholder="e.g. Tuck"
+                    placeholder={t("exerciseForm.levelPlaceholder")}
                     onChangeText={onChange}
                     value={value}
                   />
                 )}
               />
               <Pressable onPress={() => remove(index)}>
-                <Text className="text-sm text-red-400 dark:text-red-400">Remove</Text>
+                <Text className="text-sm text-red-400 dark:text-red-400">{t("common.remove")}</Text>
               </Pressable>
             </View>
           ))}
         </View>
         <Pressable onPress={() => append({ name: "" })} className="mt-2">
-          <Text className="text-sm text-blue-600 dark:text-blue-400">+ Add level</Text>
+          <Text className="text-sm text-blue-600 dark:text-blue-400">{t("exerciseForm.addLevel")}</Text>
         </Pressable>
       </View>
 
       {categories.length > 0 && (
         <View>
-          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</Text>
+          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.categories")}</Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
             {categories.map((cat) => (
               <Pressable
@@ -152,7 +154,7 @@ export function ExerciseForm({
       )}
 
       <Pressable onPress={handleSubmit(onSubmit)} disabled={isPending} className="items-center rounded-md bg-blue-600 py-3">
-        {isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">Save</Text>}
+        {isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">{t("exerciseForm.save")}</Text>}
       </Pressable>
     </View>
   );

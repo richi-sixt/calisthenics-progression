@@ -38,10 +38,13 @@ export function useToggleDone() {
           // useWorkouts (list) caches { data: Workout[] }; useWorkout (single) caches { data: Workout }.
           // Both share the "workouts" key prefix, so this has to handle both shapes.
           if (Array.isArray(old.data)) {
-            return { ...old, data: old.data.map((w) => (w.id === id ? { ...w, is_done: !w.is_done } : w)) };
+            return {
+              ...old,
+              data: old.data.map((w) => (w.id === id ? { ...w, is_done: !w.is_done } : w)),
+            } as typeof old;
           }
           if (old.data.id === id) {
-            return { ...old, data: { ...old.data, is_done: !old.data.is_done } };
+            return { ...old, data: { ...old.data, is_done: !old.data.is_done } } as typeof old;
           }
           return old;
         }

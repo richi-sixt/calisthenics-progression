@@ -2,6 +2,7 @@ import { ScrollView, View, Text, TextInput, Pressable, ActivityIndicator } from 
 import { useForm, Controller } from "react-hook-form";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSendMessage } from "@/hooks/use-messages";
+import { useTranslation } from "@/i18n";
 
 type SendMessageFormData = {
   recipient: string;
@@ -10,6 +11,7 @@ type SendMessageFormData = {
 
 export default function NewMessageScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { to } = useLocalSearchParams<{ to?: string }>();
   const sendMessage = useSendMessage();
 
@@ -25,7 +27,7 @@ export default function NewMessageScreen() {
     <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16 }}>
       <View className="gap-4">
         <View>
-          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">To</Text>
+          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("messages.to")}</Text>
           <Controller
             control={control}
             name="recipient"
@@ -33,7 +35,7 @@ export default function NewMessageScreen() {
             render={({ field: { onChange, value } }) => (
               <TextInput
                 className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-                placeholder="username"
+                placeholder={t("messages.usernamePlaceholder")}
                 autoCapitalize="none"
                 editable={!to}
                 onChangeText={onChange}
@@ -43,7 +45,7 @@ export default function NewMessageScreen() {
           />
         </View>
         <View>
-          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Message</Text>
+          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("messages.message")}</Text>
           <Controller
             control={control}
             name="body"
@@ -51,7 +53,7 @@ export default function NewMessageScreen() {
             render={({ field: { onChange, value } }) => (
               <TextInput
                 className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-                placeholder="Write a message..."
+                placeholder={t("messages.messagePlaceholder")}
                 multiline
                 numberOfLines={4}
                 onChangeText={onChange}
@@ -61,7 +63,7 @@ export default function NewMessageScreen() {
           />
         </View>
         <Pressable onPress={handleSubmit(onSubmit)} disabled={sendMessage.isPending} className="items-center rounded-md bg-blue-600 py-3">
-          {sendMessage.isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">Send</Text>}
+          {sendMessage.isPending ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">{t("messages.sendMessage")}</Text>}
         </Pressable>
       </View>
     </ScrollView>

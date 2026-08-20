@@ -3,12 +3,14 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { useForm, Controller } from "react-hook-form";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTranslation } from "@/i18n";
 
 type ResetPasswordForm = {
   password: string;
 };
 
 export default function ResetPasswordScreen() {
+  const { t } = useTranslation();
   const { clearPasswordRecovery } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const {
@@ -29,7 +31,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
-      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Set a new password</Text>
+      <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t("auth.resetPassword")}</Text>
 
       <Controller
         control={control}
@@ -39,7 +41,7 @@ export default function ResetPasswordScreen() {
           <View className="mb-4">
             <TextInput
               className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-4 py-3"
-              placeholder="New password"
+              placeholder={t("profile.newPassword")}
               secureTextEntry
               onBlur={onBlur}
               onChangeText={onChange}
@@ -60,7 +62,7 @@ export default function ResetPasswordScreen() {
         {isSubmitting ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text className="text-white font-semibold">Update password</Text>
+          <Text className="text-white font-semibold">{t("auth.resetPassword")}</Text>
         )}
       </Pressable>
     </View>

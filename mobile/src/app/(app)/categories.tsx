@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, FlatList, Alert, RefreshControl } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Alert, RefreshControl } from "react-native";
 import {
   useCategories,
   useCreateCategory,
   useRenameCategory,
   useDeleteCategory,
 } from "@/hooks/use-categories";
+import { CardListSkeleton, CategorySkeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n";
 import type { ExerciseCategory } from "@/types";
 
 export default function CategoriesScreen() {
+  const { t } = useTranslation();
   const { data, isLoading, error, refetch, isRefetching } = useCategories();
   const categories = data?.data ?? [];
 
@@ -40,15 +43,15 @@ export default function CategoriesScreen() {
   };
 
   const confirmDelete = (id: number) => {
-    Alert.alert("Delete category", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("common.delete"), "Are you sure?", [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("common.delete"),
         style: "destructive",
         onPress: () => {
           setDeleteError(null);
           deleteCategory.mutate(id, {
-            onError: (err) => setDeleteError(err instanceof Error ? err.message : "Could not delete category"),
+            onError: (err) => setDeleteError(err instanceof Error ? err.message : t("categories.cannotDelete")),
           });
         },
       },
@@ -62,7 +65,7 @@ export default function CategoriesScreen() {
           value={newName}
           onChangeText={setNewName}
           className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
-          placeholder="New category name"
+          placeholder={t("categories.newPlaceholder")}
         />
         <Pressable
           onPress={handleCreate}
@@ -70,16 +73,16 @@ export default function CategoriesScreen() {
           className="rounded-md bg-blue-600 px-4 py-2"
         >
           <Text className="text-sm font-medium text-white">
-            {createCategory.isPending ? "Adding..." : "Add"}
+            {createCategory.isPending ? t("common.adding") : t("common.add")}
           </Text>
         </Pressable>
       </View>
 
-      {isLoading && <ActivityIndicator className="mt-6" />}
+      {isLoading && <CardListSkeleton count={4} Card={CategorySkeleton} />}
       {error && <Text className="mt-6 text-red-600 dark:text-red-400">Failed to load categories.</Text>}
       {deleteError && <Text className="mt-3 text-sm text-red-600 dark:text-red-400">{deleteError}</Text>}
       {!isLoading && !error && categories.length === 0 && (
-        <Text className="mt-6 text-gray-500 dark:text-gray-400">No categories yet.</Text>
+        <Text className="mt-6 text-gray-500 dark:text-gray-400">{t("categories.empty")}</Text>
       )}
 
       <FlatList
@@ -103,13 +106,13 @@ export default function CategoriesScreen() {
                   disabled={renameCategory.isPending}
                   className="rounded-md bg-blue-600 px-3 py-1.5"
                 >
-                  <Text className="text-xs font-medium text-white">Save</Text>
+                  <Text className="text-xs font-medium text-white">{t("common.save")}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setEditingId(null)}
                   className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5"
                 >
-                  <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Cancel</Text>
+                  <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("common.cancel")}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -120,14 +123,14 @@ export default function CategoriesScreen() {
                     onPress={() => startEditing(cat.id, cat.name)}
                     className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
                   >
-                    <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">Rename</Text>
+                    <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("categories.rename")}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => confirmDelete(cat.id)}
                     disabled={deleteCategory.isPending}
                     className="rounded-md px-3 py-1.5"
                   >
-                    <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
+                    <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("common.delete")}</Text>
                   </Pressable>
                 </View>
               </>

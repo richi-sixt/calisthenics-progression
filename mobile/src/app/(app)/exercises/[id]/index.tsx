@@ -2,11 +2,13 @@ import { View, Text, Pressable, ActivityIndicator, ScrollView, Alert } from "rea
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
+import { useTranslation } from "@/i18n";
 
 export default function ExerciseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const exerciseId = Number(id);
   const router = useRouter();
+  const { t } = useTranslation();
   const { data, isLoading, error } = useExercise(exerciseId);
   const { data: profile } = useProfile();
   const deleteExercise = useDeleteExercise();
@@ -23,9 +25,9 @@ export default function ExerciseDetailScreen() {
   const isOwner = profile?.data?.id === exercise.user_id;
 
   const confirmArchive = () => {
-    Alert.alert("Archive exercise", "Are you sure you want to archive this exercise?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Archive", style: "destructive", onPress: () => deleteExercise.mutate(exerciseId, { onSuccess: () => router.back() }) },
+    Alert.alert(t("exercises.archiveConfirmTitle"), t("exercises.archiveConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("exercises.archive"), style: "destructive", onPress: () => deleteExercise.mutate(exerciseId, { onSuccess: () => router.back() }) },
     ]);
   };
 
@@ -40,15 +42,15 @@ export default function ExerciseDetailScreen() {
         {isOwner ? (
           <>
             <Pressable onPress={() => router.push(`/exercises/${exerciseId}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2">
-              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">Edit</Text>
+              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
             </Pressable>
             <Pressable onPress={confirmArchive} className="rounded-md px-4 py-2">
-              <Text className="text-sm font-medium text-red-600 dark:text-red-400">Archive</Text>
+              <Text className="text-sm font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>
             </Pressable>
           </>
         ) : (
           <Pressable onPress={() => copyExercise.mutate(exerciseId)} disabled={copyExercise.isPending} className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-4 py-2">
-            <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">{copyExercise.isPending ? "Copying..." : "Copy to mine"}</Text>
+            <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">{copyExercise.isPending ? t("exercises.copying") : t("exercises.copyToMine")}</Text>
           </Pressable>
         )}
       </View>
@@ -57,7 +59,7 @@ export default function ExerciseDetailScreen() {
 
       {exercise.progression_levels.length > 0 && (
         <View className="mt-6">
-          <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">Progression levels</Text>
+          <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</Text>
           <View className="mt-2 gap-1">
             {exercise.progression_levels.slice().sort((a, b) => a.level_order - b.level_order).map((level) => (
               <View key={level.id} className="flex-row items-center gap-2">
