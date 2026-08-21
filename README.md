@@ -4,7 +4,7 @@ A full-stack calisthenics workout tracker — built for learning purposes.\
 Handcrafted in 2019 with inspiration from [Flask Mega Tutorial](https://github.com/miguelgrinberg/microblog-2018), now enhanced with the assistance of AI.
 
 Log your training sessions, define custom exercises with progression levels and workout templates, and connect with other athletes.\
-Originally a Flask/Jinja2 monolith, the project has evolved into a **Flask REST API + Next.js frontend** architecture with Supabase Auth.
+Originally a Flask/Jinja2 monolith, the project has evolved into a **Flask REST API + Next.js web + Expo (React Native) mobile** architecture with Supabase Auth.
 
 ---
 
@@ -13,14 +13,15 @@ Originally a Flask/Jinja2 monolith, the project has evolved into a **Flask REST 
 | Layer | Technology |
 |---|---|
 | **Backend** | Python 3.14, Flask 3.1, SQLAlchemy 2.0, Flask-Migrate (Alembic) |
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript |
+| **Web frontend** | Next.js 16 (App Router), React 19, TypeScript |
+| **Mobile frontend** | Expo (React Native) SDK 57, Expo Router, TypeScript |
 | **Auth** | Supabase Auth (ES256 JWTs, JWKS verification) |
 | **State Management** | TanStack Query (React Query) 5 |
 | **Forms** | react-hook-form 7 |
-| **Styling** | Tailwind CSS 4 |
+| **Styling** | Tailwind CSS 4 (web), NativeWind 4 (mobile) |
 | **Database** | SQLite (dev) / PostgreSQL via Supabase (prod) |
 | **Production** | Gunicorn + Next.js, nginx reverse proxy, systemd |
-| **Testing** | pytest + pytest-cov (400 tests) |
+| **Testing** | pytest + pytest-cov (backend, 400 tests), Jest + React Native Testing Library (mobile) |
 | **Code Quality** | mypy, black, flake8, isort, pre-commit |
 
 ---
@@ -112,7 +113,7 @@ flask db upgrade
 flask run --port 5001
 ```
 
-### Frontend
+### Web frontend
 
 ```bash
 cd web
@@ -135,9 +136,40 @@ npm run dev
 
 The app will be available at `http://localhost:3000`.
 
+### Mobile frontend
+
+Requires Xcode (iOS Simulator) and/or Android Studio (Android emulator).
+
+```bash
+cd mobile
+npm install
+```
+
+Create `mobile/.env.local`:
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:5001/api/v1
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+The app uses native modules not supported by Expo Go, so it needs a
+development build rather than `expo start` alone:
+
+```bash
+npx expo run:ios      # or: npx expo run:android
+```
+
+Once the dev client is installed, day-to-day iteration can go back to
+`npx expo start --dev-client` with fast refresh — only native-dependency
+or config changes (`app.json`, new native packages) require re-running
+`expo run:ios`/`expo run:android`.
+
 ---
 
 ## Running Tests
+
+### Backend
 
 Tests are configured in `pytest.ini` and run with coverage by default.
 
@@ -154,6 +186,15 @@ pytest tests/unit/
 # Run only integration tests
 pytest tests/integration/
 ```
+
+### Mobile
+
+```bash
+cd mobile
+npm test
+```
+
+Jest (`jest-expo` preset) + React Native Testing Library.
 
 ---
 
@@ -175,12 +216,15 @@ flake8 project/ tests/      # lint
 
 ## Deployment
 
-The app runs on a Hetzner VPS (Ubuntu 24.04) behind nginx:
+The web app runs on a Hetzner VPS (Ubuntu 24.04) behind nginx:
 
 - **Flask API** — Gunicorn, systemd service, port 8000
 - **Next.js Frontend** — `next start`, systemd service, port 3002
 - **nginx** — reverse proxy, SSL via Let's Encrypt
 - **Database** — Supabase PostgreSQL
+
+The mobile app is not distributed yet — build/distribution setup (EAS
+build profiles, TestFlight) is in progress.
 
 ---
 
@@ -203,4 +247,6 @@ This project was built to gain hands-on experience with key patterns and tools f
 - Deployed a **two-process production setup** behind nginx with systemd, SSL, and PostgreSQL
 - Tested the application using **pytest-flask** with 400 tests covering unit and integration scenarios
 - Enforced code quality with **type annotations**, **pre-commit hooks**, and tools like `black`, `flake8`, and `isort`
+- Built an **Expo Router / React Native** mobile app sharing the same Flask API and Supabase Auth as the web frontend — same `TanStack Query` + `react-hook-form` patterns as web, ported through platform-specific concerns like secure token storage (`expo-secure-store`, chunked around iOS Keychain's per-item size limit), deep-linked auth flows, and native-vs-web styling parity via NativeWind
+- Set up **Jest + React Native Testing Library** for the mobile app, including a real regression test for a shipped bug (an optimistic cache update that assumed a single data shape)
 - Leveraged **AI assistance (Claude and autonomous agents)** to guide feature design, streamline development, and maintain high code quality

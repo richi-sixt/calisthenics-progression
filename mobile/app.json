@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Calisthenics Progression",
+    "slug": "calisthenics-progression",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "mobile",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "services.sixt.calisthenicsprogression"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#208AEF",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "services.sixt.calisthenicsprogression"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#208AEF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      "expo-secure-store",
+      "react-native-quick-crypto",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos so you can set a profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f1fba484-ef55-4bba-bf28-5b24903286a0"
+      }
+    },
+    "owner": "richi-sixt"
+  }
+}

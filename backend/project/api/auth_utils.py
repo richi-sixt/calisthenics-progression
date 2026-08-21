@@ -89,7 +89,7 @@ def _verify_es256(token: str) -> dict[str, Any] | None:
     """Verify an ES256-signed Supabase JWT using JWKS public keys."""
     jwks_client = _get_jwks_client()
     if jwks_client is None:
-        logger.error("SUPABASE_URL not configured — cannot verify ES256 JWT")
+        logger.error("DEBUG: SUPABASE_URL not configured — cannot verify ES256 JWT")
         return None
 
     try:
@@ -122,9 +122,6 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         return None
 
     email = payload.get("email", "")
-
-    # Supabase ES256 JWTs no longer include email_confirmed_at at the top level.
-    # Check multiple locations for email confirmation status.
     user_meta = payload.get("user_metadata") or {}
     app_meta = payload.get("app_metadata") or {}
 
@@ -132,7 +129,6 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         payload.get("email_confirmed_at") is not None
         or user_meta.get("email_verified") is True
         or app_meta.get("email_verified") is True
-        # If the user passed email OTP/link, amr contains "email" factor
         or any(f.get("method") == "otp" for f in payload.get("amr", []))
     )
 
@@ -184,12 +180,19 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         db.session.commit()
         logger.info("Auto-created user %s for Supabase UID %s", username, supabase_uid)
         return user
-    except IntegrityError:
+
+    except IntegrityError as e:
         # Race condition: another request created this user simultaneously
         db.session.rollback()
-        return db.session.execute(
+        existing = db.session.execute(
             db.select(User).filter_by(supabase_uid=supabase_uid)
         ).scalar_one_or_none()
+        if existing is None:
+            logger.error(
+                "Auto-create failed for Supabase UID %s (email=%s): %s",
+                supabase_uid, email, e,
+            )
+        return existing
 
 
 def _get_current_api_user() -> User | None:
