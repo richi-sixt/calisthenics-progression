@@ -5,6 +5,7 @@ const en = {
   "nav.exercises": "Exercises",
   "nav.categories": "Categories",
   "nav.explore": "Explore",
+  "nav.library": "Library",
   "nav.messages": "Messages",
   "nav.profile": "Profile",
   "nav.logout": "Logout",

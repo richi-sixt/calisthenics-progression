@@ -10,7 +10,7 @@ export default function LibraryScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <View className="px-4 py-4">
-        <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">Library</Text>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t("nav.library")}</Text>
       </View>
       <View className="px-4 gap-2">
         <Pressable

@@ -32,9 +32,9 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="library">
-        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('nav.library')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
+          src={require('@/assets/images/tabIcons/library.png')}
           renderingMode="template"
         />
       </NativeTabs.Trigger>
@@ -42,7 +42,7 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="messages">
         <NativeTabs.Trigger.Label>{t('nav.messages')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
+          src={require('@/assets/images/tabIcons/messages.png')}
           renderingMode="template"
         />
       </NativeTabs.Trigger>
@@ -50,7 +50,7 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>{t('nav.profile')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
+          src={require('@/assets/images/tabIcons/profile.png')}
           renderingMode="template"
         />
       </NativeTabs.Trigger>

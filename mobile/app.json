@@ -1,28 +1,25 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Calisthenics Progression",
+    "slug": "calisthenics-progression",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.mobile"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "services.sixt.calisthenicsprogression"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#208AEF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
-      "package": "com.anonymous.mobile"
+      "package": "services.sixt.calisthenicsprogression"
     },
     "web": {
       "output": "static",
@@ -43,7 +40,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow access to your photos so you can set a profile picture."
+          "photosPermission": "Allow access to your photos so you can set a profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-localization"

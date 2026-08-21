@@ -7,6 +7,7 @@ const de: Record<keyof typeof en, string> = {
   "nav.exercises": "Übungen",
   "nav.categories": "Kategorien",
   "nav.explore": "Entdecken",
+  "nav.library": "Bibliothek",
   "nav.messages": "Nachrichten",
   "nav.profile": "Profil",
   "nav.logout": "Abmelden",

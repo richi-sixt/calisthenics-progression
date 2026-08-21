@@ -225,7 +225,7 @@ function ExerciseBlock({
             name={`exercises.${exIndex}.exercise_definition_id`}
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <Picker selectedValue={value} onValueChange={onChange}>
+              <Picker selectedValue={value} onValueChange={onChange} testID={`exercise-picker-${exIndex}`}>
                 <Picker.Item label={t("workoutForm.selectExercise")} value="" />
                 {exerciseDefs.map((def) => (
                   <Picker.Item key={def.id} label={def.title} value={String(def.id)} />
@@ -234,7 +234,7 @@ function ExerciseBlock({
             )}
           />
         </View>
-        <Pressable onPress={onRemove}>
+        <Pressable onPress={onRemove} testID={`exercise-remove-${exIndex}`}>
           <Text className="text-sm text-red-500 dark:text-red-400">{t("common.remove")}</Text>
         </Pressable>
       </View>
@@ -244,7 +244,7 @@ function ExerciseBlock({
           <View key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2">
             <View className="mb-1.5 flex-row items-center justify-between">
               <Text className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")} {setIndex + 1}</Text>
-              <Pressable onPress={() => removeSet(setIndex)}>
+              <Pressable onPress={() => removeSet(setIndex)} testID={`set-remove-${exIndex}-${setIndex}`}>
                 <Text className="text-xs text-red-400 dark:text-red-400">{t("common.remove")}</Text>
               </Pressable>
             </View>
@@ -256,7 +256,11 @@ function ExerciseBlock({
                     control={control}
                     name={`exercises.${exIndex}.sets.${setIndex}.progression`}
                     render={({ field: { onChange, value } }) => (
-                      <Picker selectedValue={value} onValueChange={onChange}>
+                      <Picker
+                        selectedValue={value}
+                        onValueChange={onChange}
+                        testID={`progression-picker-${exIndex}-${setIndex}`}
+                      >
                         <Picker.Item label="---" value="" />
                         {progressionLevels.map((level) => (
                           <Picker.Item key={level.id} label={level.name} value={level.name} />
@@ -275,6 +279,7 @@ function ExerciseBlock({
                       placeholder="e.g. Standard"
                       onChangeText={onChange}
                       value={value}
+                      testID={`progression-input-${exIndex}-${setIndex}`}
                     />
                   )}
                 />
@@ -290,6 +295,7 @@ function ExerciseBlock({
                       placeholder="0:00"
                       onChangeText={onChange}
                       value={value}
+                      testID={`duration-${exIndex}-${setIndex}`}
                     />
                   )}
                 />
@@ -304,6 +310,7 @@ function ExerciseBlock({
                       keyboardType="number-pad"
                       onChangeText={onChange}
                       value={value}
+                      testID={`reps-${exIndex}-${setIndex}`}
                     />
                   )}
                 />
@@ -311,7 +318,7 @@ function ExerciseBlock({
             </View>
           </View>
         ))}
-        <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "" })}>
+        <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "" })} testID={`add-set-${exIndex}`}>
           <Text className="text-xs text-blue-600 dark:text-blue-400">{t("workoutForm.addSet")}</Text>
         </Pressable>
       </View>
