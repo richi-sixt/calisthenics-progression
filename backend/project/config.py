@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 backend_dir = os.path.abspath(os.path.join(basedir, ".."))
-# Load .env ONLY if no cPanel-ENV exists (Production fallback)
-if not os.environ.get("SECRET_KEY"):
-    load_dotenv(os.path.join(backend_dir, ".env"))
+# Local dev config lives in .env.local (gitignored), matching the convention
+# already used by web/ and mobile/. Production sets real env vars directly.
+load_dotenv(os.path.join(backend_dir, ".env.local"))
 
 
 # main config

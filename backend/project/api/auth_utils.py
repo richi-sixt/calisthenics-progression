@@ -7,11 +7,13 @@ from functools import wraps
 from typing import Any, Callable
 
 import jwt
-from flask import current_app, g, jsonify, request
+from flask import current_app, g, jsonify, render_template, request
 from jwt import PyJWKClient
-from project import db
-from project.models import User
 from sqlalchemy.exc import IntegrityError
+
+from project import db
+from project.email import send_email
+from project.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +112,17 @@ def _verify_es256(token: str) -> dict[str, Any] | None:
         return None
 
 
+def _notify_admins_of_new_user(user: User) -> None:
+    """Send a notification email to every admin user about a new registration."""
+    admins = db.session.execute(db.select(User).filter_by(admin=True)).scalars().all()
+    admin_emails = [admin.email for admin in admins if admin.email]
+    if not admin_emails:
+        return
+
+    html = render_template("email/new_user_registered.html", new_user=user)
+    send_email(admin_emails, f"New user registered: {user.username}", html)
+
+
 def _get_or_create_user(payload: dict[str, Any]) -> User | None:
     """Look up or auto-create a Flask User from a verified Supabase JWT payload.
 
@@ -179,6 +192,12 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         db.session.add(user)
         db.session.commit()
         logger.info("Auto-created user %s for Supabase UID %s", username, supabase_uid)
+
+        try:
+            _notify_admins_of_new_user(user)
+        except Exception:
+            logger.exception("Failed to notify admins about new user %s", username)
+
         return user
 
     except IntegrityError as e:
@@ -190,7 +209,9 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
         if existing is None:
             logger.error(
                 "Auto-create failed for Supabase UID %s (email=%s): %s",
-                supabase_uid, email, e,
+                supabase_uid,
+                email,
+                e,
             )
         return existing
 

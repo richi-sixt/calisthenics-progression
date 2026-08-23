@@ -7,9 +7,16 @@ from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
 import pytest
+
 from project import create_app, db
-from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
-                            Set, User, Workout)
+from project.models import (
+    Exercise,
+    ExerciseCategory,
+    ExerciseDefinition,
+    Set,
+    User,
+    Workout,
+)
 from tests.test_config import TestConfig
 
 
@@ -127,6 +134,31 @@ def second_user(app):
 
         user = (
             db.session.execute(db.select(User).filter_by(username="seconduser"))
+            .scalars()
+            .first()
+        )
+        yield user
+
+
+@pytest.fixture
+def admin_user(app):
+    """Create a confirmed admin test user with a Supabase UID."""
+    with app.app_context():
+        supabase_uid = str(uuid.uuid4())
+        user = User(
+            username="adminuser",
+            email="admin@example.com",
+            admin=True,
+            confirmed=True,
+            confirmed_on=datetime.now(timezone.utc),
+        )
+        user.supabase_uid = supabase_uid
+        user.set_password("password123")
+        db.session.add(user)
+        db.session.commit()
+
+        user = (
+            db.session.execute(db.select(User).filter_by(username="adminuser"))
             .scalars()
             .first()
         )

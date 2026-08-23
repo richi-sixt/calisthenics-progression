@@ -1,0 +1,8 @@
+<p>Hello,</p>
+<p>A new user has registered on Calisthenics Progression.</p>
+<p>
+    <strong>Username:</strong> {{ new_user.username }}<br>
+    <strong>Email:</strong> {{ new_user.email }}<br>
+    <strong>Registered at:</strong> {{ new_user.registered_on.strftime('%Y-%m-%d %H:%M UTC') if new_user.registered_on else 'unknown' }}
+</p>
+<p>This is an automated notification.</p>
