@@ -83,7 +83,7 @@ cd backend
 pip install -r requirements.txt
 ```
 
-Create `backend/.env`:
+Create `backend/.env.local`:
 
 ```env
 SECRET_KEY="a-hard-to-guess-secret-key"

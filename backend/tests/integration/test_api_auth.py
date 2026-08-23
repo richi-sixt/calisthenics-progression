@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
+
 from project.models import User
 from tests.test_config import TestConfig
 
@@ -190,6 +191,50 @@ class TestEmailSync:
         )
         assert resp.status_code == 200
         assert resp.get_json()["data"]["confirmed"] is True
+
+
+class TestAdminNotificationOnNewUser:
+    """Tests for admin notification email on new user auto-provisioning."""
+
+    def test_admin_notified_on_new_user(self, client, admin_user, mail_outbox):
+        """Existing admin receives an email when a new Supabase user registers."""
+        uid = str(uuid.uuid4())
+        token = _make_jwt(uid, "brandnew@example.com", confirmed=True)
+
+        resp = client.get(
+            "/api/v1/auth/profile",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert len(mail_outbox) == 1
+        sent = mail_outbox[0]
+        assert admin_user.email in sent.recipients
+        assert "brandnew" in sent.html
+
+    def test_no_admins_no_email_sent(self, client, mail_outbox):
+        """New user registration with zero admins does not error or send email."""
+        uid = str(uuid.uuid4())
+        token = _make_jwt(uid, "noadmins@example.com", confirmed=True)
+
+        resp = client.get(
+            "/api/v1/auth/profile",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert len(mail_outbox) == 0
+
+    def test_existing_user_reauth_no_notification(
+        self, client, user, admin_user, mail_outbox
+    ):
+        """Re-authenticating as an existing user does not re-send the notification."""
+        token = _make_jwt(user.supabase_uid, user.email, confirmed=True)
+
+        resp = client.get(
+            "/api/v1/auth/profile",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert len(mail_outbox) == 0
 
 
 class TestApiProfile:
