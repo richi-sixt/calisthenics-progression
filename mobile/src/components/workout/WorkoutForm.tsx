@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, Switch } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Switch, Modal, FlatList } from "react-native";
 import { useForm, useFieldArray, useWatch, Controller, type Control } from "react-hook-form";
-import { Picker } from "@react-native-picker/picker";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation, type TranslationKey } from "@/i18n";
@@ -219,21 +218,20 @@ function ExerciseBlock({
   return (
     <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
       <View className="flex-row items-center gap-2">
-        <View className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
-          <Controller
-            control={control}
-            name={`exercises.${exIndex}.exercise_definition_id`}
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <Picker selectedValue={value} onValueChange={onChange} testID={`exercise-picker-${exIndex}`}>
-                <Picker.Item label={t("workoutForm.selectExercise")} value="" />
-                {exerciseDefs.map((def) => (
-                  <Picker.Item key={def.id} label={def.title} value={String(def.id)} />
-                ))}
-              </Picker>
-            )}
-          />
-        </View>
+        <Controller
+          control={control}
+          name={`exercises.${exIndex}.exercise_definition_id`}
+          rules={{ required: true }}
+          render={({ field: { onChange, value } }) => (
+            <ExercisePickerField
+              value={value}
+              onChange={onChange}
+              exerciseDefs={exerciseDefs}
+              exerciseDefMap={exerciseDefMap}
+              testID={`exercise-picker-${exIndex}`}
+            />
+          )}
+        />
         <Pressable onPress={onRemove} testID={`exercise-remove-${exIndex}`}>
           <Text className="text-sm text-red-500 dark:text-red-400">{t("common.remove")}</Text>
         </Pressable>
@@ -249,27 +247,49 @@ function ExerciseBlock({
               </Pressable>
             </View>
 
-            <View className="flex-row gap-2">
-              {hasProgressionLevels ? (
-                <View className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
-                  <Controller
-                    control={control}
-                    name={`exercises.${exIndex}.sets.${setIndex}.progression`}
-                    render={({ field: { onChange, value } }) => (
-                      <Picker
-                        selectedValue={value}
-                        onValueChange={onChange}
-                        testID={`progression-picker-${exIndex}-${setIndex}`}
+            {hasProgressionLevels && (
+              <View className="mb-2">
+                <Controller
+                  control={control}
+                  name={`exercises.${exIndex}.sets.${setIndex}.progression`}
+                  render={({ field: { onChange, value } }) => (
+                    <View
+                      className="flex-row flex-wrap gap-1.5"
+                      testID={`progression-chips-${exIndex}-${setIndex}`}
+                    >
+                      <Pressable
+                        onPress={() => onChange("")}
+                        testID={`progression-chip-${exIndex}-${setIndex}-none`}
+                        className={`rounded-full px-2.5 py-1 ${value === "" ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
                       >
-                        <Picker.Item label="---" value="" />
-                        {progressionLevels.map((level) => (
-                          <Picker.Item key={level.id} label={level.name} value={level.name} />
-                        ))}
-                      </Picker>
-                    )}
-                  />
-                </View>
-              ) : (
+                        <Text
+                          className={`text-xs font-medium ${value === "" ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+                        >
+                          ---
+                        </Text>
+                      </Pressable>
+                      {progressionLevels.map((level) => (
+                        <Pressable
+                          key={level.id}
+                          onPress={() => onChange(level.name)}
+                          testID={`progression-chip-${exIndex}-${setIndex}-${level.id}`}
+                          className={`rounded-full px-2.5 py-1 ${value === level.name ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
+                        >
+                          <Text
+                            className={`text-xs font-medium ${value === level.name ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+                          >
+                            {level.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                />
+              </View>
+            )}
+
+            <View className="flex-row gap-2">
+              {!hasProgressionLevels && (
                 <Controller
                   control={control}
                   name={`exercises.${exIndex}.sets.${setIndex}.progression`}
@@ -323,5 +343,96 @@ function ExerciseBlock({
         </Pressable>
       </View>
     </View>
+  );
+}
+
+function ExercisePickerField({
+  value,
+  onChange,
+  exerciseDefs,
+  exerciseDefMap,
+  testID,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  exerciseDefs: ExerciseDefinition[];
+  exerciseDefMap: Map<number, ExerciseDefinition>;
+  testID: string;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedDef = value ? exerciseDefMap.get(Number(value)) : undefined;
+
+  const filteredDefs = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return query ? exerciseDefs.filter((def) => def.title.toLowerCase().includes(query)) : exerciseDefs;
+  }, [exerciseDefs, search]);
+
+  const close = () => {
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        testID={testID}
+        className="flex-1 flex-row items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5"
+      >
+        <Text
+          numberOfLines={1}
+          className={`flex-1 text-sm ${selectedDef ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}
+        >
+          {selectedDef ? selectedDef.title : t("workoutForm.selectExercise")}
+        </Text>
+        <Text className="ml-2 text-gray-400 dark:text-gray-500">▾</Text>
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
+        <View className="flex-1 bg-white dark:bg-gray-900 pt-4">
+          <View className="flex-row items-center justify-between px-4 pb-3">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {t("workoutForm.selectExercise")}
+            </Text>
+            <Pressable onPress={close} testID={`${testID}-close`}>
+              <Text className="text-sm text-blue-600 dark:text-blue-400">{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            className="mx-4 mb-3 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={t("workoutForm.searchExercisePlaceholder")}
+            value={search}
+            onChangeText={setSearch}
+            autoFocus
+            testID={`${testID}-search`}
+          />
+          <FlatList
+            data={filteredDefs}
+            keyExtractor={(item) => String(item.id)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  onChange(String(item.id));
+                  close();
+                }}
+                testID={`${testID}-option-${item.id}`}
+                className="border-b border-gray-100 dark:border-gray-800 px-4 py-3"
+              >
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{item.title}</Text>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <Text className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+                {t("workoutForm.noExercisesFound")}
+              </Text>
+            }
+          />
+        </View>
+      </Modal>
+    </>
   );
 }

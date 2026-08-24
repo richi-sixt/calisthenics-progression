@@ -73,6 +73,8 @@ const de: Record<keyof typeof en, string> = {
   "workoutForm.titlePlaceholder": "Workout-Titel",
   "workoutForm.exercises": "Übungen",
   "workoutForm.selectExercise": "Übung auswählen...",
+  "workoutForm.searchExercisePlaceholder": "Übungen suchen...",
+  "workoutForm.noExercisesFound": "Keine Übungen gefunden.",
   "workoutForm.addExercise": "+ Übung hinzufügen",
   "workoutForm.addSet": "+ Satz hinzufügen",
   "workoutForm.showOnlyMine": "Nur meine Übungen anzeigen",

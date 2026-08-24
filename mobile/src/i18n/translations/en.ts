@@ -71,6 +71,8 @@ const en = {
   "workoutForm.titlePlaceholder": "Workout title",
   "workoutForm.exercises": "Exercises",
   "workoutForm.selectExercise": "Select exercise...",
+  "workoutForm.searchExercisePlaceholder": "Search exercises...",
+  "workoutForm.noExercisesFound": "No exercises found.",
   "workoutForm.addExercise": "+ Add exercise",
   "workoutForm.addSet": "+ Add set",
   "workoutForm.showOnlyMine": "Show only my exercises",
