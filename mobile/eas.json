@@ -16,14 +16,14 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:5001/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://calisthenics-progression.sixt.services/api/v1"
       }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:5001/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://calisthenics-progression.sixt.services/api/v1"
       }
     }
   },
