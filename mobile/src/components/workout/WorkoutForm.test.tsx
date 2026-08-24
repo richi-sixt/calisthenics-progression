@@ -47,6 +47,15 @@ function renderForm(defaultValues?: Partial<Workout>) {
   );
 }
 
+async function selectExercise(
+  getByTestId: Awaited<ReturnType<typeof renderWithProviders>>["getByTestId"],
+  exIndex: number,
+  def: ExerciseDefinition
+) {
+  await fireEvent.press(getByTestId(`exercise-picker-${exIndex}`));
+  await fireEvent.press(getByTestId(`exercise-picker-${exIndex}-option-${def.id}`));
+}
+
 describe("WorkoutForm", () => {
   it("converts stored numbers (seconds, reps) into the form's string fields", async () => {
     const defaultValues: Partial<Workout> = {
@@ -118,15 +127,38 @@ describe("WorkoutForm", () => {
     expect(queryByTestId("reps-0-0")).toBeTruthy();
     expect(queryByTestId("duration-0-0")).toBeNull();
     expect(queryByTestId("progression-input-0-0")).toBeTruthy();
-    expect(queryByTestId("progression-picker-0-0")).toBeNull();
+    expect(queryByTestId("progression-chips-0-0")).toBeNull();
 
-    await fireEvent(getByTestId("exercise-picker-0"), "valueChange", String(plank.id));
+    await selectExercise(getByTestId, 0, plank);
 
     await waitFor(() => expect(queryByTestId("duration-0-0")).toBeTruthy());
     expect(queryByTestId("reps-0-0")).toBeNull();
-    // Plank has progression levels, so the freeform text input is replaced by a picker.
-    expect(queryByTestId("progression-picker-0-0")).toBeTruthy();
+    // Plank has progression levels, so the freeform text input is replaced by chips.
+    expect(queryByTestId("progression-chips-0-0")).toBeTruthy();
     expect(queryByTestId("progression-input-0-0")).toBeNull();
+  });
+
+  it("selects a progression level by tapping its chip", async () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByTestId, getByText } = await renderWithProviders(
+      <WorkoutForm onSubmit={onSubmit} isPending={false} />
+    );
+
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Plank Day");
+    await selectExercise(getByTestId, 0, plank);
+    await waitFor(() => expect(getByTestId("progression-chips-0-0")).toBeTruthy());
+
+    await fireEvent.press(getByTestId("progression-chip-0-0-10"));
+    await fireEvent.changeText(getByTestId("duration-0-0"), "0:30");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exercises: [expect.objectContaining({ sets: [expect.objectContaining({ progression: "Standard" })] })],
+        })
+      )
+    );
   });
 
   it("submits title/exercises with strings converted back to numbers and blanks to null", async () => {
@@ -136,7 +168,7 @@ describe("WorkoutForm", () => {
     );
 
     await fireEvent.changeText(getByPlaceholderText("Workout title"), "New Workout");
-    await fireEvent(getByTestId("exercise-picker-0"), "valueChange", String(pushUp.id));
+    await selectExercise(getByTestId, 0, pushUp);
     await fireEvent.changeText(getByTestId("reps-0-0"), "10");
     await fireEvent.press(getByText("Save"));
 
@@ -160,7 +192,7 @@ describe("WorkoutForm", () => {
     );
 
     await fireEvent.changeText(getByPlaceholderText("Workout title"), "Plank Day");
-    await fireEvent(getByTestId("exercise-picker-0"), "valueChange", String(plank.id));
+    await selectExercise(getByTestId, 0, plank);
     await waitFor(() => expect(getByTestId("duration-0-0")).toBeTruthy());
     await fireEvent.changeText(getByTestId("duration-0-0"), "2:05");
     await fireEvent.press(getByText("Save"));
