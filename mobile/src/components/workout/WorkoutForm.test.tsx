@@ -18,6 +18,7 @@ const pushUp: ExerciseDefinition = {
   username: "tester",
   user_image_file: null,
   archived: false,
+  is_public: false,
   progression_levels: [],
   category_ids: [],
 };
@@ -32,6 +33,7 @@ const plank: ExerciseDefinition = {
   username: "tester",
   user_image_file: null,
   archived: false,
+  is_public: false,
   progression_levels: [{ id: 10, name: "Standard", level_order: 1 }],
   category_ids: [],
 };

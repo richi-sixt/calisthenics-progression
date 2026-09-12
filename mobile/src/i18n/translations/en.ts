@@ -113,6 +113,10 @@ const en = {
   "exercises.progressionLevels": "Progression Levels",
   "exercises.copyToMine": "Copy to My Exercises",
   "exercises.copying": "Copying...",
+  "exercises.public": "Public",
+  "exercises.private": "Private",
+  "exercises.makePublic": "Make public",
+  "exercises.makePrivate": "Make private",
 
   // Exercise form
   "exerciseForm.title": "Title",
@@ -122,6 +126,8 @@ const en = {
   "exerciseForm.countingType": "Counting Type",
   "exerciseForm.reps": "Reps",
   "exerciseForm.duration": "Duration",
+  "exerciseForm.isPublic": "Public exercise",
+  "exerciseForm.isPublicHint": "Public exercises appear in All Exercises for other users to see and copy.",
   "exerciseForm.progressionLevels": "Progression Levels",
   "exerciseForm.levelPlaceholder": "Level name",
   "exerciseForm.addLevel": "+ Add level",

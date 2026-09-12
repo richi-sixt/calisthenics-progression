@@ -112,6 +112,10 @@ const de: Record<keyof typeof en, string> = {
   "exercises.progressionLevels": "Progressionsstufen",
   "exercises.copyToMine": "Zu meinen Übungen kopieren",
   "exercises.copying": "Kopieren...",
+  "exercises.public": "Öffentlich",
+  "exercises.private": "Privat",
+  "exercises.makePublic": "Öffentlich machen",
+  "exercises.makePrivate": "Privat machen",
 
   // Exercise form
   "exerciseForm.title": "Titel",
@@ -121,6 +125,8 @@ const de: Record<keyof typeof en, string> = {
   "exerciseForm.countingType": "Zählweise",
   "exerciseForm.reps": "Wiederholungen",
   "exerciseForm.duration": "Dauer",
+  "exerciseForm.isPublic": "Öffentliche Übung",
+  "exerciseForm.isPublicHint": "Öffentliche Übungen erscheinen für andere Nutzer unter Alle Übungen und können kopiert werden.",
   "exerciseForm.progressionLevels": "Progressionsstufen",
   "exerciseForm.levelPlaceholder": "Stufenname",
   "exerciseForm.addLevel": "+ Stufe hinzufügen",

@@ -218,9 +218,7 @@ class Workout(Base):
         db.Boolean, nullable=False, default=False, server_default="0"
     )
     is_done = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
-    is_public = db.Column(
-        db.Boolean, nullable=False, default=False, server_default="0"
-    )
+    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -303,6 +301,7 @@ class ExerciseDefinition(Base):
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
+    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
@@ -334,6 +333,7 @@ class ExerciseDefinition(Base):
         date_created: datetime | None = None,
         archived: bool = False,
         counting_type: str = "reps",
+        is_public: bool = False,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
 
@@ -343,6 +343,7 @@ class ExerciseDefinition(Base):
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
             counting_type: How sets are counted - "reps" or "duration".
+            is_public: Whether other users can see this exercise.
 
         Example:
             >>> exercise_def = ExerciseDefinition(
@@ -356,6 +357,7 @@ class ExerciseDefinition(Base):
         self.user_id = user_id
         self.archived = archived
         self.counting_type = counting_type
+        self.is_public = is_public
         if date_created is not None:
             self.date_created = date_created
 
@@ -377,6 +379,7 @@ class ExerciseDefinition(Base):
             "username": self.athlete.username if self.athlete else None,
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
+            "is_public": self.is_public,
             "progression_levels": [
                 pl.to_dict() for pl in self.progression_levels.all()
             ],

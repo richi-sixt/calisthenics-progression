@@ -58,6 +58,27 @@ class TestApiCreateWorkout:
         assert len(data["exercises"]) == 1
         assert len(data["exercises"][0]["sets"]) == 1
 
+    def test_create_workout_with_others_private_exercise_fails(
+        self, client, api_headers_second, exercise_definition
+    ):
+        # exercise_definition is private and owned by `user`, not `second_user`.
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers_second,
+            data=json.dumps(
+                {
+                    "title": "Sneaky Workout",
+                    "exercises": [
+                        {
+                            "exercise_definition_id": exercise_definition.id,
+                            "sets": [{"progression": "Standard", "reps": 10}],
+                        }
+                    ],
+                }
+            ),
+        )
+        assert resp.status_code == 400
+
     def test_create_workout_no_title(self, client, api_headers, exercise_definition):
         resp = client.post(
             "/api/v1/workouts",

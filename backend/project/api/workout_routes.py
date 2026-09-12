@@ -21,7 +21,9 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
             return "Missing exercise_definition_id."
 
         ex_def = db.session.get(ExerciseDefinition, ex_def_id)
-        if ex_def is None:
+        if ex_def is None or (
+            ex_def.user_id != g.current_api_user.id and not ex_def.is_public
+        ):
             return f"Exercise definition {ex_def_id} not found."
 
         exercise = Exercise(

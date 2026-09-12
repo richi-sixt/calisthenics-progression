@@ -9,6 +9,7 @@ interface ExerciseFormData {
   title: string;
   description: string;
   counting_type: "reps" | "duration";
+  is_public: boolean;
   progression_levels: { name: string }[];
   category_ids: number[];
 }
@@ -32,6 +33,7 @@ export default function ExerciseForm({
         title: defaultValues?.title ?? "",
         description: defaultValues?.description ?? "",
         counting_type: defaultValues?.counting_type ?? "reps",
+        is_public: defaultValues?.is_public ?? false,
         progression_levels:
           defaultValues?.progression_levels?.map((p) => ({ name: p.name })) ??
           [],
@@ -94,6 +96,20 @@ export default function ExerciseForm({
             {t("exerciseForm.duration")}
           </label>
         </div>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            {...register("is_public")}
+            className="rounded border-gray-300 dark:border-gray-600"
+          />
+          {t("exerciseForm.isPublic")}
+        </label>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {t("exerciseForm.isPublicHint")}
+        </p>
       </div>
 
       <div>

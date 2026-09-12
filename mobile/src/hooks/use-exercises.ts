@@ -27,6 +27,7 @@ export function useCreateExercise() {
       title: string;
       description?: string;
       counting_type: string;
+      is_public?: boolean;
       progression_levels?: string[];
       category_ids?: number[];
     }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),
