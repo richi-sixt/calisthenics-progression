@@ -66,6 +66,10 @@ const de: Record<keyof typeof en, string> = {
   "workouts.noExercises": "Keine Übungen in diesem Workout.",
   "workouts.noSetsRecorded": "Keine Sätze aufgezeichnet",
   "workouts.exercise": "Übung",
+  "workouts.public": "Öffentlich",
+  "workouts.private": "Privat",
+  "workouts.makePublic": "Öffentlich machen",
+  "workouts.makePrivate": "Privat machen",
 
   // Workout form
   "workoutForm.title": "Titel",
@@ -75,6 +79,8 @@ const de: Record<keyof typeof en, string> = {
   "workoutForm.addExercise": "+ Übung hinzufügen",
   "workoutForm.addSet": "+ Satz hinzufügen",
   "workoutForm.showOnlyMine": "Nur meine Übungen anzeigen",
+  "workoutForm.isPublic": "Öffentliches Workout",
+  "workoutForm.isPublicHint": "Öffentliche Workouts erscheinen für andere Nutzer unter Entdecken.",
   "workoutForm.save": "Speichern",
 
   // Templates
@@ -106,6 +112,10 @@ const de: Record<keyof typeof en, string> = {
   "exercises.progressionLevels": "Progressionsstufen",
   "exercises.copyToMine": "Zu meinen Übungen kopieren",
   "exercises.copying": "Kopieren...",
+  "exercises.public": "Öffentlich",
+  "exercises.private": "Privat",
+  "exercises.makePublic": "Öffentlich machen",
+  "exercises.makePrivate": "Privat machen",
 
   // Exercise form
   "exerciseForm.title": "Titel",
@@ -115,6 +125,8 @@ const de: Record<keyof typeof en, string> = {
   "exerciseForm.countingType": "Zählweise",
   "exerciseForm.reps": "Wiederholungen",
   "exerciseForm.duration": "Dauer",
+  "exerciseForm.isPublic": "Öffentliche Übung",
+  "exerciseForm.isPublicHint": "Öffentliche Übungen erscheinen für andere Nutzer unter Alle Übungen und können kopiert werden.",
   "exerciseForm.progressionLevels": "Progressionsstufen",
   "exerciseForm.levelPlaceholder": "Stufenname",
   "exerciseForm.addLevel": "+ Stufe hinzufügen",

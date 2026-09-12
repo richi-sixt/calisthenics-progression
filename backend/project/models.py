@@ -146,6 +146,7 @@ class User(UserMixin, Base):
             .filter(
                 followers.c.follower_id == self.id,
                 Workout.is_template == False,  # noqa: E712
+                Workout.is_public == True,  # noqa: E712
             )
         )
 
@@ -217,6 +218,7 @@ class Workout(Base):
         db.Boolean, nullable=False, default=False, server_default="0"
     )
     is_done = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -230,12 +232,14 @@ class Workout(Base):
         timestamp: datetime | None = None,
         is_template: bool = False,
         is_done: bool = False,
+        is_public: bool = False,
     ) -> None:
         """Initialize a workout session or template."""
         self.title = title
         self.user_id = user_id
         self.is_template = is_template
         self.is_done = is_done
+        self.is_public = is_public
         if timestamp is not None:  # has a default
             self.timestamp = timestamp
 
@@ -254,6 +258,7 @@ class Workout(Base):
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "is_template": self.is_template,
             "is_done": self.is_done,
+            "is_public": self.is_public,
         }
         if include_exercises:
             data["exercises"] = [
@@ -296,6 +301,7 @@ class ExerciseDefinition(Base):
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
+    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
@@ -327,6 +333,7 @@ class ExerciseDefinition(Base):
         date_created: datetime | None = None,
         archived: bool = False,
         counting_type: str = "reps",
+        is_public: bool = False,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
 
@@ -336,6 +343,7 @@ class ExerciseDefinition(Base):
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
             counting_type: How sets are counted - "reps" or "duration".
+            is_public: Whether other users can see this exercise.
 
         Example:
             >>> exercise_def = ExerciseDefinition(
@@ -349,6 +357,7 @@ class ExerciseDefinition(Base):
         self.user_id = user_id
         self.archived = archived
         self.counting_type = counting_type
+        self.is_public = is_public
         if date_created is not None:
             self.date_created = date_created
 
@@ -370,6 +379,7 @@ class ExerciseDefinition(Base):
             "username": self.athlete.username if self.athlete else None,
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
+            "is_public": self.is_public,
             "progression_levels": [
                 pl.to_dict() for pl in self.progression_levels.all()
             ],

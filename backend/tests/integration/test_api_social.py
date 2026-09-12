@@ -10,7 +10,7 @@ class TestApiExplore:
         from project.models import Workout
 
         with app.app_context():
-            w = Workout(title="Other Workout", user_id=second_user.id)
+            w = Workout(title="Other Workout", user_id=second_user.id, is_public=True)
             db.session.add(w)
             db.session.commit()
 
@@ -26,6 +26,19 @@ class TestApiExplore:
         # Own workout should not appear
         assert len(resp.get_json()["data"]) == 0
 
+    def test_explore_excludes_private(self, client, api_headers, second_user, app):
+        from project import db
+        from project.models import Workout
+
+        with app.app_context():
+            w = Workout(title="Private Workout", user_id=second_user.id)
+            db.session.add(w)
+            db.session.commit()
+
+        resp = client.get("/api/v1/explore", headers=api_headers)
+        assert resp.status_code == 200
+        assert len(resp.get_json()["data"]) == 0
+
 
 class TestApiGetUser:
     def test_get_user(self, client, api_headers, second_user):
@@ -38,6 +51,24 @@ class TestApiGetUser:
     def test_get_user_not_found(self, client, api_headers):
         resp = client.get("/api/v1/users/ghost", headers=api_headers)
         assert resp.status_code == 404
+
+    def test_get_user_hides_private_workouts(
+        self, client, api_headers, second_user, app
+    ):
+        from project import db
+        from project.models import Workout
+
+        with app.app_context():
+            db.session.add(
+                Workout(title="Public One", user_id=second_user.id, is_public=True)
+            )
+            db.session.add(Workout(title="Private One", user_id=second_user.id))
+            db.session.commit()
+
+        resp = client.get(f"/api/v1/users/{second_user.username}", headers=api_headers)
+        assert resp.status_code == 200
+        titles = [w["title"] for w in resp.get_json()["data"]["workouts"]]
+        assert titles == ["Public One"]
 
 
 class TestApiFollow:

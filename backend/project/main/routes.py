@@ -178,7 +178,9 @@ def add_workout() -> ResponseReturnValue:
 @check_confirmed
 def copy_exercise(exercises_id: int) -> ResponseReturnValue:
     original = db.session.get(ExerciseDefinition, exercises_id)
-    if original is None:
+    if original is None or (
+        original.user_id != current_user.id and not original.is_public
+    ):
         abort(404)
     if original.user_id == current_user.id:
         return (
@@ -372,6 +374,7 @@ def _get_exercise_lists_and_progression_map() -> (
             .filter(
                 ExerciseDefinition.user_id != current_user.id,
                 ExerciseDefinition.archived == False,  # noqa: E712
+                ExerciseDefinition.is_public == True,  # noqa: E712
             )
             .order_by(ExerciseDefinition.title.asc())  # type: ignore[union-attr]
         )
@@ -414,7 +417,9 @@ def _save_exercises_to_workout(
             return redirect(redirect_url)
 
         exercise_def = db.session.get(ExerciseDefinition, exercise_def_id)
-        if exercise_def is None:
+        if exercise_def is None or (
+            exercise_def.user_id != current_user.id and not exercise_def.is_public
+        ):
             db.session.rollback()
             flash("Übung nicht gefunden.", "danger")
             return redirect(redirect_url)
@@ -686,7 +691,9 @@ def add_exercise() -> str | ResponseReturnValue:
 @check_confirmed
 def exercise(exercises_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercises_id)
-    if exercise is None:
+    if exercise is None or (
+        exercise.user_id != current_user.id and not exercise.is_public
+    ):
         abort(404)
     return render_template("exercise.html", title=exercise.title, exercise=exercise)
 
@@ -706,6 +713,13 @@ def all_exercises() -> str:
     )
     if user_filter == "mine":
         query = query.filter(ExerciseDefinition.user_id == current_user.id)
+    else:
+        query = query.filter(
+            db.or_(
+                ExerciseDefinition.user_id == current_user.id,
+                ExerciseDefinition.is_public == True,  # noqa: E712
+            )
+        )
     for cat_id in selected_categories:
         query = query.filter(
             ExerciseDefinition.categories.any(ExerciseCategory.id == cat_id)
@@ -963,6 +977,7 @@ def explore() -> ResponseReturnValue:
         .filter(
             Workout.user_id != current_user.id,
             Workout.is_template == False,  # noqa: E712
+            Workout.is_public == True,  # noqa: E712
         )
         .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
         page=page,

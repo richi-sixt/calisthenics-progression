@@ -27,6 +27,7 @@ export interface Workout {
   user_image_file: string | null;
   is_template: boolean;
   is_done: boolean;
+  is_public: boolean;
   exercises?: Exercise[];
 }
 
@@ -59,6 +60,7 @@ export interface ExerciseDefinition {
   username: string | null;
   user_image_file: string | null;
   archived: boolean;
+  is_public: boolean;
   progression_levels: ProgressionLevel[];
   category_ids: number[];
 }

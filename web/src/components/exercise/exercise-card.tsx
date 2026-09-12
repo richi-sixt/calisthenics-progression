@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { ExerciseDefinition } from "@/types";
-import { useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
+import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useMemo } from "react";
@@ -16,6 +16,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
   const { t } = useTranslation();
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
+  const updateExercise = useUpdateExercise();
   const { data: profile } = useProfile();
   const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
@@ -69,6 +70,11 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
             <span className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               {exercise.counting_type}
             </span>
+            {isOwner && exercise.is_public && (
+              <span className="inline-flex rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                {t("exercises.public")}
+              </span>
+            )}
             {categoryNames.map((name) => (
               <span
                 key={name}
@@ -101,6 +107,15 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
                 >
                   {t("common.edit")}
                 </Link>
+                <button
+                  onClick={() =>
+                    updateExercise.mutate({ id: exercise.id, is_public: !exercise.is_public })
+                  }
+                  disabled={updateExercise.isPending}
+                  className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  {exercise.is_public ? t("exercises.makePrivate") : t("exercises.makePublic")}
+                </button>
                 <button
                   onClick={() => setShowArchiveDialog(true)}
                   disabled={deleteExercise.isPending}

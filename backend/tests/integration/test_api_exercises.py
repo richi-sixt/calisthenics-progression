@@ -15,6 +15,30 @@ class TestApiListExercises:
         resp = client.get("/api/v1/exercises?user=all", headers=api_headers)
         assert resp.status_code == 200
 
+    def test_list_all_excludes_others_private_exercises(
+        self, client, api_headers_second, exercise_definition
+    ):
+        # exercise_definition is private and owned by `user`, not `second_user`.
+        resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+    def test_list_all_includes_others_public_exercises(
+        self, client, api_headers_second, exercise_definition, app
+    ):
+        from project import db
+        from project.models import ExerciseDefinition
+
+        with app.app_context():
+            ex = db.session.get(ExerciseDefinition, exercise_definition.id)
+            ex.is_public = True
+            db.session.commit()
+
+        resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
+        assert resp.status_code == 200
+        titles = [e["title"] for e in resp.get_json()["data"]]
+        assert titles == ["Push-ups"]
+
     def test_filter_by_category(
         self, client, api_headers, exercise_definition, exercise_categories, app
     ):
@@ -89,6 +113,26 @@ class TestApiCreateExercise:
         assert resp.status_code == 201
         assert exercise_categories[2].id in resp.get_json()["data"]["category_ids"]
 
+    def test_create_exercise_defaults_private(self, client, api_headers):
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": "Squats", "counting_type": "reps"}),
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()["data"]["is_public"] is False
+
+    def test_create_exercise_public(self, client, api_headers):
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps(
+                {"title": "Lunges", "counting_type": "reps", "is_public": True}
+            ),
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()["data"]["is_public"] is True
+
 
 class TestApiGetExercise:
     def test_get_exercise(self, client, api_headers, exercise_definition):
@@ -101,6 +145,27 @@ class TestApiGetExercise:
     def test_get_exercise_not_found(self, client, api_headers):
         resp = client.get("/api/v1/exercises/99999", headers=api_headers)
         assert resp.status_code == 404
+
+    def test_get_private_exercise_forbidden_for_others(
+        self, client, api_headers_second, exercise_definition
+    ):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers_second
+        )
+        assert resp.status_code == 404
+
+    def test_get_public_exercise_visible_to_others(
+        self, client, api_headers_second, exercise_definition, app
+    ):
+        from project import db
+
+        exercise_definition.is_public = True
+        db.session.commit()
+
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers_second
+        )
+        assert resp.status_code == 200
 
 
 class TestApiUpdateExercise:
@@ -119,6 +184,15 @@ class TestApiUpdateExercise:
         data = resp.get_json()["data"]
         assert data["title"] == "Diamond Push-ups"
         assert len(data["progression_levels"]) == 2
+
+    def test_update_exercise_visibility(self, client, api_headers, exercise_definition):
+        resp = client.put(
+            f"/api/v1/exercises/{exercise_definition.id}",
+            headers=api_headers,
+            data=json.dumps({"is_public": True}),
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["is_public"] is True
 
     def test_update_exercise_forbidden(
         self, client, api_headers_second, exercise_definition
@@ -175,8 +249,13 @@ class TestApiDeleteExercise:
 
 class TestApiCopyExercise:
     def test_copy_exercise(
-        self, client, api_headers_second, exercise_definition, second_user
+        self, client, api_headers_second, exercise_definition, second_user, app
     ):
+        from project import db
+
+        exercise_definition.is_public = True
+        db.session.commit()
+
         resp = client.post(
             f"/api/v1/exercises/{exercise_definition.id}/copy",
             headers=api_headers_second,
@@ -185,6 +264,7 @@ class TestApiCopyExercise:
         data = resp.get_json()["data"]
         assert "Kopie" in data["title"]
         assert data["user_id"] == second_user.id
+        assert data["is_public"] is False
 
     def test_copy_own_exercise(self, client, api_headers, exercise_definition):
         resp = client.post(
@@ -192,3 +272,13 @@ class TestApiCopyExercise:
             headers=api_headers,
         )
         assert resp.status_code == 400
+
+    def test_copy_private_exercise_not_found(
+        self, client, api_headers_second, exercise_definition
+    ):
+        # exercise_definition is private and owned by `user`, not `second_user`.
+        resp = client.post(
+            f"/api/v1/exercises/{exercise_definition.id}/copy",
+            headers=api_headers_second,
+        )
+        assert resp.status_code == 404

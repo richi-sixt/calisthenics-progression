@@ -127,7 +127,9 @@ class TestUserModel:
             )
 
             # Create workout for second user
-            workout2 = Workout(title="Second Workout", user_id=user2.id)
+            workout2 = Workout(
+                title="Second Workout", user_id=user2.id, is_public=True
+            )
             db.session.add(workout2)
             db.session.commit()
 

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { View, Text, Pressable, Image, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import type { ExerciseDefinition } from "@/types";
-import { useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
+import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
@@ -14,6 +14,7 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   const { t } = useTranslation();
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
+  const updateExercise = useUpdateExercise();
   const { data: profile } = useProfile();
   const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
@@ -54,6 +55,11 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
             <View className="rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5">
               <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{exercise.counting_type}</Text>
             </View>
+            {isOwner && exercise.is_public && (
+              <View className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5">
+                <Text className="text-xs font-medium text-blue-700 dark:text-blue-400">{t("exercises.public")}</Text>
+              </View>
+            )}
             {categoryNames.map((name) => (
               <View key={name} className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5">
                 <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{name}</Text>
@@ -83,6 +89,15 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
           <>
             <Pressable onPress={() => router.push(`/exercises/${exercise.id}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
               <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => updateExercise.mutate({ id: exercise.id, is_public: !exercise.is_public })}
+              disabled={updateExercise.isPending}
+              className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
+            >
+              <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                {exercise.is_public ? t("exercises.makePrivate") : t("exercises.makePublic")}
+              </Text>
             </Pressable>
             <Pressable onPress={confirmArchive} disabled={deleteExercise.isPending} className="rounded-md px-3 py-1.5">
               <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>

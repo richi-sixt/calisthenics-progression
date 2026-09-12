@@ -64,6 +64,10 @@ const en = {
   "workouts.noExercises": "No exercises in this workout.",
   "workouts.noSetsRecorded": "No sets recorded",
   "workouts.exercise": "Exercise",
+  "workouts.public": "Public",
+  "workouts.private": "Private",
+  "workouts.makePublic": "Make public",
+  "workouts.makePrivate": "Make private",
 
   // Workout form
   "workoutForm.title": "Title",
@@ -73,6 +77,8 @@ const en = {
   "workoutForm.addExercise": "+ Add exercise",
   "workoutForm.addSet": "+ Add set",
   "workoutForm.showOnlyMine": "Show only my exercises",
+  "workoutForm.isPublic": "Public workout",
+  "workoutForm.isPublicHint": "Public workouts appear in Explore for other users to see.",
   "workoutForm.save": "Save",
 
   // Templates
@@ -104,6 +110,10 @@ const en = {
   "exercises.progressionLevels": "Progression Levels",
   "exercises.copyToMine": "Copy to My Exercises",
   "exercises.copying": "Copying...",
+  "exercises.public": "Public",
+  "exercises.private": "Private",
+  "exercises.makePublic": "Make public",
+  "exercises.makePrivate": "Make private",
 
   // Exercise form
   "exerciseForm.title": "Title",
@@ -113,6 +123,8 @@ const en = {
   "exerciseForm.countingType": "Counting Type",
   "exerciseForm.reps": "Reps",
   "exerciseForm.duration": "Duration",
+  "exerciseForm.isPublic": "Public exercise",
+  "exerciseForm.isPublicHint": "Public exercises appear in All Exercises for other users to see and copy.",
   "exerciseForm.progressionLevels": "Progression Levels",
   "exerciseForm.levelPlaceholder": "Level name",
   "exerciseForm.addLevel": "+ Add level",

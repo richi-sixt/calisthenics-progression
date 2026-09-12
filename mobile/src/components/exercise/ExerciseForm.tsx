@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Switch } from "react-native";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
@@ -8,6 +8,7 @@ interface ExerciseFormData {
   title: string;
   description: string;
   counting_type: "reps" | "duration";
+  is_public: boolean;
   progression_levels: { name: string }[];
   category_ids: number[];
 }
@@ -30,6 +31,7 @@ export function ExerciseForm({
       title: defaultValues?.title ?? "",
       description: defaultValues?.description ?? "",
       counting_type: defaultValues?.counting_type ?? "reps",
+      is_public: defaultValues?.is_public ?? false,
       progression_levels: defaultValues?.progression_levels?.map((p) => ({ name: p.name })) ?? [],
       category_ids: defaultValues?.category_ids ?? [],
     },
@@ -102,6 +104,20 @@ export function ExerciseForm({
             </View>
           )}
         />
+      </View>
+
+      <View className="gap-1">
+        <View className="flex-row items-center gap-2">
+          <Controller
+            control={control}
+            name="is_public"
+            render={({ field: { onChange, value } }) => (
+              <Switch value={value} onValueChange={onChange} testID="is-public-switch" />
+            )}
+          />
+          <Text className="text-sm text-gray-700 dark:text-gray-300">{t("exerciseForm.isPublic")}</Text>
+        </View>
+        <Text className="text-xs text-gray-500 dark:text-gray-400">{t("exerciseForm.isPublicHint")}</Text>
       </View>
 
       <View>

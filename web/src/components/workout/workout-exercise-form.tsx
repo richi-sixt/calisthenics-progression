@@ -37,6 +37,7 @@ interface ExerciseData {
 
 interface WorkoutFormData {
   title: string;
+  is_public: boolean;
   exercises: ExerciseData[];
 }
 
@@ -47,7 +48,7 @@ export default function WorkoutExerciseForm({
   submitLabel = "Save",
 }: {
   defaultValues?: Partial<Workout>;
-  onSubmit: (data: { title: string; exercises: unknown[] }) => void;
+  onSubmit: (data: { title: string; exercises: unknown[]; is_public: boolean }) => void;
   isPending: boolean;
   submitLabel?: string;
 }) {
@@ -67,6 +68,7 @@ export default function WorkoutExerciseForm({
   const { register, handleSubmit, control } = useForm<WorkoutFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
+      is_public: defaultValues?.is_public ?? false,
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
@@ -109,6 +111,7 @@ export default function WorkoutExerciseForm({
   const submit = (data: WorkoutFormData) => {
     onSubmit({
       title: data.title,
+      is_public: data.is_public,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
         sets: ex.sets.map((s) => ({
@@ -129,6 +132,20 @@ export default function WorkoutExerciseForm({
           className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           placeholder={t("workoutForm.titlePlaceholder")}
         />
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            {...register("is_public")}
+            className="rounded border-gray-300 dark:border-gray-600"
+          />
+          {t("workoutForm.isPublic")}
+        </label>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {t("workoutForm.isPublicHint")}
+        </p>
       </div>
 
       {/* Exercise filter controls */}
