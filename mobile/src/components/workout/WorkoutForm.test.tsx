@@ -175,6 +175,7 @@ describe("WorkoutForm", () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({
         title: "New Workout",
+        is_public: false,
         exercises: [
           {
             exercise_definition_id: pushUp.id,
@@ -182,6 +183,31 @@ describe("WorkoutForm", () => {
           },
         ],
       })
+    );
+  });
+
+  it("submits is_public toggled on, and defaults it from defaultValues", async () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByTestId, getByText } = await renderWithProviders(
+      <WorkoutForm
+        defaultValues={{ is_public: true }}
+        onSubmit={onSubmit}
+        isPending={false}
+      />
+    );
+
+    expect(getByTestId("is-public-switch").props.value).toBe(true);
+
+    await fireEvent(getByTestId("is-public-switch"), "valueChange", false);
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Public Toggle Test");
+    await selectExercise(getByTestId, 0, pushUp);
+    await fireEvent.changeText(getByTestId("reps-0-0"), "5");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ is_public: false })
+      )
     );
   });
 

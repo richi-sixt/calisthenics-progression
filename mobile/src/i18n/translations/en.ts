@@ -65,6 +65,10 @@ const en = {
   "workouts.noExercises": "No exercises in this workout.",
   "workouts.noSetsRecorded": "No sets recorded",
   "workouts.exercise": "Exercise",
+  "workouts.public": "Public",
+  "workouts.private": "Private",
+  "workouts.makePublic": "Make public",
+  "workouts.makePrivate": "Make private",
 
   // Workout form
   "workoutForm.title": "Title",
@@ -76,6 +80,8 @@ const en = {
   "workoutForm.addExercise": "+ Add exercise",
   "workoutForm.addSet": "+ Add set",
   "workoutForm.showOnlyMine": "Show only my exercises",
+  "workoutForm.isPublic": "Public workout",
+  "workoutForm.isPublicHint": "Public workouts appear in Explore for other users to see.",
   "workoutForm.save": "Save",
 
   // Templates

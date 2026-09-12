@@ -90,6 +90,7 @@ def api_create_workout() -> ResponseReturnValue:
     data = request.get_json(silent=True) or {}
     title = data.get("title", "").strip()
     exercises_data = data.get("exercises", [])
+    is_public = bool(data.get("is_public", False))
 
     if not title:
         return jsonify({"error": "Title is required."}), 400
@@ -100,6 +101,7 @@ def api_create_workout() -> ResponseReturnValue:
         title=title,
         user_id=g.current_api_user.id,
         timestamp=datetime.now(timezone.utc),
+        is_public=is_public,
     )
     db.session.add(workout)
     db.session.flush()
@@ -139,6 +141,9 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
 
     if "title" in data:
         workout.title = data["title"].strip()
+
+    if "is_public" in data:
+        workout.is_public = bool(data["is_public"])
 
     if "exercises" in data:
         exercises_data = data["exercises"]

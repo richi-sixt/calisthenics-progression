@@ -21,6 +21,7 @@ def api_explore() -> ResponseReturnValue:
         .filter(
             Workout.user_id != g.current_api_user.id,
             Workout.is_template == False,  # noqa: E712
+            Workout.is_public == True,  # noqa: E712
         )
         .order_by(Workout.timestamp.desc()),
         page=page,
@@ -54,9 +55,11 @@ def api_get_user(username: str) -> ResponseReturnValue:
         return jsonify({"error": "User not found."}), 404
 
     page = request.args.get("page", 1, type=int)
+    workouts_query = user.workouts.filter(Workout.is_template == False)  # noqa: E712
+    if user.id != g.current_api_user.id:
+        workouts_query = workouts_query.filter(Workout.is_public == True)  # noqa: E712
     workouts_pagination = (
-        user.workouts.filter(Workout.is_template == False)  # noqa: E712
-        .order_by(Workout.timestamp.desc())
+        workouts_query.order_by(Workout.timestamp.desc())
         .paginate(
             page=page,
             per_page=current_app.config["WORKOUTS_PER_PAGE"],

@@ -73,7 +73,7 @@ export function useDeleteWorkout() {
 export function useCreateWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; exercises: unknown[] }) =>
+    mutationFn: (data: { title: string; exercises: unknown[]; is_public?: boolean }) =>
       api.post<ApiResponse<Workout>>("/workouts", data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
   });
@@ -82,9 +82,19 @@ export function useCreateWorkout() {
 export function useUpdateWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; title?: string; exercises?: unknown[] }) =>
-      api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: number;
+      title?: string;
+      exercises?: unknown[];
+      is_public?: boolean;
+    }) => api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["explore"] });
+    },
   });
 }
 

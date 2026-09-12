@@ -8,7 +8,7 @@ import type { Workout } from "@/types";
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
 jest.mock("@/lib/api", () => ({
-  api: { post: jest.fn(), delete: jest.fn() },
+  api: { post: jest.fn(), put: jest.fn(), delete: jest.fn() },
   ApiError: class ApiError extends Error {},
 }));
 
@@ -30,7 +30,29 @@ function makeWorkout(overrides: Partial<Workout>): Workout {
 describe("WorkoutCard", () => {
   beforeEach(() => {
     (api.post as jest.Mock).mockResolvedValue({ data: {} });
+    (api.put as jest.Mock).mockResolvedValue({ data: {} });
     (api.delete as jest.Mock).mockResolvedValue({ data: { message: "deleted" } });
+  });
+
+  it("shows a public badge and 'Make private' button for a public workout", async () => {
+    const { getByText, queryByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ is_public: true })} />
+    );
+    expect(getByText("Public")).toBeTruthy();
+    expect(getByText("Make private")).toBeTruthy();
+    expect(queryByText("Make public")).toBeNull();
+  });
+
+  it("calls the update endpoint with the flipped is_public when the visibility button is pressed", async () => {
+    const { getByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ id: 42, is_public: false })} />
+    );
+
+    await fireEvent.press(getByText("Make public"));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/workouts/42", { is_public: true })
+    );
   });
 
   it("shows the pending badge and a 'Mark done' button for an unfinished workout", async () => {

@@ -1,7 +1,7 @@
 import { View, Text, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import type { Workout, Exercise } from "@/types";
-import { useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
+import { useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
 import { useTranslation, type TranslationKey } from "@/i18n";
 
 function formatSetSummary(exercise: Exercise, t: (key: TranslationKey) => string): string {
@@ -26,6 +26,7 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
   const { t, formatDate } = useTranslation();
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
+  const updateWorkout = useUpdateWorkout();
 
   const confirmDelete = () => {
     Alert.alert(t("workouts.deleteConfirmTitle"), t("workouts.deleteConfirmMessage"), [
@@ -44,6 +45,13 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
               {workout.is_done ? t("workouts.done") : t("workouts.pendent")}
             </Text>
           </View>
+          {workout.is_public && (
+            <View className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5">
+              <Text className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                {t("workouts.public")}
+              </Text>
+            </View>
+          )}
         </View>
         {workout.timestamp && (
           <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -73,6 +81,15 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
         >
           <Text className={`text-xs font-medium ${workout.is_done ? "text-green-700 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`}>
             {workout.is_done ? t("workouts.done") : t("workouts.markDone")}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => updateWorkout.mutate({ id: workout.id, is_public: !workout.is_public })}
+          disabled={updateWorkout.isPending}
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
+        >
+          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            {workout.is_public ? t("workouts.makePrivate") : t("workouts.makePublic")}
           </Text>
         </Pressable>
         <Pressable

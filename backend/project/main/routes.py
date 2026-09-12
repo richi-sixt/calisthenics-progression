@@ -963,6 +963,7 @@ def explore() -> ResponseReturnValue:
         .filter(
             Workout.user_id != current_user.id,
             Workout.is_template == False,  # noqa: E712
+            Workout.is_public == True,  # noqa: E712
         )
         .order_by(Workout.timestamp.desc()),  # type: ignore[union-attr]
         page=page,

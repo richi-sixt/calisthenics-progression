@@ -67,6 +67,10 @@ const de: Record<keyof typeof en, string> = {
   "workouts.noExercises": "Keine Übungen in diesem Workout.",
   "workouts.noSetsRecorded": "Keine Sätze aufgezeichnet",
   "workouts.exercise": "Übung",
+  "workouts.public": "Öffentlich",
+  "workouts.private": "Privat",
+  "workouts.makePublic": "Öffentlich machen",
+  "workouts.makePrivate": "Privat machen",
 
   // Workout form
   "workoutForm.title": "Titel",
@@ -78,6 +82,8 @@ const de: Record<keyof typeof en, string> = {
   "workoutForm.addExercise": "+ Übung hinzufügen",
   "workoutForm.addSet": "+ Satz hinzufügen",
   "workoutForm.showOnlyMine": "Nur meine Übungen anzeigen",
+  "workoutForm.isPublic": "Öffentliches Workout",
+  "workoutForm.isPublicHint": "Öffentliche Workouts erscheinen für andere Nutzer unter Entdecken.",
   "workoutForm.save": "Speichern",
 
   // Templates

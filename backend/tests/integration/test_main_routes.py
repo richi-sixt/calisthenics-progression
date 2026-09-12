@@ -972,6 +972,7 @@ class TestExploreRoute:
             workout = Workout(
                 title="Second User Workout",
                 user_id=second_user.id,
+                is_public=True,
             )
             db.session.add(workout)
             db.session.commit()

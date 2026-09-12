@@ -34,6 +34,7 @@ interface ExerciseData {
 
 interface WorkoutFormData {
   title: string;
+  is_public: boolean;
   exercises: ExerciseData[];
 }
 
@@ -44,7 +45,7 @@ export function WorkoutForm({
   submitLabel,
 }: {
   defaultValues?: Partial<Workout>;
-  onSubmit: (data: { title: string; exercises: unknown[] }) => void;
+  onSubmit: (data: { title: string; exercises: unknown[]; is_public: boolean }) => void;
   isPending: boolean;
   submitLabel?: string;
 }) {
@@ -62,6 +63,7 @@ export function WorkoutForm({
   const { handleSubmit, control } = useForm<WorkoutFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
+      is_public: defaultValues?.is_public ?? false,
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
@@ -98,6 +100,7 @@ export function WorkoutForm({
   const submit = (data: WorkoutFormData) => {
     onSubmit({
       title: data.title,
+      is_public: data.is_public,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
         sets: ex.sets.map((s) => ({
@@ -127,6 +130,20 @@ export function WorkoutForm({
             />
           )}
         />
+      </View>
+
+      <View className="gap-1">
+        <View className="flex-row items-center gap-2">
+          <Controller
+            control={control}
+            name="is_public"
+            render={({ field: { onChange, value } }) => (
+              <Switch value={value} onValueChange={onChange} testID="is-public-switch" />
+            )}
+          />
+          <Text className="text-sm text-gray-700 dark:text-gray-300">{t("workoutForm.isPublic")}</Text>
+        </View>
+        <Text className="text-xs text-gray-500 dark:text-gray-400">{t("workoutForm.isPublicHint")}</Text>
       </View>
 
       <View className="gap-2">
