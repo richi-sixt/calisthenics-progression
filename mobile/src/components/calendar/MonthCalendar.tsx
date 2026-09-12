@@ -112,7 +112,7 @@ export function MonthCalendar({
               className="items-center justify-center py-1"
             >
               <View
-                className={`h-8 w-8 items-center justify-center rounded-full ${
+                className={`relative h-8 w-8 items-center justify-center rounded-full ${
                   selected
                     ? "bg-blue-600"
                     : isToday(day)
@@ -131,15 +131,15 @@ export function MonthCalendar({
                 >
                   {format(day, "d")}
                 </Text>
+                {marked && (
+                  <View
+                    testID={`calendar-day-${iso}-marker`}
+                    className={`absolute bottom-0.5 self-center h-1 w-1 rounded-full ${
+                      selected ? "bg-white" : "bg-blue-500"
+                    }`}
+                  />
+                )}
               </View>
-              {marked && (
-                <View
-                  testID={`calendar-day-${iso}-marker`}
-                  className={`mt-0.5 h-1 w-1 rounded-full ${
-                    selected ? "bg-blue-600" : "bg-blue-500"
-                  }`}
-                />
-              )}
             </Pressable>
           );
         })}
