@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
@@ -38,6 +39,7 @@ interface ExerciseData {
 interface WorkoutFormData {
   title: string;
   is_public: boolean;
+  planned_date: string;
   exercises: ExerciseData[];
 }
 
@@ -48,7 +50,12 @@ export default function WorkoutExerciseForm({
   submitLabel = "Save",
 }: {
   defaultValues?: Partial<Workout>;
-  onSubmit: (data: { title: string; exercises: unknown[]; is_public: boolean }) => void;
+  onSubmit: (data: {
+    title: string;
+    exercises: unknown[];
+    is_public: boolean;
+    planned_date: string;
+  }) => void;
   isPending: boolean;
   submitLabel?: string;
 }) {
@@ -69,6 +76,7 @@ export default function WorkoutExerciseForm({
     defaultValues: {
       title: defaultValues?.title ?? "",
       is_public: defaultValues?.is_public ?? false,
+      planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
@@ -112,6 +120,7 @@ export default function WorkoutExerciseForm({
     onSubmit({
       title: data.title,
       is_public: data.is_public,
+      planned_date: data.planned_date,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
         sets: ex.sets.map((s) => ({
@@ -131,6 +140,15 @@ export default function WorkoutExerciseForm({
           {...register("title", { required: true })}
           className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           placeholder={t("workoutForm.titlePlaceholder")}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.plannedDate")}</label>
+        <input
+          type="date"
+          {...register("planned_date", { required: true })}
+          className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         />
       </div>
 

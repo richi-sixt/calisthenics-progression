@@ -27,6 +27,7 @@ export interface Workout {
   is_template: boolean;
   is_done: boolean;
   is_public: boolean;
+  planned_date: string | null;
   exercises?: Exercise[];
 }
 

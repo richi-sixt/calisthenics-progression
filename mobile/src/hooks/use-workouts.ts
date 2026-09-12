@@ -2,14 +2,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Workout, PaginatedResponse, ApiResponse } from "@/types";
 
-export function useWorkouts(page: number = 1, hideDone: boolean = false) {
+export function useWorkouts(
+  page: number = 1,
+  hideDone: boolean = false,
+  date: string | null = null
+) {
   return useQuery({
-    queryKey: ["workouts", page, hideDone],
+    queryKey: ["workouts", page, hideDone, date],
     queryFn: () =>
       api.get<PaginatedResponse<Workout>>("/workouts", {
         page: String(page),
         hide_done: hideDone ? "1" : "0",
+        ...(date ? { date } : {}),
       }),
+  });
+}
+
+export function useWorkoutsCalendar(month: string) {
+  return useQuery({
+    queryKey: ["workouts", "calendar", month],
+    queryFn: () => api.get<ApiResponse<string[]>>("/workouts/calendar", { month }),
   });
 }
 
@@ -73,8 +85,12 @@ export function useDeleteWorkout() {
 export function useCreateWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; exercises: unknown[]; is_public?: boolean }) =>
-      api.post<ApiResponse<Workout>>("/workouts", data),
+    mutationFn: (data: {
+      title: string;
+      exercises: unknown[];
+      is_public?: boolean;
+      planned_date?: string | null;
+    }) => api.post<ApiResponse<Workout>>("/workouts", data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
   });
 }
@@ -90,6 +106,7 @@ export function useUpdateWorkout() {
       title?: string;
       exercises?: unknown[];
       is_public?: boolean;
+      planned_date?: string | null;
     }) => api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });

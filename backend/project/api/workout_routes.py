@@ -1,6 +1,6 @@
 """API routes for workouts and workout templates."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
@@ -48,6 +48,17 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
     return None
 
 
+def _parse_planned_date(value: str) -> tuple[date | None, str | None]:
+    """Parse an ISO 'YYYY-MM-DD' string into a date.
+
+    Returns (parsed_date, None) on success, or (None, error) on failure.
+    """
+    try:
+        return date.fromisoformat(value), None
+    except (TypeError, ValueError):
+        return None, "Invalid planned_date. Use YYYY-MM-DD."
+
+
 # --- Workout CRUD ---
 
 
@@ -57,6 +68,7 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
 def api_list_workouts() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     hide_done = request.args.get("hide_done", 0, type=int)
+    date_str = request.args.get("date")
 
     query = db.select(Workout).filter(
         Workout.user_id == g.current_api_user.id,
@@ -64,6 +76,11 @@ def api_list_workouts() -> ResponseReturnValue:
     )
     if hide_done:
         query = query.filter(Workout.is_done == False)  # noqa: E712
+    if date_str:
+        filter_date, err = _parse_planned_date(date_str)
+        if err:
+            return jsonify({"error": err}), 400
+        query = query.filter(Workout.planned_date == filter_date)
 
     pagination = db.paginate(
         query.order_by(Workout.timestamp.desc()),
@@ -85,6 +102,38 @@ def api_list_workouts() -> ResponseReturnValue:
     )
 
 
+@bp.route("/workouts/calendar", methods=["GET"])
+@api_login_required
+@api_check_confirmed
+def api_workouts_calendar() -> ResponseReturnValue:
+    """Return distinct planned_date ISO strings for the given month."""
+    month_str = request.args.get("month", "")
+    try:
+        year, month = int(month_str[:4]), int(month_str[5:7])
+        start = date(year, month, 1)
+    except (ValueError, IndexError):
+        return jsonify({"error": "Invalid month. Use YYYY-MM."}), 400
+
+    end = date(year + (month == 12), (month % 12) + 1, 1)
+
+    rows = (
+        db.session.execute(
+            db.select(Workout.planned_date)
+            .filter(
+                Workout.user_id == g.current_api_user.id,
+                Workout.is_template == False,  # noqa: E712
+                Workout.planned_date >= start,
+                Workout.planned_date < end,
+            )
+            .distinct()
+        )
+        .scalars()
+        .all()
+    )
+    dates = sorted(d.isoformat() for d in rows if d is not None)
+    return jsonify({"data": dates})
+
+
 @bp.route("/workouts", methods=["POST"])
 @api_login_required
 @api_check_confirmed
@@ -99,11 +148,18 @@ def api_create_workout() -> ResponseReturnValue:
     if not exercises_data:
         return jsonify({"error": "At least one exercise is required."}), 400
 
+    planned_date = None
+    if data.get("planned_date"):
+        planned_date, err = _parse_planned_date(data["planned_date"])
+        if err:
+            return jsonify({"error": err}), 400
+
     workout = Workout(
         title=title,
         user_id=g.current_api_user.id,
         timestamp=datetime.now(timezone.utc),
         is_public=is_public,
+        planned_date=planned_date,
     )
     db.session.add(workout)
     db.session.flush()
@@ -146,6 +202,15 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
 
     if "is_public" in data:
         workout.is_public = bool(data["is_public"])
+
+    if "planned_date" in data:
+        if data["planned_date"] is None:
+            workout.planned_date = None
+        else:
+            parsed, err = _parse_planned_date(data["planned_date"])
+            if err:
+                return jsonify({"error": err}), 400
+            workout.planned_date = parsed
 
     if "exercises" in data:
         exercises_data = data["exercises"]

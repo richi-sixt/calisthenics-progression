@@ -1,5 +1,6 @@
 import { Alert } from "react-native";
 import { fireEvent, waitFor } from "@testing-library/react-native";
+import { format } from "date-fns";
 import { renderWithProviders } from "@/test-utils";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { api } from "@/lib/api";
@@ -22,6 +23,7 @@ function makeWorkout(overrides: Partial<Workout>): Workout {
     user_image_file: null,
     is_template: false,
     is_done: false,
+    planned_date: null,
     exercises: [],
     ...overrides,
   } as Workout;
@@ -75,6 +77,47 @@ describe("WorkoutCard", () => {
     await fireEvent.press(getByText("Mark done"));
 
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/workouts/42/toggle-done"));
+  });
+
+  it("shows a 'Planned for' badge for a future, not-yet-done workout", async () => {
+    const future = format(new Date(Date.now() + 10 * 86400000), "yyyy-MM-dd");
+    const { getByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ planned_date: future, is_done: false })} />
+    );
+    expect(getByText(/Planned for/)).toBeTruthy();
+  });
+
+  it("does not show a 'Planned for' badge once the workout is done", async () => {
+    const future = format(new Date(Date.now() + 10 * 86400000), "yyyy-MM-dd");
+    const { queryByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ planned_date: future, is_done: true })} />
+    );
+    expect(queryByText(/Planned for/)).toBeNull();
+  });
+
+  it("does not show a 'Planned for' badge for a past or today date", async () => {
+    const todayIso = format(new Date(), "yyyy-MM-dd");
+    const { queryByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ planned_date: todayIso, is_done: false })} />
+    );
+    expect(queryByText(/Planned for/)).toBeNull();
+  });
+
+  it("re-plans a workout by picking a day from the calendar modal", async () => {
+    const { getByTestId, queryByTestId } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ id: 42 })} />
+    );
+
+    await fireEvent.press(getByTestId("replan-button-42"));
+    expect(getByTestId("month-calendar")).toBeTruthy();
+
+    const firstOfMonth = format(new Date(), "yyyy-MM") + "-01";
+    await fireEvent.press(getByTestId(`calendar-day-${firstOfMonth}`));
+
+    expect(queryByTestId("month-calendar")).toBeNull();
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/workouts/42", { planned_date: firstOfMonth })
+    );
   });
 
   it("deletes the workout after the confirmation alert is accepted", async () => {

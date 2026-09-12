@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator, Switch, Modal, FlatList } from "react-native";
 import { useForm, useFieldArray, useWatch, Controller, type Control } from "react-hook-form";
+import { format, parseISO } from "date-fns";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation, type TranslationKey } from "@/i18n";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import type { Workout, ExerciseDefinition } from "@/types";
 
 function secondsToMmss(totalSeconds: number): string {
@@ -35,6 +37,7 @@ interface ExerciseData {
 interface WorkoutFormData {
   title: string;
   is_public: boolean;
+  planned_date: string;
   exercises: ExerciseData[];
 }
 
@@ -45,7 +48,12 @@ export function WorkoutForm({
   submitLabel,
 }: {
   defaultValues?: Partial<Workout>;
-  onSubmit: (data: { title: string; exercises: unknown[]; is_public: boolean }) => void;
+  onSubmit: (data: {
+    title: string;
+    exercises: unknown[];
+    is_public: boolean;
+    planned_date: string;
+  }) => void;
   isPending: boolean;
   submitLabel?: string;
 }) {
@@ -64,6 +72,7 @@ export function WorkoutForm({
     defaultValues: {
       title: defaultValues?.title ?? "",
       is_public: defaultValues?.is_public ?? false,
+      planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
@@ -101,6 +110,7 @@ export function WorkoutForm({
     onSubmit({
       title: data.title,
       is_public: data.is_public,
+      planned_date: data.planned_date,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
         sets: ex.sets.map((s) => ({
@@ -128,6 +138,18 @@ export function WorkoutForm({
               onChangeText={onChange}
               value={value}
             />
+          )}
+        />
+      </View>
+
+      <View>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.plannedDate")}</Text>
+        <Controller
+          control={control}
+          name="planned_date"
+          rules={{ required: true }}
+          render={({ field: { onChange, value } }) => (
+            <PlannedDateField value={value} onChange={onChange} testID="planned-date-field" />
           )}
         />
       </View>
@@ -360,6 +382,62 @@ function ExerciseBlock({
         </Pressable>
       </View>
     </View>
+  );
+}
+
+function PlannedDateField({
+  value,
+  onChange,
+  testID,
+}: {
+  value: string;
+  onChange: (date: string) => void;
+  testID: string;
+}) {
+  const { t, formatDate } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => new Date());
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        testID={testID}
+        className="mt-1 flex-row items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5"
+      >
+        <Text className="text-sm text-gray-900 dark:text-gray-100">
+          {formatDate(parseISO(value), "long")}
+        </Text>
+        <Text className="ml-2 text-gray-400 dark:text-gray-500">▾</Text>
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(false)}>
+        <View className="flex-1 bg-white dark:bg-gray-900 pt-4">
+          <View className="flex-row items-center justify-between px-4 pb-3">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {t("workoutForm.plannedDate")}
+            </Text>
+            <Pressable onPress={() => setOpen(false)} testID={`${testID}-close`}>
+              <Text className="text-sm text-blue-600 dark:text-blue-400">{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+          <View className="px-4">
+            <MonthCalendar
+              month={month}
+              onMonthChange={setMonth}
+              selectedDate={value}
+              onSelectDate={(date) => {
+                if (date) {
+                  onChange(date);
+                  setOpen(false);
+                }
+              }}
+              markedDates={new Set()}
+            />
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 

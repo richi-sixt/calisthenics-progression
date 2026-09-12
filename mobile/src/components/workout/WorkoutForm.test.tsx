@@ -1,9 +1,12 @@
 import { fireEvent, waitFor } from "@testing-library/react-native";
+import { format } from "date-fns";
 import { renderWithProviders } from "@/test-utils";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import type { ExerciseDefinition, Workout } from "@/types";
+
+const TODAY_ISO = format(new Date(), "yyyy-MM-dd");
 
 jest.mock("@/hooks/use-exercises", () => ({ useExercises: jest.fn() }));
 jest.mock("@/hooks/use-categories", () => ({ useCategories: jest.fn() }));
@@ -178,6 +181,7 @@ describe("WorkoutForm", () => {
       expect(onSubmit).toHaveBeenCalledWith({
         title: "New Workout",
         is_public: false,
+        planned_date: TODAY_ISO,
         exercises: [
           {
             exercise_definition_id: pushUp.id,
@@ -211,6 +215,47 @@ describe("WorkoutForm", () => {
         expect.objectContaining({ is_public: false })
       )
     );
+  });
+
+  it("defaults planned_date to today, and lets the user pick a different day via the modal", async () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByTestId, getByText, queryByTestId } =
+      await renderWithProviders(<WorkoutForm onSubmit={onSubmit} isPending={false} />);
+
+    // Opens showing today's date, formatted.
+    expect(getByTestId("planned-date-field")).toBeTruthy();
+
+    await fireEvent.press(getByTestId("planned-date-field"));
+    expect(getByTestId("month-calendar")).toBeTruthy();
+
+    // Pick the 1st of the currently displayed month.
+    const firstOfMonth = format(new Date(), "yyyy-MM") + "-01";
+    await fireEvent.press(getByTestId(`calendar-day-${firstOfMonth}`));
+
+    // Modal closes automatically on selection.
+    expect(queryByTestId("month-calendar")).toBeNull();
+
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Rescheduled");
+    await selectExercise(getByTestId, 0, pushUp);
+    await fireEvent.changeText(getByTestId("reps-0-0"), "5");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ planned_date: firstOfMonth })
+      )
+    );
+  });
+
+  it("pre-fills planned_date from defaultValues and can close the modal without changing it", async () => {
+    const future = "2099-12-25";
+    const { getByTestId, queryByTestId } = await renderForm({ planned_date: future });
+
+    await fireEvent.press(getByTestId("planned-date-field"));
+    expect(getByTestId("month-calendar")).toBeTruthy();
+
+    await fireEvent.press(getByTestId("planned-date-field-close"));
+    expect(queryByTestId("month-calendar")).toBeNull();
   });
 
   it("converts a mm:ss duration back to seconds on submit", async () => {

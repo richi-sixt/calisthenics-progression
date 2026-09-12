@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from time import time
 from typing import Any
 
@@ -219,6 +219,7 @@ class Workout(Base):
     )
     is_done = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
     is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    planned_date = db.Column(db.Date, index=True, default=lambda: date.today())
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -233,6 +234,7 @@ class Workout(Base):
         is_template: bool = False,
         is_done: bool = False,
         is_public: bool = False,
+        planned_date: date | None = None,
     ) -> None:
         """Initialize a workout session or template."""
         self.title = title
@@ -242,6 +244,8 @@ class Workout(Base):
         self.is_public = is_public
         if timestamp is not None:  # has a default
             self.timestamp = timestamp
+        if planned_date is not None:  # has a default
+            self.planned_date = planned_date
 
     def __repr__(self) -> str:
         """String representation of Workout."""
@@ -259,6 +263,9 @@ class Workout(Base):
             "is_template": self.is_template,
             "is_done": self.is_done,
             "is_public": self.is_public,
+            "planned_date": (
+                self.planned_date.isoformat() if self.planned_date else None
+            ),
         }
         if include_exercises:
             data["exercises"] = [
