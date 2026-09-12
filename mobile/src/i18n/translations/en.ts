@@ -69,10 +69,18 @@ const en = {
   "workouts.private": "Private",
   "workouts.makePublic": "Make public",
   "workouts.makePrivate": "Make private",
+  "workouts.plannedFor": "Planned for {{date}}",
+  "workouts.replan": "Re-plan",
+
+  // Calendar
+  "calendar.today": "Today",
+  "calendar.prevMonth": "Previous month",
+  "calendar.nextMonth": "Next month",
 
   // Workout form
   "workoutForm.title": "Title",
   "workoutForm.titlePlaceholder": "Workout title",
+  "workoutForm.plannedDate": "Date",
   "workoutForm.exercises": "Exercises",
   "workoutForm.selectExercise": "Select exercise...",
   "workoutForm.searchExercisePlaceholder": "Search exercises...",

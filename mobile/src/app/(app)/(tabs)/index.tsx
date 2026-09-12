@@ -2,8 +2,10 @@ import { useState } from "react";
 import { View, Text, FlatList, Pressable, Switch, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useWorkouts } from "@/hooks/use-workouts";
+import { format } from "date-fns";
+import { useWorkouts, useWorkoutsCalendar } from "@/hooks/use-workouts";
 import { WorkoutCard } from "@/components/workout/WorkoutCard";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { CardListSkeleton, WorkoutCardSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
 import type { Workout } from "@/types";
@@ -12,8 +14,16 @@ export default function WorkoutsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const [hideDone, setHideDone] = useState(false);
-  const { data, isLoading, error, refetch, isRefetching } = useWorkouts(page, hideDone);
+  const [hideDone, setHideDone] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const { data, isLoading, error, refetch, isRefetching } = useWorkouts(
+    page,
+    hideDone,
+    selectedDate
+  );
+  const { data: calendarData } = useWorkoutsCalendar(format(calendarMonth, "yyyy-MM"));
+  const markedDates = new Set(calendarData?.data ?? []);
 
   const workouts = data?.data ?? [];
   const meta = data?.meta;
@@ -53,19 +63,35 @@ export default function WorkoutsScreen() {
           </View>
         )}
 
-        {!isLoading && !error && workouts.length === 0 && (
-          <Text className="mt-6 text-gray-500 dark:text-gray-400">{t("workouts.empty")}</Text>
+        {!isLoading && !error && (
+          <FlatList
+            className="flex-1"
+            data={workouts}
+            keyExtractor={(item: Workout) => String(item.id)}
+            renderItem={({ item }) => <WorkoutCard workout={item} />}
+            ListHeaderComponent={
+              <MonthCalendar
+                month={calendarMonth}
+                onMonthChange={setCalendarMonth}
+                selectedDate={selectedDate}
+                onSelectDate={(date) => {
+                  setSelectedDate(date);
+                  setPage(1);
+                }}
+                markedDates={markedDates}
+              />
+            }
+            ListHeaderComponentStyle={{ marginBottom: 12 }}
+            ListEmptyComponent={
+              <Text className="mt-6 text-gray-500 dark:text-gray-400">
+                {t("workouts.empty")}
+              </Text>
+            }
+            ItemSeparatorComponent={() => <View className="h-3" />}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          />
         )}
-
-        <FlatList
-          className="flex-1"
-          data={workouts}
-          keyExtractor={(item: Workout) => String(item.id)}
-          renderItem={({ item }) => <WorkoutCard workout={item} />}
-          ItemSeparatorComponent={() => <View className="h-3" />}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
-        />
 
         {meta && (meta.has_prev || meta.has_next) && (
           <View className="flex-row items-center justify-between py-4">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
 import type { Workout } from "@/types";
 import { useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -35,6 +36,10 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
   const updateWorkout = useUpdateWorkout();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const isPlanned =
+    !!workout.planned_date && workout.planned_date > todayIso && !workout.is_done;
+
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div>
@@ -63,6 +68,13 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
         {workout.timestamp && (
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {formatDate(workout.timestamp, "dateTime")}
+          </p>
+        )}
+        {isPlanned && (
+          <p className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            {t("workouts.plannedFor", {
+              date: formatDate(parseISO(workout.planned_date!), "long"),
+            })}
           </p>
         )}
 
@@ -103,6 +115,18 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
           >
             {workout.is_public ? t("workouts.makePrivate") : t("workouts.makePublic")}
           </button>
+          <label className="flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+            {t("workouts.replan")}
+            <input
+              type="date"
+              value={workout.planned_date ?? ""}
+              onChange={(e) =>
+                updateWorkout.mutate({ id: workout.id, planned_date: e.target.value })
+              }
+              disabled={updateWorkout.isPending}
+              className="bg-transparent text-xs text-gray-700 dark:text-gray-300 focus:outline-none"
+            />
+          </label>
           <Link
             href={`/workouts/${workout.id}/edit`}
             className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"

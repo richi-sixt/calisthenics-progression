@@ -1,7 +1,10 @@
-import { View, Text, Pressable, Alert } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, Alert, Modal } from "react-native";
 import { useRouter } from "expo-router";
+import { format, parseISO } from "date-fns";
 import type { Workout, Exercise } from "@/types";
 import { useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { useTranslation, type TranslationKey } from "@/i18n";
 
 function formatSetSummary(exercise: Exercise, t: (key: TranslationKey) => string): string {
@@ -27,6 +30,12 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
   const updateWorkout = useUpdateWorkout();
+  const [replanOpen, setReplanOpen] = useState(false);
+  const [replanMonth, setReplanMonth] = useState(() => new Date());
+
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const isPlanned =
+    !!workout.planned_date && workout.planned_date > todayIso && !workout.is_done;
 
   const confirmDelete = () => {
     Alert.alert(t("workouts.deleteConfirmTitle"), t("workouts.deleteConfirmMessage"), [
@@ -56,6 +65,13 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
         {workout.timestamp && (
           <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {formatDate(workout.timestamp, "dateTime")}
+          </Text>
+        )}
+        {isPlanned && (
+          <Text className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            {t("workouts.plannedFor", {
+              date: formatDate(parseISO(workout.planned_date!), "long"),
+            })}
           </Text>
         )}
       </Pressable>
@@ -93,6 +109,15 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
           </Text>
         </Pressable>
         <Pressable
+          onPress={() => setReplanOpen(true)}
+          testID={`replan-button-${workout.id}`}
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
+        >
+          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            {t("workouts.replan")}
+          </Text>
+        </Pressable>
+        <Pressable
           onPress={() => router.push(`/workouts/${workout.id}/edit`)}
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
         >
@@ -102,6 +127,38 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
           <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("common.delete")}</Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={replanOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setReplanOpen(false)}
+      >
+        <View className="flex-1 bg-white dark:bg-gray-900 pt-4">
+          <View className="flex-row items-center justify-between px-4 pb-3">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {t("workouts.replan")}
+            </Text>
+            <Pressable onPress={() => setReplanOpen(false)} testID="replan-modal-close">
+              <Text className="text-sm text-blue-600 dark:text-blue-400">{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+          <View className="px-4">
+            <MonthCalendar
+              month={replanMonth}
+              onMonthChange={setReplanMonth}
+              selectedDate={workout.planned_date}
+              onSelectDate={(date) => {
+                if (date) {
+                  updateWorkout.mutate({ id: workout.id, planned_date: date });
+                  setReplanOpen(false);
+                }
+              }}
+              markedDates={new Set()}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

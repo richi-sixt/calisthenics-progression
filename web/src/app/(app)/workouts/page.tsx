@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
 import Link from "next/link";
-import { useWorkouts } from "@/hooks/use-workouts";
+import { useWorkouts, useWorkoutsCalendar } from "@/hooks/use-workouts";
 import WorkoutCard from "@/components/workout/workout-card";
+import MonthCalendar from "@/components/calendar/month-calendar";
 import { useTranslation } from "@/i18n";
 import { CardListSkeleton, WorkoutCardSkeleton } from "@/components/ui/skeleton";
 
 export default function WorkoutsPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const [hideDone, setHideDone] = useState(false);
-  const { data, isLoading, error } = useWorkouts(page, hideDone);
+  const [hideDone, setHideDone] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const { data, isLoading, error } = useWorkouts(page, hideDone, selectedDate);
+  const { data: calendarData } = useWorkoutsCalendar(format(calendarMonth, "yyyy-MM"));
+  const markedDates = new Set(calendarData?.data ?? []);
 
   const workouts = data?.data ?? [];
   const meta = data?.meta;
@@ -40,6 +46,19 @@ export default function WorkoutsPage() {
             {t("workouts.new")}
           </Link>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <MonthCalendar
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          selectedDate={selectedDate}
+          onSelectDate={(date) => {
+            setSelectedDate(date);
+            setPage(1);
+          }}
+          markedDates={markedDates}
+        />
       </div>
 
       {isLoading && (

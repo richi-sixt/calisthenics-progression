@@ -1,6 +1,9 @@
-import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useWorkout, useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
+import { format, parseISO } from "date-fns";
+import { useWorkout, useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { useTranslation } from "@/i18n";
 
 export default function WorkoutDetailScreen() {
@@ -11,6 +14,9 @@ export default function WorkoutDetailScreen() {
   const { data, isLoading, error } = useWorkout(workoutId);
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
+  const updateWorkout = useUpdateWorkout();
+  const [replanOpen, setReplanOpen] = useState(false);
+  const [replanMonth, setReplanMonth] = useState(() => new Date());
 
   if (isLoading) {
     return (
@@ -29,6 +35,9 @@ export default function WorkoutDetailScreen() {
   }
 
   const workout = data.data;
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const isPlanned =
+    !!workout.planned_date && workout.planned_date > todayIso && !workout.is_done;
 
   const confirmDelete = () => {
     Alert.alert(t("workouts.deleteConfirmTitle"), t("workouts.deleteConfirmMessage"), [
@@ -49,6 +58,13 @@ export default function WorkoutDetailScreen() {
           {formatDate(workout.timestamp, "dateTime")}
         </Text>
       )}
+      {isPlanned && (
+        <Text className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+          {t("workouts.plannedFor", {
+            date: formatDate(parseISO(workout.planned_date!), "long"),
+          })}
+        </Text>
+      )}
 
       <View className="mt-3 flex-row flex-wrap gap-2">
         <Pressable
@@ -56,6 +72,15 @@ export default function WorkoutDetailScreen() {
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
         >
           <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setReplanOpen(true)}
+          testID="replan-button"
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
+        >
+          <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            {t("workouts.replan")}
+          </Text>
         </Pressable>
         <Pressable
           onPress={() => toggleDone.mutate(workoutId)}
@@ -109,6 +134,38 @@ export default function WorkoutDetailScreen() {
       ) : (
         <Text className="mt-6 text-gray-500 dark:text-gray-400">{t("workouts.noExercises")}</Text>
       )}
+
+      <Modal
+        visible={replanOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setReplanOpen(false)}
+      >
+        <View className="flex-1 bg-white dark:bg-gray-900 pt-4">
+          <View className="flex-row items-center justify-between px-4 pb-3">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {t("workouts.replan")}
+            </Text>
+            <Pressable onPress={() => setReplanOpen(false)} testID="replan-modal-close">
+              <Text className="text-sm text-blue-600 dark:text-blue-400">{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+          <View className="px-4">
+            <MonthCalendar
+              month={replanMonth}
+              onMonthChange={setReplanMonth}
+              selectedDate={workout.planned_date}
+              onSelectDate={(date) => {
+                if (date) {
+                  updateWorkout.mutate({ id: workoutId, planned_date: date });
+                  setReplanOpen(false);
+                }
+              }}
+              markedDates={new Set()}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

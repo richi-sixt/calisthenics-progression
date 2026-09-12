@@ -70,10 +70,18 @@ const de: Record<keyof typeof en, string> = {
   "workouts.private": "Privat",
   "workouts.makePublic": "Öffentlich machen",
   "workouts.makePrivate": "Privat machen",
+  "workouts.plannedFor": "Geplant für {{date}}",
+  "workouts.replan": "Umplanen",
+
+  // Calendar
+  "calendar.today": "Heute",
+  "calendar.prevMonth": "Vorheriger Monat",
+  "calendar.nextMonth": "Nächster Monat",
 
   // Workout form
   "workoutForm.title": "Titel",
   "workoutForm.titlePlaceholder": "Workout-Titel",
+  "workoutForm.plannedDate": "Datum",
   "workoutForm.exercises": "Übungen",
   "workoutForm.selectExercise": "Übung auswählen...",
   "workoutForm.addExercise": "+ Übung hinzufügen",

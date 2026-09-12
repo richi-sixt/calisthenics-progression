@@ -2,7 +2,13 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useWorkout, useToggleDone, useDeleteWorkout } from "@/hooks/use-workouts";
+import { format, parseISO } from "date-fns";
+import {
+  useWorkout,
+  useToggleDone,
+  useDeleteWorkout,
+  useUpdateWorkout,
+} from "@/hooks/use-workouts";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -19,6 +25,7 @@ export default function WorkoutDetailPage({
   const { data, isLoading, error } = useWorkout(workoutId);
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
+  const updateWorkout = useUpdateWorkout();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (isLoading) {
@@ -30,6 +37,9 @@ export default function WorkoutDetailPage({
   }
 
   const workout = data.data;
+  const todayIso = format(new Date(), "yyyy-MM-dd");
+  const isPlanned =
+    !!workout.planned_date && workout.planned_date > todayIso && !workout.is_done;
 
   return (
     <div>
@@ -48,8 +58,27 @@ export default function WorkoutDetailPage({
               {formatDate(workout.timestamp, "dateTime")}
             </p>
           )}
+          {isPlanned && (
+            <p className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+              {t("workouts.plannedFor", {
+                date: formatDate(parseISO(workout.planned_date!), "long"),
+              })}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+            {t("workouts.replan")}
+            <input
+              type="date"
+              value={workout.planned_date ?? ""}
+              onChange={(e) =>
+                updateWorkout.mutate({ id: workoutId, planned_date: e.target.value })
+              }
+              disabled={updateWorkout.isPending}
+              className="bg-transparent text-sm text-gray-700 dark:text-gray-300 focus:outline-none"
+            />
+          </label>
           <Link
             href={`/workouts/${workoutId}/edit`}
             className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
