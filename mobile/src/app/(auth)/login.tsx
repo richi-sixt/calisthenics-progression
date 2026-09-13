@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Linking } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase/client";
 import { useTranslation } from "@/i18n";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 type LoginForm = {
   email: string;
@@ -29,7 +30,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
+    <ScrollView
+      className="flex-1 bg-white dark:bg-gray-900"
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 32 }}
+    >
       <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t("auth.login")}</Text>
 
       <Controller
@@ -97,6 +101,29 @@ export default function LoginScreen() {
           <Text className="text-center text-blue-600 dark:text-blue-400">{t("auth.forgotPassword")}</Text>
         </Pressable>
       </Link>
-    </View>
+
+      <View className="mt-8 gap-3">
+        <Text className="text-sm text-gray-600 dark:text-gray-400">{t("landing.about1")}</Text>
+        <Text className="text-sm text-gray-600 dark:text-gray-400">{t("landing.aboutInactivity")}</Text>
+        <View className="h-px bg-gray-200 dark:bg-gray-700" />
+        <View>
+          <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("landing.featuresTitle")}</Text>
+          <View className="mt-2 gap-1">
+            <Text className="text-sm text-gray-600 dark:text-gray-400">• {t("landing.feature1")}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">• {t("landing.feature2")}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">• {t("landing.feature3")}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">• {t("landing.feature4")}</Text>
+            <Text className="text-sm text-gray-600 dark:text-gray-400">• {t("landing.feature5")}</Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 dark:bg-gray-700" />
+        <Pressable onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)}>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">
+            {t("landing.contactPrompt")}{" "}
+            <Text className="text-blue-600 dark:text-blue-400">{CONTACT_EMAIL}</Text>
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 }

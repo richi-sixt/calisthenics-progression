@@ -126,6 +126,7 @@ Create `web/.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_CONTACT_USERNAME=your-app-username
 ```
 
 Run the dev server:
@@ -151,6 +152,7 @@ Create `mobile/.env.local`:
 EXPO_PUBLIC_API_URL=http://localhost:5001/api/v1
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+EXPO_PUBLIC_CONTACT_USERNAME=your-app-username
 ```
 
 The app uses native modules not supported by Expo Go, so it needs a

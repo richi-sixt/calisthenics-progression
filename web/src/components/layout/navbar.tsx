@@ -12,6 +12,7 @@ import {
 } from "@headlessui/react";
 import { useTranslation } from "@/i18n";
 import { useUnreadMessageCount } from "@/hooks/use-notifications";
+import { CONTACT_USERNAME } from "@/lib/contact";
 
 function CloseIcon(props: React.ComponentPropsWithoutRef<"svg">) {
   return (
@@ -207,6 +208,9 @@ function MobileNavigation() {
                 </span>
               )}
             </MobileNavItem>
+            <MobileNavItem href={`/messages/new?to=${CONTACT_USERNAME}`}>
+              {t("nav.contact")}
+            </MobileNavItem>
             <MobileNavItem href="/profile">{t("nav.profile")}</MobileNavItem>
           </ul>
         </nav>
@@ -323,6 +327,9 @@ export default function Navbar() {
                     {unreadCount}
                   </span>
                 )}
+              </NavLink>
+              <NavLink href={`/messages/new?to=${CONTACT_USERNAME}`}>
+                {t("nav.contact")}
               </NavLink>
               <NavLink href="/profile">{t("nav.profile")}</NavLink>
               <form action="/auth/logout" method="POST">

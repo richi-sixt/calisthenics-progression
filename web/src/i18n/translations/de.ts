@@ -8,6 +8,7 @@ const de: Record<keyof typeof en, string> = {
   "nav.categories": "Kategorien",
   "nav.explore": "Entdecken",
   "nav.messages": "Nachrichten",
+  "nav.contact": "Kontakt",
   "nav.profile": "Profil",
   "nav.logout": "Abmelden",
   "nav.menu": "Menü",
@@ -233,6 +234,16 @@ const de: Record<keyof typeof en, string> = {
   // Landing
   "landing.title": "Calisthenics Progression",
   "landing.subtitle": "Verfolge deine Workouts, verwalte Übungen und steigere deine Fähigkeiten.",
+  "landing.about1": "Ich bin Calisthenics-Enthusiast und entwickle diese App nebenbei als Hobby – es kann also mal etwas ruckeln oder ungewohnt aussehen.",
+  "landing.aboutInactivity": "Konten ohne Aktivität werden von Zeit zu Zeit gelöscht, um die Datenbank schlank zu halten.",
+  "landing.about2": "Du musst dich registrieren, um den Tracker zu verwenden:",
+  "landing.featuresTitle": "Features:",
+  "landing.feature1": "Übungen erstellen",
+  "landing.feature2": "Workouts mit mehreren Übungen und Sets erstellen",
+  "landing.feature3": "Workouts von anderen Athleten entdecken",
+  "landing.feature4": "Andere Athleten folgen",
+  "landing.feature5": "Private Nachrichten an andere Athleten senden",
+  "landing.contactPrompt": "Fragen oder Feedback? Kontaktiere mich:",
 
   // Confirm dialog
   "confirm.cancel": "Abbrechen",

@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { ScrollView, View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useForm, Controller } from "react-hook-form";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { useSendMessage } from "@/hooks/use-messages";
 import { useTranslation } from "@/i18n";
+import { CONTACT_USERNAME } from "@/lib/contact";
 
 type SendMessageFormData = {
   recipient: string;
@@ -11,9 +13,15 @@ type SendMessageFormData = {
 
 export default function NewMessageScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const { to } = useLocalSearchParams<{ to?: string }>();
+  const isContact = to === CONTACT_USERNAME;
   const sendMessage = useSendMessage();
+
+  useEffect(() => {
+    navigation.setOptions({ title: isContact ? t("nav.contact") : t("messages.new") });
+  }, [navigation, isContact, t]);
 
   const { control, handleSubmit } = useForm<SendMessageFormData>({
     defaultValues: { recipient: to ?? "", body: "" },
