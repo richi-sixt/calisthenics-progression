@@ -63,6 +63,16 @@
     "test": "jest --forceExit"
   },
   "private": true,
+  "overrides": {
+    "@xmldom/xmldom": "0.8.15",
+    "js-yaml": "3.15.2",
+    "@expo/xcpretty": {
+      "js-yaml": "4.3.2"
+    },
+    "plist": {
+      "@xmldom/xmldom": "0.9.12"
+    }
+  },
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
