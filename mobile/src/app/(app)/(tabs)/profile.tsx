@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateProfile, useUploadProfilePicture, useDeleteAccount } from "@/hooks/use-update-profile";
 import { supabase } from "@/lib/supabase/client";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
+import { CONTACT_USERNAME } from "@/lib/contact";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { t, locale, setLocale, formatDate } = useTranslation();
   const { data, isLoading, error } = useProfile();
   const updateProfile = useUpdateProfile();
@@ -273,6 +276,17 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        <View className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t("nav.contact")}</Text>
+          <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t("landing.contactPrompt")}</Text>
+          <Pressable
+            onPress={() => router.push({ pathname: "/messages/new", params: { to: CONTACT_USERNAME } })}
+            className="mt-3 self-start rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
+          >
+            <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("messages.sendMessage")}</Text>
+          </Pressable>
         </View>
 
         <View className="mt-6 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800 p-4">

@@ -6,6 +6,7 @@ const en = {
   "nav.categories": "Categories",
   "nav.explore": "Explore",
   "nav.messages": "Messages",
+  "nav.contact": "Contact",
   "nav.profile": "Profile",
   "nav.logout": "Logout",
   "nav.menu": "Menu",
@@ -231,6 +232,16 @@ const en = {
   // Landing
   "landing.title": "Calisthenics Progression",
   "landing.subtitle": "Track your workouts, manage exercises, and progress your skills.",
+  "landing.about1": "I'm a calisthenics enthusiast who builds this app as a hobby on the side — so it might occasionally be a bit rough around the edges.",
+  "landing.aboutInactivity": "Accounts with no activity for a longer period may be deleted from time to time to keep the database tidy.",
+  "landing.about2": "You need to register to use the tracker:",
+  "landing.featuresTitle": "Features:",
+  "landing.feature1": "Create exercises",
+  "landing.feature2": "Create workouts with multiple exercises and sets",
+  "landing.feature3": "Discover workouts from other athletes",
+  "landing.feature4": "Follow other athletes",
+  "landing.feature5": "Send private messages to other athletes",
+  "landing.contactPrompt": "Questions or feedback? Contact me:",
 
   // Confirm dialog
   "confirm.cancel": "Cancel",
