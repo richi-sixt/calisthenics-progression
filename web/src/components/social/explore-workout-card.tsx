@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Workout } from "@/types";
 import { useTranslation } from "@/i18n";
+import { useFollow, useUnfollow } from "@/hooks/use-social";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -20,15 +21,23 @@ function ProfilePic({ imageFile, username }: { imageFile: string | null; usernam
   );
 }
 
-export default function ExploreWorkoutCard({ workout }: { workout: Workout }) {
+export default function ExploreWorkoutCard({
+  workout,
+  showOwner = true,
+}: {
+  workout: Workout;
+  showOwner?: boolean;
+}) {
   const { t, formatDate } = useTranslation();
+  const follow = useFollow();
+  const unfollow = useUnfollow();
   const exerciseCount = workout.exercises?.length ?? 0;
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between">
         <div className="flex min-w-0 flex-1 gap-3">
-          {workout.username && (
+          {showOwner && workout.username && (
             <Link href={`/users/${workout.username}`} className="flex-shrink-0">
               <ProfilePic
                 imageFile={workout.user_image_file}
@@ -39,13 +48,34 @@ export default function ExploreWorkoutCard({ workout }: { workout: Workout }) {
           <div className="min-w-0 flex-1">
             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{workout.title}</p>
             <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-              {workout.username && (
-                <Link
-                  href={`/users/${workout.username}`}
-                  className="font-medium text-blue-600 hover:text-blue-800"
-                >
-                  @{workout.username}
-                </Link>
+              {showOwner && workout.username && (
+                <span className="flex items-center gap-1.5">
+                  <Link
+                    href={`/users/${workout.username}`}
+                    className="font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    @{workout.username}
+                  </Link>
+                  {workout.is_following ? (
+                    <button
+                      type="button"
+                      onClick={() => unfollow.mutate(workout.username!)}
+                      disabled={unfollow.isPending}
+                      className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    >
+                      {t("social.followingPill")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => follow.mutate(workout.username!)}
+                      disabled={follow.isPending}
+                      className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                    >
+                      {t("social.follow")}
+                    </button>
+                  )}
+                </span>
               )}
               {workout.timestamp && (
                 <time dateTime={workout.timestamp}>

@@ -55,9 +55,31 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
             <View className="rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5">
               <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{exercise.counting_type}</Text>
             </View>
-            {isOwner && exercise.is_public && (
-              <View className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5">
-                <Text className="text-xs font-medium text-blue-700 dark:text-blue-400">{t("exercises.public")}</Text>
+            {isOwner && (
+              <View
+                className={`rounded-full px-2.5 py-0.5 ${
+                  exercise.visibility === "public"
+                    ? "bg-blue-100 dark:bg-blue-900/30"
+                    : exercise.visibility === "followers"
+                      ? "bg-indigo-100 dark:bg-indigo-900/30"
+                      : "bg-gray-100 dark:bg-gray-700"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-medium ${
+                    exercise.visibility === "public"
+                      ? "text-blue-700 dark:text-blue-400"
+                      : exercise.visibility === "followers"
+                        ? "text-indigo-700 dark:text-indigo-400"
+                        : "text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  {exercise.visibility === "public"
+                    ? t("exercises.public")
+                    : exercise.visibility === "followers"
+                      ? t("exercises.followers")
+                      : t("exercises.private")}
+                </Text>
               </View>
             )}
             {categoryNames.map((name) => (
@@ -90,15 +112,21 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
             <Pressable onPress={() => router.push(`/exercises/${exercise.id}/edit`)} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
               <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
             </Pressable>
-            <Pressable
-              onPress={() => updateExercise.mutate({ id: exercise.id, is_public: !exercise.is_public })}
-              disabled={updateExercise.isPending}
-              className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
-            >
-              <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {exercise.is_public ? t("exercises.makePrivate") : t("exercises.makePublic")}
-              </Text>
-            </Pressable>
+            <View className="flex-row overflow-hidden rounded-md border border-gray-300 dark:border-gray-600">
+              {(["public", "followers", "private"] as const).map((opt) => (
+                <Pressable
+                  key={opt}
+                  onPress={() => updateExercise.mutate({ id: exercise.id, visibility: opt })}
+                  disabled={updateExercise.isPending}
+                  testID={`visibility-option-${exercise.id}-${opt}`}
+                  className={`px-2.5 py-1.5 ${exercise.visibility === opt ? "bg-blue-600" : "bg-gray-100 dark:bg-gray-700"}`}
+                >
+                  <Text className={`text-xs font-medium ${exercise.visibility === opt ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>
+                    {opt === "public" ? t("exercises.public") : opt === "followers" ? t("exercises.followers") : t("exercises.private")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
             <Pressable onPress={confirmArchive} disabled={deleteExercise.isPending} className="rounded-md px-3 py-1.5">
               <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>
             </Pressable>

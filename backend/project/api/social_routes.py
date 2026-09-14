@@ -15,22 +15,50 @@ from project.models import Message, Notification, User, Workout
 @api_check_confirmed
 def api_explore() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
+    scope = request.args.get("scope", "all")
+    username = request.args.get("username")
+
+    followed_ids = {u.id for u in g.current_api_user.followed}
+
+    query = db.select(Workout).filter(
+        Workout.user_id != g.current_api_user.id,
+        Workout.is_template == False,  # noqa: E712
+        db.or_(
+            Workout.visibility == "public",
+            db.and_(
+                Workout.visibility == "followers",
+                Workout.user_id.in_(followed_ids),
+            ),
+        ),
+    )
+
+    if username:
+        target = (
+            db.session.execute(db.select(User).filter_by(username=username))
+            .scalars()
+            .first()
+        )
+        if target is None:
+            return jsonify({"error": "User not found."}), 404
+        query = query.filter(Workout.user_id == target.id)
+    elif scope == "following":
+        query = query.filter(Workout.user_id.in_(followed_ids))
 
     pagination = db.paginate(
-        db.select(Workout)
-        .filter(
-            Workout.user_id != g.current_api_user.id,
-            Workout.is_template == False,  # noqa: E712
-            Workout.is_public == True,  # noqa: E712
-        )
-        .order_by(Workout.timestamp.desc()),
+        query.order_by(Workout.timestamp.desc()),
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
         error_out=False,
     )
+
+    def _serialize(w: Workout) -> dict:
+        data = w.to_dict(include_exercises=True)
+        data["is_following"] = w.user_id in followed_ids
+        return data
+
     return jsonify(
         {
-            "data": [w.to_dict(include_exercises=True) for w in pagination.items],
+            "data": [_serialize(w) for w in pagination.items],
             "meta": {
                 "page": pagination.page,
                 "per_page": pagination.per_page,
@@ -57,7 +85,9 @@ def api_get_user(username: str) -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     workouts_query = user.workouts.filter(Workout.is_template == False)  # noqa: E712
     if user.id != g.current_api_user.id:
-        workouts_query = workouts_query.filter(Workout.is_public == True)  # noqa: E712
+        is_follower = g.current_api_user.is_following(user)
+        allowed = ("public", "followers") if is_follower else ("public",)
+        workouts_query = workouts_query.filter(Workout.visibility.in_(allowed))
     workouts_pagination = (
         workouts_query.order_by(Workout.timestamp.desc())
         .paginate(
@@ -74,7 +104,9 @@ def api_get_user(username: str) -> ResponseReturnValue:
         {
             "data": {
                 "user": user_data,
-                "workouts": [w.to_dict() for w in workouts_pagination.items],
+                "workouts": [
+                    w.to_dict(include_exercises=True) for w in workouts_pagination.items
+                ],
             },
             "meta": {
                 "page": workouts_pagination.page,
@@ -123,6 +155,70 @@ def api_unfollow(username: str) -> ResponseReturnValue:
     g.current_api_user.unfollow(user)
     db.session.commit()
     return jsonify({"data": {"message": f"Unfollowed {username}."}}), 200
+
+
+def _paginated_user_list(query, page: int) -> ResponseReturnValue:
+    """Paginate a dynamic User relationship query and serialize as summaries."""
+    followed_ids = {u.id for u in g.current_api_user.followed}
+    pagination = query.paginate(
+        page=page,
+        per_page=current_app.config["WORKOUTS_PER_PAGE"],
+        error_out=False,
+    )
+    return jsonify(
+        {
+            "data": [
+                {
+                    "id": u.id,
+                    "username": u.username,
+                    "image_file": u.image_file,
+                    "is_following": u.id in followed_ids,
+                }
+                for u in pagination.items
+            ],
+            "meta": {
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "total": pagination.total,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev,
+            },
+        }
+    )
+
+
+@bp.route("/users/<username>/followers", methods=["GET"])
+@api_login_required
+@api_check_confirmed
+def api_list_followers(username: str) -> ResponseReturnValue:
+    user = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if user is None:
+        return jsonify({"error": "User not found."}), 404
+
+    page = request.args.get("page", 1, type=int)
+    query = user.followers.order_by(User.username.asc())  # type: ignore[attr-defined]
+    return _paginated_user_list(query, page)
+
+
+@bp.route("/users/<username>/following", methods=["GET"])
+@api_login_required
+@api_check_confirmed
+def api_list_following(username: str) -> ResponseReturnValue:
+    user = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if user is None:
+        return jsonify({"error": "User not found."}), 404
+
+    page = request.args.get("page", 1, type=int)
+    query = user.followed.order_by(User.username.asc())
+    return _paginated_user_list(query, page)
 
 
 @bp.route("/messages", methods=["GET"])

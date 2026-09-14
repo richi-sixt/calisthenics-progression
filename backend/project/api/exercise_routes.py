@@ -5,8 +5,8 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import (ExerciseCategory, ExerciseDefinition,
-                            ProgressionLevel)
+from project.models import (VISIBILITY_VALUES, ExerciseCategory,
+                            ExerciseDefinition, ProgressionLevel)
 from sqlalchemy import or_
 
 
@@ -26,10 +26,15 @@ def api_list_exercises() -> ResponseReturnValue:
     if user_filter == "mine":
         query = query.filter(ExerciseDefinition.user_id == g.current_api_user.id)
     else:
+        followed_ids = {u.id for u in g.current_api_user.followed}
         query = query.filter(
             or_(
                 ExerciseDefinition.user_id == g.current_api_user.id,
-                ExerciseDefinition.is_public == True,  # noqa: E712
+                ExerciseDefinition.visibility == "public",
+                db.and_(
+                    ExerciseDefinition.visibility == "followers",
+                    ExerciseDefinition.user_id.in_(followed_ids),
+                ),
             )
         )
 
@@ -66,12 +71,14 @@ def api_create_exercise() -> ResponseReturnValue:
     title = data.get("title", "").strip()
     description = data.get("description")
     counting_type = data.get("counting_type", "reps")
-    is_public = bool(data.get("is_public", False))
+    visibility = data.get("visibility", "followers")
 
     if not title:
         return jsonify({"error": "Title is required."}), 400
     if counting_type not in ("reps", "duration"):
         return jsonify({"error": "counting_type must be 'reps' or 'duration'."}), 400
+    if visibility not in VISIBILITY_VALUES:
+        return jsonify({"error": "Invalid visibility."}), 400
 
     # Check for duplicate title per user
     existing = (
@@ -91,7 +98,7 @@ def api_create_exercise() -> ResponseReturnValue:
         description=description,
         user_id=g.current_api_user.id,
         counting_type=counting_type,
-        is_public=is_public,
+        visibility=visibility,
     )
     db.session.add(exercise)
     db.session.flush()
@@ -129,9 +136,7 @@ def api_create_exercise() -> ResponseReturnValue:
 @api_check_confirmed
 def api_get_exercise(exercise_id: int) -> ResponseReturnValue:
     exercise = db.session.get(ExerciseDefinition, exercise_id)
-    if exercise is None or (
-        exercise.user_id != g.current_api_user.id and not exercise.is_public
-    ):
+    if exercise is None or not exercise.is_visible_to(g.current_api_user):
         return jsonify({"error": "Exercise not found."}), 404
     return jsonify({"data": exercise.to_dict()})
 
@@ -170,8 +175,10 @@ def api_update_exercise(exercise_id: int) -> ResponseReturnValue:
     if "description" in data:
         exercise.description = data["description"]
 
-    if "is_public" in data:
-        exercise.is_public = bool(data["is_public"])
+    if "visibility" in data:
+        if data["visibility"] not in VISIBILITY_VALUES:
+            return jsonify({"error": "Invalid visibility."}), 400
+        exercise.visibility = data["visibility"]
 
     if "counting_type" in data:
         if data["counting_type"] not in ("reps", "duration"):
@@ -237,9 +244,7 @@ def api_delete_exercise(exercise_id: int) -> ResponseReturnValue:
 def api_copy_exercise(exercise_id: int) -> ResponseReturnValue:
     """Copy another user's exercise definition to the current user."""
     original = db.session.get(ExerciseDefinition, exercise_id)
-    if original is None or (
-        original.user_id != g.current_api_user.id and not original.is_public
-    ):
+    if original is None or not original.is_visible_to(g.current_api_user):
         return jsonify({"error": "Exercise not found."}), 404
     if original.user_id == g.current_api_user.id:
         return jsonify({"error": "Cannot copy your own exercise."}), 400

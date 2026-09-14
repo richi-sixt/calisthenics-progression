@@ -54,13 +54,31 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
               {workout.is_done ? t("workouts.done") : t("workouts.pendent")}
             </Text>
           </View>
-          {workout.is_public && (
-            <View className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5">
-              <Text className="text-xs font-medium text-blue-700 dark:text-blue-400">
-                {t("workouts.public")}
-              </Text>
-            </View>
-          )}
+          <View
+            className={`rounded-full px-2 py-0.5 ${
+              workout.visibility === "public"
+                ? "bg-blue-100 dark:bg-blue-900/30"
+                : workout.visibility === "followers"
+                  ? "bg-indigo-100 dark:bg-indigo-900/30"
+                  : "bg-gray-100 dark:bg-gray-700"
+            }`}
+          >
+            <Text
+              className={`text-xs font-medium ${
+                workout.visibility === "public"
+                  ? "text-blue-700 dark:text-blue-400"
+                  : workout.visibility === "followers"
+                    ? "text-indigo-700 dark:text-indigo-400"
+                    : "text-gray-600 dark:text-gray-400"
+              }`}
+            >
+              {workout.visibility === "public"
+                ? t("workouts.public")
+                : workout.visibility === "followers"
+                  ? t("workouts.followers")
+                  : t("workouts.private")}
+            </Text>
+          </View>
         </View>
         {workout.timestamp && (
           <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -99,15 +117,21 @@ export function WorkoutCard({ workout }: { workout: Workout }) {
             {workout.is_done ? t("workouts.done") : t("workouts.markDone")}
           </Text>
         </Pressable>
-        <Pressable
-          onPress={() => updateWorkout.mutate({ id: workout.id, is_public: !workout.is_public })}
-          disabled={updateWorkout.isPending}
-          className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
-        >
-          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {workout.is_public ? t("workouts.makePrivate") : t("workouts.makePublic")}
-          </Text>
-        </Pressable>
+        <View className="flex-row overflow-hidden rounded-md border border-gray-300 dark:border-gray-600">
+          {(["public", "followers", "private"] as const).map((opt) => (
+            <Pressable
+              key={opt}
+              onPress={() => updateWorkout.mutate({ id: workout.id, visibility: opt })}
+              disabled={updateWorkout.isPending}
+              testID={`visibility-option-${workout.id}-${opt}`}
+              className={`px-2.5 py-1.5 ${workout.visibility === opt ? "bg-blue-600" : "bg-gray-100 dark:bg-gray-700"}`}
+            >
+              <Text className={`text-xs font-medium ${workout.visibility === opt ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>
+                {opt === "public" ? t("workouts.public") : opt === "followers" ? t("workouts.followers") : t("workouts.private")}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
         <Pressable
           onPress={() => setReplanOpen(true)}
           testID={`replan-button-${workout.id}`}

@@ -2,6 +2,7 @@ import { View, Text, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import type { Workout, Exercise } from "@/types";
 import { useTranslation, type TranslationKey } from "@/i18n";
+import { useFollow, useUnfollow } from "@/hooks/use-social";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -17,9 +18,11 @@ function formatSetDetails(exercise: Exercise, t: (key: TranslationKey) => string
     .join(", ");
 }
 
-export function ExploreWorkoutCard({ workout }: { workout: Workout }) {
+export function ExploreWorkoutCard({ workout, showOwner = true }: { workout: Workout; showOwner?: boolean }) {
   const router = useRouter();
   const { t, formatDate } = useTranslation();
+  const follow = useFollow();
+  const unfollow = useUnfollow();
   const exerciseCount = workout.exercises?.length ?? 0;
   const profilePicUrl = workout.user_image_file ? `${API_BASE}/static/profile_pics/${workout.user_image_file}` : null;
 
@@ -27,7 +30,7 @@ export function ExploreWorkoutCard({ workout }: { workout: Workout }) {
     <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 flex-row gap-3">
-          {workout.username && (
+          {showOwner && workout.username && (
             <Pressable onPress={() => router.push(`/users/${workout.username}`)}>
               {profilePicUrl ? (
                 <Image source={{ uri: profilePicUrl }} className="h-10 w-10 rounded-full" />
@@ -41,10 +44,29 @@ export function ExploreWorkoutCard({ workout }: { workout: Workout }) {
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{workout.title}</Text>
             <View className="mt-1 flex-row flex-wrap items-center gap-2">
-              {workout.username && (
-                <Pressable onPress={() => router.push(`/users/${workout.username}`)}>
-                  <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">@{workout.username}</Text>
-                </Pressable>
+              {showOwner && workout.username && (
+                <View className="flex-row items-center gap-1.5">
+                  <Pressable onPress={() => router.push(`/users/${workout.username}`)}>
+                    <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">@{workout.username}</Text>
+                  </Pressable>
+                  {workout.is_following ? (
+                    <Pressable
+                      onPress={() => unfollow.mutate(workout.username!)}
+                      disabled={unfollow.isPending}
+                      className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5"
+                    >
+                      <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("social.followingPill")}</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => follow.mutate(workout.username!)}
+                      disabled={follow.isPending}
+                      className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5"
+                    >
+                      <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{t("social.follow")}</Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
               {workout.timestamp && <Text className="text-sm text-gray-500 dark:text-gray-400">{formatDate(workout.timestamp)}</Text>}
               <Text className="text-sm text-gray-500 dark:text-gray-400">{exerciseCount} {exerciseCount === 1 ? t("explore.exercise") : t("explore.exercises")}</Text>

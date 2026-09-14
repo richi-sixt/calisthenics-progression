@@ -28,8 +28,12 @@ export function UserProfileHeader({ user }: { user: UserWithFollowing }) {
           <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">@{user.username}</Text>
           {user.about_me && <Text className="mt-1 text-sm text-gray-600 dark:text-gray-400">{user.about_me}</Text>}
           <View className="mt-2 flex-row items-center gap-4">
-            <Text className="text-sm text-gray-500 dark:text-gray-400"><Text className="font-bold text-gray-900 dark:text-gray-100">{user.follower_count}</Text> {t("profile.followers")}</Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400"><Text className="font-bold text-gray-900 dark:text-gray-100">{user.following_count}</Text> {t("profile.following")}</Text>
+            <Pressable onPress={() => router.push(`/users/${user.username}/followers`)}>
+              <Text className="text-sm text-gray-500 dark:text-gray-400"><Text className="font-bold text-gray-900 dark:text-gray-100">{user.follower_count}</Text> {t("profile.followers")}</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push(`/users/${user.username}/following`)}>
+              <Text className="text-sm text-gray-500 dark:text-gray-400"><Text className="font-bold text-gray-900 dark:text-gray-100">{user.following_count}</Text> {t("profile.following")}</Text>
+            </Pressable>
           </View>
           {user.last_seen && <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">{t("profile.lastSeen")} {formatDate(user.last_seen)}</Text>}
         </View>

@@ -48,6 +48,8 @@
     "@types/node": "^26.2.0",
     "@types/react": "~19.2.2",
     "eas-cli": "^22.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "jest": "~29.7.0",
     "jest-expo": "~57.0.4",
     "test-renderer": "^1.2.0",

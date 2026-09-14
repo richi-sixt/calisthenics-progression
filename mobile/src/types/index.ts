@@ -1,6 +1,8 @@
 
 // ---- Model types (matching Flask to_dict() responses) ----
 
+export type Visibility = "public" | "followers" | "private";
+
 export interface User {
   id: number;
   username: string;
@@ -18,6 +20,13 @@ export interface UserWithFollowing extends User {
   is_following: boolean;
 }
 
+export interface FollowUser {
+  id: number;
+  username: string;
+  image_file: string;
+  is_following: boolean;
+}
+
 export interface Workout {
   id: number;
   title: string;
@@ -27,9 +36,10 @@ export interface Workout {
   user_image_file: string | null;
   is_template: boolean;
   is_done: boolean;
-  is_public: boolean;
+  visibility: Visibility;
   planned_date: string | null;
   exercises?: Exercise[];
+  is_following?: boolean;
 }
 
 export interface Exercise {
@@ -61,7 +71,7 @@ export interface ExerciseDefinition {
   username: string | null;
   user_image_file: string | null;
   archived: boolean;
-  is_public: boolean;
+  visibility: Visibility;
   progression_levels: ProgressionLevel[];
   category_ids: number[];
 }

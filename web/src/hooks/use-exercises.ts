@@ -2,7 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ExerciseDefinition, PaginatedResponse, ApiResponse } from "@/types";
+import type {
+  ExerciseDefinition,
+  PaginatedResponse,
+  ApiResponse,
+  Visibility,
+} from "@/types";
 
 export function useExercises(
   page: number = 1,
@@ -36,7 +41,7 @@ export function useCreateExercise() {
       title: string;
       description?: string;
       counting_type: string;
-      is_public?: boolean;
+      visibility?: Visibility;
       progression_levels?: string[];
       category_ids?: number[];
     }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),

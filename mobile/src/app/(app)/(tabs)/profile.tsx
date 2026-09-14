@@ -199,7 +199,15 @@ export default function ProfileScreen() {
                 </View>
                 <View>
                   <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("profile.stats")}</Text>
-                  <Text className="mt-1 text-sm text-gray-900 dark:text-gray-100">{user.follower_count} {t("profile.followers")} · {user.following_count} {t("profile.following")}</Text>
+                  <View className="mt-1 flex-row items-center gap-1">
+                    <Pressable onPress={() => router.push(`/users/${user.username}/followers`)}>
+                      <Text className="text-sm text-gray-900 dark:text-gray-100">{user.follower_count} {t("profile.followers")}</Text>
+                    </Pressable>
+                    <Text className="text-sm text-gray-900 dark:text-gray-100"> · </Text>
+                    <Pressable onPress={() => router.push(`/users/${user.username}/following`)}>
+                      <Text className="text-sm text-gray-900 dark:text-gray-100">{user.following_count} {t("profile.following")}</Text>
+                    </Pressable>
+                  </View>
                 </View>
                 {user.registered_on && (
                   <View>

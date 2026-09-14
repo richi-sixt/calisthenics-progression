@@ -9,6 +9,13 @@ import {
   PopoverButton,
   PopoverBackdrop,
   PopoverPanel,
+  Menu,
+  MenuButton,
+  MenuItems,
+  MenuItem,
+  Disclosure,
+  DisclosureButton,
+  DisclosurePanel,
 } from "@headlessui/react";
 import { useTranslation } from "@/i18n";
 import { useUnreadMessageCount } from "@/hooks/use-notifications";
@@ -118,10 +125,16 @@ function useNavItems() {
   const { t } = useTranslation();
   return [
     { href: "/workouts", label: t("nav.workouts") },
+    { href: "/explore", label: t("nav.explore") },
+  ];
+}
+
+function useLibraryItems() {
+  const { t } = useTranslation();
+  return [
     { href: "/templates", label: t("nav.templates") },
     { href: "/exercises", label: t("nav.exercises") },
     { href: "/categories", label: t("nav.categories") },
-    { href: "/explore", label: t("nav.explore") },
   ];
 }
 
@@ -164,6 +177,27 @@ function MobileNavItem({
   );
 }
 
+function MobileLibraryDisclosure() {
+  const { t } = useTranslation();
+  const libraryItems = useLibraryItems();
+
+  return (
+    <Disclosure as="li">
+      <DisclosureButton className="flex w-full items-center justify-between py-2 text-left">
+        {t("nav.library")}
+        <ChevronDownIcon className="h-auto w-2 stroke-gray-500 dark:stroke-gray-400" />
+      </DisclosureButton>
+      <DisclosurePanel as="ul" className="ml-4 border-l border-gray-100 dark:border-gray-700 pl-3">
+        {libraryItems.map((item) => (
+          <MobileNavItem key={item.href} href={item.href}>
+            {item.label}
+          </MobileNavItem>
+        ))}
+      </DisclosurePanel>
+    </Disclosure>
+  );
+}
+
 function MobileNavigation() {
   const { t } = useTranslation();
   const navItems = useNavItems();
@@ -195,7 +229,9 @@ function MobileNavigation() {
         </div>
         <nav className="mt-4">
           <ul className="-my-2 divide-y divide-gray-100 text-base text-gray-800 dark:divide-gray-700 dark:text-gray-200">
-            {navItems.map((item) => (
+            <MobileNavItem href={navItems[0].href}>{navItems[0].label}</MobileNavItem>
+            <MobileLibraryDisclosure />
+            {navItems.slice(1).map((item) => (
               <MobileNavItem key={item.href} href={item.href}>
                 {item.label}
               </MobileNavItem>
@@ -229,12 +265,55 @@ function MobileNavigation() {
   );
 }
 
+function DesktopLibraryMenu() {
+  const { t } = useTranslation();
+  const pathname = usePathname();
+  const libraryItems = useLibraryItems();
+  const active = libraryItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+
+  return (
+    <Menu as="div" className="relative">
+      <MenuButton
+        className={
+          "flex items-center gap-1 " +
+          (active
+            ? "font-medium text-gray-900 dark:text-white"
+            : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white")
+        }
+      >
+        {t("nav.library")}
+        <ChevronDownIcon className="h-auto w-2 stroke-current" />
+      </MenuButton>
+      <MenuItems
+        transition
+        anchor="bottom start"
+        className="z-50 mt-2 w-40 origin-top-left rounded-md bg-white dark:bg-gray-800 py-1 text-sm shadow-lg ring-1 ring-gray-900/5 dark:ring-white/10 transition duration-100 data-closed:scale-95 data-closed:opacity-0"
+      >
+        {libraryItems.map((item) => (
+          <MenuItem key={item.href}>
+            <Link
+              href={item.href}
+              className="block px-3 py-2 text-gray-700 dark:text-gray-300 data-focus:bg-gray-100 dark:data-focus:bg-gray-700"
+            >
+              {item.label}
+            </Link>
+          </MenuItem>
+        ))}
+      </MenuItems>
+    </Menu>
+  );
+}
+
 function DesktopNavigation() {
   const navItems = useNavItems();
 
   return (
     <div className="hidden items-center gap-4 text-sm md:flex">
-      {navItems.map((item) => (
+      <NavLink href={navItems[0].href}>{navItems[0].label}</NavLink>
+      <DesktopLibraryMenu />
+      {navItems.slice(1).map((item) => (
         <NavLink key={item.href} href={item.href}>
           {item.label}
         </NavLink>

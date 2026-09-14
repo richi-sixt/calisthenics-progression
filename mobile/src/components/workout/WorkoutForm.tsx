@@ -6,7 +6,7 @@ import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation, type TranslationKey } from "@/i18n";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
-import type { Workout, ExerciseDefinition } from "@/types";
+import type { Workout, ExerciseDefinition, Visibility } from "@/types";
 
 function secondsToMmss(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60);
@@ -36,7 +36,7 @@ interface ExerciseData {
 
 interface WorkoutFormData {
   title: string;
-  is_public: boolean;
+  visibility: Visibility;
   planned_date: string;
   exercises: ExerciseData[];
 }
@@ -51,7 +51,7 @@ export function WorkoutForm({
   onSubmit: (data: {
     title: string;
     exercises: unknown[];
-    is_public: boolean;
+    visibility: Visibility;
     planned_date: string;
   }) => void;
   isPending: boolean;
@@ -71,7 +71,7 @@ export function WorkoutForm({
   const { handleSubmit, control } = useForm<WorkoutFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
-      is_public: defaultValues?.is_public ?? false,
+      visibility: defaultValues?.visibility ?? "followers",
       planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
       exercises:
         defaultValues?.exercises?.map((ex) => ({
@@ -109,7 +109,7 @@ export function WorkoutForm({
   const submit = (data: WorkoutFormData) => {
     onSubmit({
       title: data.title,
-      is_public: data.is_public,
+      visibility: data.visibility,
       planned_date: data.planned_date,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
@@ -155,17 +155,36 @@ export function WorkoutForm({
       </View>
 
       <View className="gap-1">
-        <View className="flex-row items-center gap-2">
-          <Controller
-            control={control}
-            name="is_public"
-            render={({ field: { onChange, value } }) => (
-              <Switch value={value} onValueChange={onChange} testID="is-public-switch" />
-            )}
-          />
-          <Text className="text-sm text-gray-700 dark:text-gray-300">{t("workoutForm.isPublic")}</Text>
-        </View>
-        <Text className="text-xs text-gray-500 dark:text-gray-400">{t("workoutForm.isPublicHint")}</Text>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.visibility")}</Text>
+        <Controller
+          control={control}
+          name="visibility"
+          render={({ field: { onChange, value } }) => (
+            <>
+              <View className="mt-1 flex-row self-start overflow-hidden rounded-md border border-gray-300 dark:border-gray-600">
+                {(["public", "followers", "private"] as const).map((opt) => (
+                  <Pressable
+                    key={opt}
+                    onPress={() => onChange(opt)}
+                    testID={`visibility-option-${opt}`}
+                    className={`px-3 py-1.5 ${value === opt ? "bg-blue-600" : "bg-transparent"}`}
+                  >
+                    <Text className={`text-xs font-medium ${value === opt ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>
+                      {opt === "public" ? t("workouts.public") : opt === "followers" ? t("workouts.followers") : t("workouts.private")}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {value === "public"
+                  ? t("workoutForm.visibilityPublicHint")
+                  : value === "private"
+                    ? t("workoutForm.visibilityPrivateHint")
+                    : t("workoutForm.visibilityFollowersHint")}
+              </Text>
+            </>
+          )}
+        />
       </View>
 
       <View className="gap-2">

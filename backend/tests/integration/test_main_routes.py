@@ -395,7 +395,7 @@ class TestExercisesRoute:
                 title="Squats",
                 description="Bodyweight squats",
                 user_id=second_user.id,
-                is_public=True,
+                visibility="public",
             )
             db.session.add(ex)
             db.session.commit()
@@ -416,7 +416,7 @@ class TestExercisesRoute:
                 title="Dips",
                 description="Parallel bar dips",
                 user_id=second_user.id,
-                is_public=True,
+                visibility="public",
             )
             db.session.add(ex)
             # Create existing copy with "(Kopie)" title owned by current user
@@ -579,7 +579,7 @@ class TestExercisesRoute:
                 description="Hold a plank",
                 user_id=second_user.id,
                 counting_type="duration",
-                is_public=True,
+                visibility="public",
             )
             db.session.add(ex)
             db.session.commit()
@@ -975,7 +975,7 @@ class TestExploreRoute:
             workout = Workout(
                 title="Second User Workout",
                 user_id=second_user.id,
-                is_public=True,
+                visibility="public",
             )
             db.session.add(workout)
             db.session.commit()
@@ -1177,7 +1177,7 @@ class TestProgressionLevels:
                 title="Squats",
                 description="Bodyweight squats",
                 user_id=second_user.id,
-                is_public=True,
+                visibility="public",
             )
             db.session.add(ex)
             db.session.flush()
@@ -2623,7 +2623,7 @@ class TestExerciseCategoryRoutes:
                 title="Plank",
                 user_id=second_user.id,
                 counting_type="duration",
-                is_public=True,
+                visibility="public",
             )
             db.session.add(core_ex)
             db.session.flush()
