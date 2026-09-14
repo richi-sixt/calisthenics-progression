@@ -36,14 +36,14 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{user.about_me}</p>
           )}
           <div className="mt-2 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-            <span>
+            <Link href={`/users/${user.username}/followers`} className="hover:text-gray-700 dark:hover:text-gray-300">
               <strong className="text-gray-900 dark:text-gray-100">{user.follower_count}</strong>{" "}
               {t("profile.followers")}
-            </span>
-            <span>
+            </Link>
+            <Link href={`/users/${user.username}/following`} className="hover:text-gray-700 dark:hover:text-gray-300">
               <strong className="text-gray-900 dark:text-gray-100">{user.following_count}</strong>{" "}
               {t("profile.following")}
-            </span>
+            </Link>
           </div>
           {user.last_seen && (
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">

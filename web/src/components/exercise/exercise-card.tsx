@@ -70,9 +70,21 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
             <span className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               {exercise.counting_type}
             </span>
-            {isOwner && exercise.is_public && (
-              <span className="inline-flex rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
-                {t("exercises.public")}
+            {isOwner && (
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  exercise.visibility === "public"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                    : exercise.visibility === "followers"
+                      ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {exercise.visibility === "public"
+                  ? t("exercises.public")
+                  : exercise.visibility === "followers"
+                    ? t("exercises.followers")
+                    : t("exercises.private")}
               </span>
             )}
             {categoryNames.map((name) => (
@@ -107,15 +119,19 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
                 >
                   {t("common.edit")}
                 </Link>
-                <button
-                  onClick={() =>
-                    updateExercise.mutate({ id: exercise.id, is_public: !exercise.is_public })
+                <select
+                  value={exercise.visibility}
+                  onChange={(e) =>
+                    updateExercise.mutate({ id: exercise.id, visibility: e.target.value })
                   }
                   disabled={updateExercise.isPending}
+                  aria-label={t("exercises.visibility")}
                   className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                 >
-                  {exercise.is_public ? t("exercises.makePrivate") : t("exercises.makePublic")}
-                </button>
+                  <option value="public">{t("exercises.public")}</option>
+                  <option value="followers">{t("exercises.followers")}</option>
+                  <option value="private">{t("exercises.private")}</option>
+                </select>
                 <button
                   onClick={() => setShowArchiveDialog(true)}
                   disabled={deleteExercise.isPending}

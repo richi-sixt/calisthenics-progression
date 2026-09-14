@@ -3,13 +3,13 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
-import type { ExerciseDefinition } from "@/types";
+import type { ExerciseDefinition, Visibility } from "@/types";
 
 interface ExerciseFormData {
   title: string;
   description: string;
   counting_type: "reps" | "duration";
-  is_public: boolean;
+  visibility: Visibility;
   progression_levels: { name: string }[];
   category_ids: number[];
 }
@@ -33,7 +33,7 @@ export default function ExerciseForm({
         title: defaultValues?.title ?? "",
         description: defaultValues?.description ?? "",
         counting_type: defaultValues?.counting_type ?? "reps",
-        is_public: defaultValues?.is_public ?? false,
+        visibility: defaultValues?.visibility ?? "followers",
         progression_levels:
           defaultValues?.progression_levels?.map((p) => ({ name: p.name })) ??
           [],
@@ -47,6 +47,13 @@ export default function ExerciseForm({
   });
 
   const selectedCats: number[] = watch("category_ids") ?? [];
+  const visibility = watch("visibility");
+  const visibilityHint =
+    visibility === "public"
+      ? t("exerciseForm.visibilityPublicHint")
+      : visibility === "private"
+        ? t("exerciseForm.visibilityPrivateHint")
+        : t("exerciseForm.visibilityFollowersHint");
 
   const toggleCategory = (catId: number) => {
     const next = selectedCats.includes(catId)
@@ -99,17 +106,18 @@ export default function ExerciseForm({
       </div>
 
       <div>
-        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
-            {...register("is_public")}
-            className="rounded border-gray-300 dark:border-gray-600"
-          />
-          {t("exerciseForm.isPublic")}
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t("exerciseForm.visibility")}
         </label>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t("exerciseForm.isPublicHint")}
-        </p>
+        <select
+          {...register("visibility")}
+          className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        >
+          <option value="public">{t("exercises.public")}</option>
+          <option value="followers">{t("exercises.followers")}</option>
+          <option value="private">{t("exercises.private")}</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{visibilityHint}</p>
       </div>
 
       <div>

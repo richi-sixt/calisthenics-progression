@@ -69,9 +69,8 @@ const de: Record<keyof typeof en, string> = {
   "workouts.noSetsRecorded": "Keine Sätze aufgezeichnet",
   "workouts.exercise": "Übung",
   "workouts.public": "Öffentlich",
+  "workouts.followers": "Follower",
   "workouts.private": "Privat",
-  "workouts.makePublic": "Öffentlich machen",
-  "workouts.makePrivate": "Privat machen",
   "workouts.plannedFor": "Geplant für {{date}}",
   "workouts.replan": "Umplanen",
 
@@ -91,8 +90,10 @@ const de: Record<keyof typeof en, string> = {
   "workoutForm.addExercise": "+ Übung hinzufügen",
   "workoutForm.addSet": "+ Satz hinzufügen",
   "workoutForm.showOnlyMine": "Nur meine Übungen anzeigen",
-  "workoutForm.isPublic": "Öffentliches Workout",
-  "workoutForm.isPublicHint": "Öffentliche Workouts erscheinen für andere Nutzer unter Entdecken.",
+  "workoutForm.visibility": "Sichtbarkeit",
+  "workoutForm.visibilityPublicHint": "Für alle sichtbar und erscheint für alle Nutzer unter Entdecken.",
+  "workoutForm.visibilityFollowersHint": "Nur für deine Follower sichtbar.",
+  "workoutForm.visibilityPrivateHint": "Nur für dich sichtbar.",
   "workoutForm.save": "Speichern",
 
   // Templates
@@ -125,9 +126,8 @@ const de: Record<keyof typeof en, string> = {
   "exercises.copyToMine": "Zu meinen Übungen kopieren",
   "exercises.copying": "Kopieren...",
   "exercises.public": "Öffentlich",
+  "exercises.followers": "Follower",
   "exercises.private": "Privat",
-  "exercises.makePublic": "Öffentlich machen",
-  "exercises.makePrivate": "Privat machen",
 
   // Exercise form
   "exerciseForm.title": "Titel",
@@ -137,8 +137,10 @@ const de: Record<keyof typeof en, string> = {
   "exerciseForm.countingType": "Zählweise",
   "exerciseForm.reps": "Wiederholungen",
   "exerciseForm.duration": "Dauer",
-  "exerciseForm.isPublic": "Öffentliche Übung",
-  "exerciseForm.isPublicHint": "Öffentliche Übungen erscheinen für andere Nutzer unter Alle Übungen und können kopiert werden.",
+  "exerciseForm.visibility": "Sichtbarkeit",
+  "exerciseForm.visibilityPublicHint": "Für alle sichtbar unter Alle Übungen und von jedem kopierbar.",
+  "exerciseForm.visibilityFollowersHint": "Nur für deine Follower sichtbar und kopierbar.",
+  "exerciseForm.visibilityPrivateHint": "Nur für dich sichtbar.",
   "exerciseForm.progressionLevels": "Progressionsstufen",
   "exerciseForm.levelPlaceholder": "Stufenname",
   "exerciseForm.addLevel": "+ Stufe hinzufügen",
@@ -173,6 +175,10 @@ const de: Record<keyof typeof en, string> = {
   "explore.emptyDescription": "Folge anderen Benutzern, um ihre Workouts in deinem Feed zu sehen.",
   "explore.exercise": "Übung",
   "explore.exercises": "Übungen",
+  "explore.all": "Alle",
+  "explore.following": "Gefolgt",
+  "explore.allUsers": "Alle Nutzer",
+  "explore.filterByUser": "Nutzer",
 
   // Profile
   "profile.title": "Profil",
@@ -213,6 +219,13 @@ const de: Record<keyof typeof en, string> = {
   "social.unfollowing": "Entfolgen...",
   "social.sendMessage": "Nachricht senden",
   "social.noWorkouts": "Noch keine Workouts.",
+  "social.followingPill": "Gefolgt",
+
+  // Follow lists
+  "followList.followersTitle": "Follower",
+  "followList.followingTitle": "Gefolgt",
+  "followList.loading": "Laden...",
+  "followList.empty": "Noch keine Nutzer.",
 
   // Auth
   "auth.login": "Anmelden",

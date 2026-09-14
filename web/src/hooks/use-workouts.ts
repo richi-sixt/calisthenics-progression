@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import type { Workout, PaginatedResponse, ApiResponse } from "@/types";
+import type { Workout, PaginatedResponse, ApiResponse, Visibility } from "@/types";
 
 export function useWorkouts(
   page: number = 1,
@@ -62,7 +62,7 @@ export function useCreateWorkout() {
     mutationFn: (data: {
       title: string;
       exercises: unknown[];
-      is_public?: boolean;
+      visibility?: Visibility;
       planned_date?: string | null;
     }) => api.post<ApiResponse<Workout>>("/workouts", data),
     onSuccess: () => {
@@ -81,7 +81,7 @@ export function useUpdateWorkout() {
       id: number;
       title?: string;
       exercises?: unknown[];
-      is_public?: boolean;
+      visibility?: Visibility;
       planned_date?: string | null;
     }) => api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
     onSuccess: () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useProfile } from "@/hooks/use-profile";
 import {
   useUpdateProfile,
@@ -226,8 +227,18 @@ export default function ProfilePage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("profile.stats")}</dt>
                 <dd className="mt-1 flex gap-4 text-sm text-gray-900 dark:text-gray-100">
-                  <span>{user.follower_count} {t("profile.followers")}</span>
-                  <span>{user.following_count} {t("profile.following")}</span>
+                  <Link
+                    href={`/users/${user.username}/followers`}
+                    className="hover:text-blue-600 dark:hover:text-blue-400"
+                  >
+                    {user.follower_count} {t("profile.followers")}
+                  </Link>
+                  <Link
+                    href={`/users/${user.username}/following`}
+                    className="hover:text-blue-600 dark:hover:text-blue-400"
+                  >
+                    {user.following_count} {t("profile.following")}
+                  </Link>
                 </dd>
               </div>
               {user.registered_on && (

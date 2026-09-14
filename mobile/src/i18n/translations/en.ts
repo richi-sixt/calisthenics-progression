@@ -67,9 +67,8 @@ const en = {
   "workouts.noSetsRecorded": "No sets recorded",
   "workouts.exercise": "Exercise",
   "workouts.public": "Public",
+  "workouts.followers": "Followers",
   "workouts.private": "Private",
-  "workouts.makePublic": "Make public",
-  "workouts.makePrivate": "Make private",
   "workouts.plannedFor": "Planned for {{date}}",
   "workouts.replan": "Re-plan",
 
@@ -89,8 +88,10 @@ const en = {
   "workoutForm.addExercise": "+ Add exercise",
   "workoutForm.addSet": "+ Add set",
   "workoutForm.showOnlyMine": "Show only my exercises",
-  "workoutForm.isPublic": "Public workout",
-  "workoutForm.isPublicHint": "Public workouts appear in Explore for other users to see.",
+  "workoutForm.visibility": "Visibility",
+  "workoutForm.visibilityPublicHint": "Visible to everyone and appears in Explore for all users.",
+  "workoutForm.visibilityFollowersHint": "Visible only to people who follow you.",
+  "workoutForm.visibilityPrivateHint": "Visible only to you.",
   "workoutForm.save": "Save",
 
   // Templates
@@ -123,9 +124,8 @@ const en = {
   "exercises.copyToMine": "Copy to My Exercises",
   "exercises.copying": "Copying...",
   "exercises.public": "Public",
+  "exercises.followers": "Followers",
   "exercises.private": "Private",
-  "exercises.makePublic": "Make public",
-  "exercises.makePrivate": "Make private",
 
   // Exercise form
   "exerciseForm.title": "Title",
@@ -135,8 +135,10 @@ const en = {
   "exerciseForm.countingType": "Counting Type",
   "exerciseForm.reps": "Reps",
   "exerciseForm.duration": "Duration",
-  "exerciseForm.isPublic": "Public exercise",
-  "exerciseForm.isPublicHint": "Public exercises appear in All Exercises for other users to see and copy.",
+  "exerciseForm.visibility": "Visibility",
+  "exerciseForm.visibilityPublicHint": "Visible to everyone in All Exercises, and copyable by anyone.",
+  "exerciseForm.visibilityFollowersHint": "Visible and copyable only by people who follow you.",
+  "exerciseForm.visibilityPrivateHint": "Visible only to you.",
   "exerciseForm.progressionLevels": "Progression Levels",
   "exerciseForm.levelPlaceholder": "Level name",
   "exerciseForm.addLevel": "+ Add level",
@@ -171,6 +173,10 @@ const en = {
   "explore.emptyDescription": "Follow other users to see their workouts in your explore feed.",
   "explore.exercise": "exercise",
   "explore.exercises": "exercises",
+  "explore.all": "All",
+  "explore.following": "Following",
+  "explore.allUsers": "All users",
+  "explore.filterByUser": "User",
 
   // Profile
   "profile.title": "Profile",
@@ -211,6 +217,13 @@ const en = {
   "social.unfollowing": "Unfollowing...",
   "social.sendMessage": "Send Message",
   "social.noWorkouts": "No workouts yet.",
+  "social.followingPill": "Following",
+
+  // Follow lists
+  "followList.followersTitle": "Followers",
+  "followList.followingTitle": "Following",
+  "followList.loading": "Loading...",
+  "followList.empty": "No users yet.",
 
   // Auth
   "auth.login": "Login",

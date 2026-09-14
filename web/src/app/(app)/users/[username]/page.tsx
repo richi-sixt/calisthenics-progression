@@ -4,7 +4,9 @@ import { use } from "react";
 import Link from "next/link";
 import { useUserProfile } from "@/hooks/use-social";
 import UserProfileHeader from "@/components/social/user-profile-header";
+import ExploreWorkoutCard from "@/components/social/explore-workout-card";
 import ErrorMessage from "@/components/ui/error-message";
+import EmptyState from "@/components/ui/empty-state";
 import { useTranslation } from "@/i18n";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 
@@ -20,7 +22,7 @@ export default function UserProfilePage({
   if (isLoading) return <ProfileSkeleton />;
   if (error || !data) return <ErrorMessage error={error} />;
 
-  const { user } = data.data;
+  const { user, workouts } = data.data;
 
   return (
     <div>
@@ -30,6 +32,18 @@ export default function UserProfilePage({
 
       <div className="mt-4">
         <UserProfileHeader user={user} />
+      </div>
+
+      <div className="mt-6">
+        {workouts.length === 0 ? (
+          <EmptyState title={t("social.noWorkouts")} />
+        ) : (
+          <div className="space-y-3">
+            {workouts.map((w) => (
+              <ExploreWorkoutCard key={w.id} workout={w} showOwner={false} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

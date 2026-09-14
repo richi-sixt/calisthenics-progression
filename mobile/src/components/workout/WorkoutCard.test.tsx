@@ -23,6 +23,7 @@ function makeWorkout(overrides: Partial<Workout>): Workout {
     user_image_file: null,
     is_template: false,
     is_done: false,
+    visibility: "followers",
     planned_date: null,
     exercises: [],
     ...overrides,
@@ -36,24 +37,23 @@ describe("WorkoutCard", () => {
     (api.delete as jest.Mock).mockResolvedValue({ data: { message: "deleted" } });
   });
 
-  it("shows a public badge and 'Make private' button for a public workout", async () => {
-    const { getByText, queryByText } = await renderWithProviders(
-      <WorkoutCard workout={makeWorkout({ is_public: true })} />
+  it("shows a public badge for a public workout", async () => {
+    const { getAllByText } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ visibility: "public" })} />
     );
-    expect(getByText("Public")).toBeTruthy();
-    expect(getByText("Make private")).toBeTruthy();
-    expect(queryByText("Make public")).toBeNull();
+    // "Public" appears both as the status badge and as a visibility option label.
+    expect(getAllByText("Public").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("calls the update endpoint with the flipped is_public when the visibility button is pressed", async () => {
-    const { getByText } = await renderWithProviders(
-      <WorkoutCard workout={makeWorkout({ id: 42, is_public: false })} />
+  it("calls the update endpoint with the tapped visibility option", async () => {
+    const { getByTestId } = await renderWithProviders(
+      <WorkoutCard workout={makeWorkout({ id: 42, visibility: "followers" })} />
     );
 
-    await fireEvent.press(getByText("Make public"));
+    await fireEvent.press(getByTestId("visibility-option-42-public"));
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/workouts/42", { is_public: true })
+      expect(api.put).toHaveBeenCalledWith("/workouts/42", { visibility: "public" })
     );
   });
 

@@ -59,11 +59,21 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
               {t("workouts.pendent")}
             </span>
           )}
-          {workout.is_public && (
-            <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
-              {t("workouts.public")}
-            </span>
-          )}
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              workout.visibility === "public"
+                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                : workout.visibility === "followers"
+                  ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+            }`}
+          >
+            {workout.visibility === "public"
+              ? t("workouts.public")
+              : workout.visibility === "followers"
+                ? t("workouts.followers")
+                : t("workouts.private")}
+          </span>
         </div>
         {workout.timestamp && (
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -106,15 +116,22 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
           >
             {workout.is_done ? t("workouts.done") : t("workouts.markDone")}
           </button>
-          <button
-            onClick={() =>
-              updateWorkout.mutate({ id: workout.id, is_public: !workout.is_public })
+          <select
+            value={workout.visibility}
+            onChange={(e) =>
+              updateWorkout.mutate({
+                id: workout.id,
+                visibility: e.target.value as Workout["visibility"],
+              })
             }
             disabled={updateWorkout.isPending}
+            aria-label={t("workouts.visibility")}
             className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            {workout.is_public ? t("workouts.makePrivate") : t("workouts.makePublic")}
-          </button>
+            <option value="public">{t("workouts.public")}</option>
+            <option value="followers">{t("workouts.followers")}</option>
+            <option value="private">{t("workouts.private")}</option>
+          </select>
           <label className="flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
             {t("workouts.replan")}
             <input

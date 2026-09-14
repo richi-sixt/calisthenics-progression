@@ -6,7 +6,7 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
-import type { Workout, ExerciseDefinition } from "@/types";
+import type { Workout, ExerciseDefinition, Visibility } from "@/types";
 
 /** Convert total seconds to "mm:ss" string */
 function secondsToMmss(totalSeconds: number): string {
@@ -38,7 +38,7 @@ interface ExerciseData {
 
 interface WorkoutFormData {
   title: string;
-  is_public: boolean;
+  visibility: Visibility;
   planned_date: string;
   exercises: ExerciseData[];
 }
@@ -53,7 +53,7 @@ export default function WorkoutExerciseForm({
   onSubmit: (data: {
     title: string;
     exercises: unknown[];
-    is_public: boolean;
+    visibility: Visibility;
     planned_date: string;
   }) => void;
   isPending: boolean;
@@ -72,10 +72,10 @@ export default function WorkoutExerciseForm({
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
-  const { register, handleSubmit, control } = useForm<WorkoutFormData>({
+  const { register, handleSubmit, control, watch } = useForm<WorkoutFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
-      is_public: defaultValues?.is_public ?? false,
+      visibility: defaultValues?.visibility ?? "followers",
       planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
       exercises:
         defaultValues?.exercises?.map((ex) => ({
@@ -116,10 +116,18 @@ export default function WorkoutExerciseForm({
     );
   };
 
+  const visibility = watch("visibility");
+  const visibilityHint =
+    visibility === "public"
+      ? t("workoutForm.visibilityPublicHint")
+      : visibility === "private"
+        ? t("workoutForm.visibilityPrivateHint")
+        : t("workoutForm.visibilityFollowersHint");
+
   const submit = (data: WorkoutFormData) => {
     onSubmit({
       title: data.title,
-      is_public: data.is_public,
+      visibility: data.visibility,
       planned_date: data.planned_date,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
@@ -153,17 +161,18 @@ export default function WorkoutExerciseForm({
       </div>
 
       <div>
-        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
-            {...register("is_public")}
-            className="rounded border-gray-300 dark:border-gray-600"
-          />
-          {t("workoutForm.isPublic")}
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t("workoutForm.visibility")}
         </label>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t("workoutForm.isPublicHint")}
-        </p>
+        <select
+          {...register("visibility")}
+          className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        >
+          <option value="public">{t("workouts.public")}</option>
+          <option value="followers">{t("workouts.followers")}</option>
+          <option value="private">{t("workouts.private")}</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{visibilityHint}</p>
       </div>
 
       {/* Exercise filter controls */}
