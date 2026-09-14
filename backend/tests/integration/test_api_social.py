@@ -10,7 +10,9 @@ class TestApiExplore:
         from project.models import Workout
 
         with app.app_context():
-            w = Workout(title="Other Workout", user_id=second_user.id, is_public=True)
+            w = Workout(
+                title="Other Workout", user_id=second_user.id, visibility="public"
+            )
             db.session.add(w)
             db.session.commit()
 
@@ -19,6 +21,7 @@ class TestApiExplore:
         data = resp.get_json()
         assert len(data["data"]) == 1
         assert data["data"][0]["title"] == "Other Workout"
+        assert data["data"][0]["is_following"] is False
 
     def test_explore_excludes_own(self, client, api_headers, workout):
         resp = client.get("/api/v1/explore", headers=api_headers)
@@ -26,18 +29,124 @@ class TestApiExplore:
         # Own workout should not appear
         assert len(resp.get_json()["data"]) == 0
 
-    def test_explore_excludes_private(self, client, api_headers, second_user, app):
+    def test_explore_excludes_followers_only_from_non_follower(
+        self, client, api_headers, second_user, app
+    ):
         from project import db
         from project.models import Workout
 
         with app.app_context():
-            w = Workout(title="Private Workout", user_id=second_user.id)
+            w = Workout(
+                title="Followers Workout",
+                user_id=second_user.id,
+                visibility="followers",
+            )
             db.session.add(w)
             db.session.commit()
 
         resp = client.get("/api/v1/explore", headers=api_headers)
         assert resp.status_code == 200
         assert len(resp.get_json()["data"]) == 0
+
+    def test_explore_excludes_private(self, client, api_headers, second_user, app):
+        from project import db
+        from project.models import Workout
+
+        with app.app_context():
+            w = Workout(
+                title="Private Workout", user_id=second_user.id, visibility="private"
+            )
+            db.session.add(w)
+            db.session.commit()
+
+        resp = client.get("/api/v1/explore", headers=api_headers)
+        assert resp.status_code == 200
+        assert len(resp.get_json()["data"]) == 0
+
+    def test_explore_shows_followers_only_workout_to_follower(
+        self, client, api_headers, second_user, user, app
+    ):
+        from project import db
+        from project.models import User, Workout
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u.follow(u2)
+            db.session.add(
+                Workout(
+                    title="Followers Workout",
+                    user_id=second_user.id,
+                    visibility="followers",
+                )
+            )
+            db.session.commit()
+
+        resp = client.get("/api/v1/explore", headers=api_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert len(data) == 1
+        assert data[0]["title"] == "Followers Workout"
+        assert data[0]["is_following"] is True
+
+    def test_explore_scope_following(
+        self, client, api_headers, second_user, user, app
+    ):
+        from project import db
+        from project.models import User, Workout
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u.follow(u2)
+            db.session.add(
+                Workout(
+                    title="Followed User Workout",
+                    user_id=second_user.id,
+                    visibility="public",
+                )
+            )
+            db.session.commit()
+
+        # A third, unfollowed user's public workout should not show up when
+        # scope=following is requested.
+        resp = client.get(
+            "/api/v1/explore", query_string={"scope": "following"}, headers=api_headers
+        )
+        assert resp.status_code == 200
+        titles = [w["title"] for w in resp.get_json()["data"]]
+        assert titles == ["Followed User Workout"]
+
+    def test_explore_filter_by_username(
+        self, client, api_headers, second_user, app
+    ):
+        from project import db
+        from project.models import Workout
+
+        with app.app_context():
+            db.session.add(
+                Workout(
+                    title="Second User Workout",
+                    user_id=second_user.id,
+                    visibility="public",
+                )
+            )
+            db.session.commit()
+
+        resp = client.get(
+            "/api/v1/explore",
+            query_string={"username": second_user.username},
+            headers=api_headers,
+        )
+        assert resp.status_code == 200
+        titles = [w["title"] for w in resp.get_json()["data"]]
+        assert titles == ["Second User Workout"]
+
+    def test_explore_filter_by_username_not_found(self, client, api_headers):
+        resp = client.get(
+            "/api/v1/explore", query_string={"username": "ghost"}, headers=api_headers
+        )
+        assert resp.status_code == 404
 
 
 class TestApiGetUser:
@@ -52,7 +161,7 @@ class TestApiGetUser:
         resp = client.get("/api/v1/users/ghost", headers=api_headers)
         assert resp.status_code == 404
 
-    def test_get_user_hides_private_workouts(
+    def test_get_user_hides_followers_and_private_workouts_from_non_follower(
         self, client, api_headers, second_user, app
     ):
         from project import db
@@ -60,15 +169,47 @@ class TestApiGetUser:
 
         with app.app_context():
             db.session.add(
-                Workout(title="Public One", user_id=second_user.id, is_public=True)
+                Workout(title="Public One", user_id=second_user.id, visibility="public")
             )
-            db.session.add(Workout(title="Private One", user_id=second_user.id))
+            db.session.add(
+                Workout(
+                    title="Followers One", user_id=second_user.id, visibility="followers"
+                )
+            )
+            db.session.add(
+                Workout(title="Private One", user_id=second_user.id, visibility="private")
+            )
             db.session.commit()
 
         resp = client.get(f"/api/v1/users/{second_user.username}", headers=api_headers)
         assert resp.status_code == 200
         titles = [w["title"] for w in resp.get_json()["data"]["workouts"]]
         assert titles == ["Public One"]
+
+    def test_get_user_shows_followers_workouts_to_follower(
+        self, client, api_headers, second_user, user, app
+    ):
+        from project import db
+        from project.models import User, Workout
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u.follow(u2)
+            db.session.add(
+                Workout(
+                    title="Followers One", user_id=second_user.id, visibility="followers"
+                )
+            )
+            db.session.add(
+                Workout(title="Private One", user_id=second_user.id, visibility="private")
+            )
+            db.session.commit()
+
+        resp = client.get(f"/api/v1/users/{second_user.username}", headers=api_headers)
+        assert resp.status_code == 200
+        titles = [w["title"] for w in resp.get_json()["data"]["workouts"]]
+        assert titles == ["Followers One"]
 
 
 class TestApiFollow:
@@ -101,6 +242,57 @@ class TestApiFollow:
             f"/api/v1/users/{second_user.username}/unfollow", headers=api_headers
         )
         assert resp.status_code == 200
+
+
+class TestApiFollowersList:
+    def test_followers_list(self, client, api_headers, second_user, user, app):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u2.follow(u)
+            db.session.commit()
+
+        resp = client.get(f"/api/v1/users/{user.username}/followers", headers=api_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert len(data) == 1
+        assert data[0]["username"] == second_user.username
+        assert data[0]["is_following"] is False
+
+    def test_followers_list_not_found(self, client, api_headers):
+        resp = client.get("/api/v1/users/ghost/followers", headers=api_headers)
+        assert resp.status_code == 404
+
+    def test_followers_list_empty(self, client, api_headers, user):
+        resp = client.get(f"/api/v1/users/{user.username}/followers", headers=api_headers)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+
+class TestApiFollowingList:
+    def test_following_list(self, client, api_headers, second_user, user, app):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u.follow(u2)
+            db.session.commit()
+
+        resp = client.get(f"/api/v1/users/{user.username}/following", headers=api_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert len(data) == 1
+        assert data[0]["username"] == second_user.username
+        assert data[0]["is_following"] is True
+
+    def test_following_list_not_found(self, client, api_headers):
+        resp = client.get("/api/v1/users/ghost/following", headers=api_headers)
+        assert resp.status_code == 404
 
 
 class TestApiMessages:

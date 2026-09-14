@@ -7,7 +7,7 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import Exercise, ExerciseDefinition, Set, Workout
+from project.models import VISIBILITY_VALUES, Exercise, ExerciseDefinition, Set, Workout
 
 
 def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | None:
@@ -21,9 +21,7 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
             return "Missing exercise_definition_id."
 
         ex_def = db.session.get(ExerciseDefinition, ex_def_id)
-        if ex_def is None or (
-            ex_def.user_id != g.current_api_user.id and not ex_def.is_public
-        ):
+        if ex_def is None or not ex_def.is_visible_to(g.current_api_user):
             return f"Exercise definition {ex_def_id} not found."
 
         exercise = Exercise(
@@ -141,12 +139,14 @@ def api_create_workout() -> ResponseReturnValue:
     data = request.get_json(silent=True) or {}
     title = data.get("title", "").strip()
     exercises_data = data.get("exercises", [])
-    is_public = bool(data.get("is_public", False))
+    visibility = data.get("visibility", "followers")
 
     if not title:
         return jsonify({"error": "Title is required."}), 400
     if not exercises_data:
         return jsonify({"error": "At least one exercise is required."}), 400
+    if visibility not in VISIBILITY_VALUES:
+        return jsonify({"error": "Invalid visibility."}), 400
 
     planned_date = None
     if data.get("planned_date"):
@@ -158,7 +158,7 @@ def api_create_workout() -> ResponseReturnValue:
         title=title,
         user_id=g.current_api_user.id,
         timestamp=datetime.now(timezone.utc),
-        is_public=is_public,
+        visibility=visibility,
         planned_date=planned_date,
     )
     db.session.add(workout)
@@ -200,8 +200,10 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
     if "title" in data:
         workout.title = data["title"].strip()
 
-    if "is_public" in data:
-        workout.is_public = bool(data["is_public"])
+    if "visibility" in data:
+        if data["visibility"] not in VISIBILITY_VALUES:
+            return jsonify({"error": "Invalid visibility."}), 400
+        workout.visibility = data["visibility"]
 
     if "planned_date" in data:
         if data["planned_date"] is None:

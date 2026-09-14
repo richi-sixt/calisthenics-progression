@@ -15,13 +15,31 @@ class TestApiListExercises:
         resp = client.get("/api/v1/exercises?user=all", headers=api_headers)
         assert resp.status_code == 200
 
-    def test_list_all_excludes_others_private_exercises(
+    def test_list_all_excludes_others_followers_only_exercises_from_non_follower(
         self, client, api_headers_second, exercise_definition
     ):
-        # exercise_definition is private and owned by `user`, not `second_user`.
+        # exercise_definition defaults to followers-only and is owned by `user`,
+        # and `second_user` does not follow `user`.
         resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
         assert resp.status_code == 200
         assert resp.get_json()["data"] == []
+
+    def test_list_all_includes_others_followers_only_exercises_for_follower(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            follower = db.session.get(User, second_user.id)
+            followed = db.session.get(User, user.id)
+            follower.follow(followed)
+            db.session.commit()
+
+        resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
+        assert resp.status_code == 200
+        titles = [e["title"] for e in resp.get_json()["data"]]
+        assert titles == ["Push-ups"]
 
     def test_list_all_includes_others_public_exercises(
         self, client, api_headers_second, exercise_definition, app
@@ -31,7 +49,7 @@ class TestApiListExercises:
 
         with app.app_context():
             ex = db.session.get(ExerciseDefinition, exercise_definition.id)
-            ex.is_public = True
+            ex.visibility = "public"
             db.session.commit()
 
         resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
@@ -113,25 +131,35 @@ class TestApiCreateExercise:
         assert resp.status_code == 201
         assert exercise_categories[2].id in resp.get_json()["data"]["category_ids"]
 
-    def test_create_exercise_defaults_private(self, client, api_headers):
+    def test_create_exercise_defaults_followers(self, client, api_headers):
         resp = client.post(
             "/api/v1/exercises",
             headers=api_headers,
             data=json.dumps({"title": "Squats", "counting_type": "reps"}),
         )
         assert resp.status_code == 201
-        assert resp.get_json()["data"]["is_public"] is False
+        assert resp.get_json()["data"]["visibility"] == "followers"
 
     def test_create_exercise_public(self, client, api_headers):
         resp = client.post(
             "/api/v1/exercises",
             headers=api_headers,
             data=json.dumps(
-                {"title": "Lunges", "counting_type": "reps", "is_public": True}
+                {"title": "Lunges", "counting_type": "reps", "visibility": "public"}
             ),
         )
         assert resp.status_code == 201
-        assert resp.get_json()["data"]["is_public"] is True
+        assert resp.get_json()["data"]["visibility"] == "public"
+
+    def test_create_exercise_invalid_visibility(self, client, api_headers):
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps(
+                {"title": "Burpees", "counting_type": "reps", "visibility": "bogus"}
+            ),
+        )
+        assert resp.status_code == 400
 
 
 class TestApiGetExercise:
@@ -146,9 +174,44 @@ class TestApiGetExercise:
         resp = client.get("/api/v1/exercises/99999", headers=api_headers)
         assert resp.status_code == 404
 
-    def test_get_private_exercise_forbidden_for_others(
+    def test_get_followers_only_exercise_forbidden_for_non_follower(
         self, client, api_headers_second, exercise_definition
     ):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers_second
+        )
+        assert resp.status_code == 404
+
+    def test_get_followers_only_exercise_visible_to_follower(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            follower = db.session.get(User, second_user.id)
+            followed = db.session.get(User, user.id)
+            follower.follow(followed)
+            db.session.commit()
+
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers_second
+        )
+        assert resp.status_code == 200
+
+    def test_get_private_exercise_forbidden_even_for_follower(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            follower = db.session.get(User, second_user.id)
+            followed = db.session.get(User, user.id)
+            follower.follow(followed)
+            exercise_definition.visibility = "private"
+            db.session.commit()
+
         resp = client.get(
             f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers_second
         )
@@ -159,7 +222,7 @@ class TestApiGetExercise:
     ):
         from project import db
 
-        exercise_definition.is_public = True
+        exercise_definition.visibility = "public"
         db.session.commit()
 
         resp = client.get(
@@ -189,10 +252,20 @@ class TestApiUpdateExercise:
         resp = client.put(
             f"/api/v1/exercises/{exercise_definition.id}",
             headers=api_headers,
-            data=json.dumps({"is_public": True}),
+            data=json.dumps({"visibility": "public"}),
         )
         assert resp.status_code == 200
-        assert resp.get_json()["data"]["is_public"] is True
+        assert resp.get_json()["data"]["visibility"] == "public"
+
+    def test_update_exercise_invalid_visibility(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.put(
+            f"/api/v1/exercises/{exercise_definition.id}",
+            headers=api_headers,
+            data=json.dumps({"visibility": "bogus"}),
+        )
+        assert resp.status_code == 400
 
     def test_update_exercise_forbidden(
         self, client, api_headers_second, exercise_definition
@@ -253,7 +326,7 @@ class TestApiCopyExercise:
     ):
         from project import db
 
-        exercise_definition.is_public = True
+        exercise_definition.visibility = "public"
         db.session.commit()
 
         resp = client.post(
@@ -264,7 +337,7 @@ class TestApiCopyExercise:
         data = resp.get_json()["data"]
         assert "Kopie" in data["title"]
         assert data["user_id"] == second_user.id
-        assert data["is_public"] is False
+        assert data["visibility"] == "followers"
 
     def test_copy_own_exercise(self, client, api_headers, exercise_definition):
         resp = client.post(
@@ -273,12 +346,31 @@ class TestApiCopyExercise:
         )
         assert resp.status_code == 400
 
-    def test_copy_private_exercise_not_found(
+    def test_copy_followers_only_exercise_not_found_for_non_follower(
         self, client, api_headers_second, exercise_definition
     ):
-        # exercise_definition is private and owned by `user`, not `second_user`.
+        # exercise_definition defaults to followers-only and is owned by `user`,
+        # and `second_user` does not follow `user`.
         resp = client.post(
             f"/api/v1/exercises/{exercise_definition.id}/copy",
             headers=api_headers_second,
         )
         assert resp.status_code == 404
+
+    def test_copy_followers_only_exercise_allowed_for_follower(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            follower = db.session.get(User, second_user.id)
+            followed = db.session.get(User, user.id)
+            follower.follow(followed)
+            db.session.commit()
+
+        resp = client.post(
+            f"/api/v1/exercises/{exercise_definition.id}/copy",
+            headers=api_headers_second,
+        )
+        assert resp.status_code == 201

@@ -18,6 +18,27 @@ followers = db.Table(
     db.Column("followed_id", db.Integer, db.ForeignKey("user.id")),
 )
 
+# Visibility tiers shared by Workout and ExerciseDefinition
+VISIBILITY_VALUES = ("public", "followers", "private")
+DEFAULT_VISIBILITY = "followers"
+
+
+def is_visible_to(owner_id: int, visibility: str, viewer: "User | None") -> bool:
+    """Whether content with the given owner/visibility is visible to viewer.
+
+    The owner can always see their own content. 'public' content is visible to
+    anyone. 'followers' content is visible only to people who follow the owner.
+    'private' content is visible only to the owner.
+    """
+    if viewer is not None and viewer.id == owner_id:
+        return True
+    if visibility == "public":
+        return True
+    if visibility == "followers":
+        return viewer is not None and viewer.is_following_id(owner_id)
+    return False
+
+
 # Exercise categories many-to-many association table
 exercise_categories = db.Table(
     "exercise_categories",
@@ -136,6 +157,10 @@ class User(UserMixin, Base):
         """Check if this user is following another user."""
         return bool(self.followed.filter(followers.c.followed_id == user.id).count())
 
+    def is_following_id(self, user_id: int) -> bool:
+        """Check if this user is following the user with the given id."""
+        return bool(self.followed.filter(followers.c.followed_id == user_id).count())
+
     def followed_workouts(self):  # type: ignore[return]
         """Get workouts from followed users and own workouts (excludes templates)."""
         followed = (
@@ -146,7 +171,7 @@ class User(UserMixin, Base):
             .filter(
                 followers.c.follower_id == self.id,
                 Workout.is_template == False,  # noqa: E712
-                Workout.is_public == True,  # noqa: E712
+                Workout.visibility.in_(("public", "followers")),
             )
         )
 
@@ -218,7 +243,12 @@ class Workout(Base):
         db.Boolean, nullable=False, default=False, server_default="0"
     )
     is_done = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
-    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    visibility = db.Column(
+        db.String(10),
+        nullable=False,
+        default=DEFAULT_VISIBILITY,
+        server_default=DEFAULT_VISIBILITY,
+    )
     planned_date = db.Column(db.Date, index=True, default=lambda: date.today())
 
     # Relationships to exercises in this workout
@@ -233,7 +263,7 @@ class Workout(Base):
         timestamp: datetime | None = None,
         is_template: bool = False,
         is_done: bool = False,
-        is_public: bool = False,
+        visibility: str = DEFAULT_VISIBILITY,
         planned_date: date | None = None,
     ) -> None:
         """Initialize a workout session or template."""
@@ -241,11 +271,15 @@ class Workout(Base):
         self.user_id = user_id
         self.is_template = is_template
         self.is_done = is_done
-        self.is_public = is_public
+        self.visibility = visibility
         if timestamp is not None:  # has a default
             self.timestamp = timestamp
         if planned_date is not None:  # has a default
             self.planned_date = planned_date
+
+    def is_visible_to(self, viewer: "User | None") -> bool:
+        """Whether this workout is visible to the given viewer."""
+        return is_visible_to(self.user_id, self.visibility, viewer)
 
     def __repr__(self) -> str:
         """String representation of Workout."""
@@ -262,7 +296,7 @@ class Workout(Base):
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "is_template": self.is_template,
             "is_done": self.is_done,
-            "is_public": self.is_public,
+            "visibility": self.visibility,
             "planned_date": (
                 self.planned_date.isoformat() if self.planned_date else None
             ),
@@ -308,7 +342,12 @@ class ExerciseDefinition(Base):
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
-    is_public = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    visibility = db.Column(
+        db.String(10),
+        nullable=False,
+        default=DEFAULT_VISIBILITY,
+        server_default=DEFAULT_VISIBILITY,
+    )
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
@@ -340,7 +379,7 @@ class ExerciseDefinition(Base):
         date_created: datetime | None = None,
         archived: bool = False,
         counting_type: str = "reps",
-        is_public: bool = False,
+        visibility: str = DEFAULT_VISIBILITY,
     ) -> None:
         """Initialize an ExerciseDefinition instance.
 
@@ -350,7 +389,8 @@ class ExerciseDefinition(Base):
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
             counting_type: How sets are counted - "reps" or "duration".
-            is_public: Whether other users can see this exercise.
+            visibility: Who can see this exercise - "public", "followers", or
+                "private".
 
         Example:
             >>> exercise_def = ExerciseDefinition(
@@ -364,13 +404,17 @@ class ExerciseDefinition(Base):
         self.user_id = user_id
         self.archived = archived
         self.counting_type = counting_type
-        self.is_public = is_public
+        self.visibility = visibility
         if date_created is not None:
             self.date_created = date_created
 
     def __repr__(self) -> str:
         """String representation of Exercise definition."""
         return f"<ExerciseDefinition {self.title}>"
+
+    def is_visible_to(self, viewer: "User | None") -> bool:
+        """Whether this exercise definition is visible to the given viewer."""
+        return is_visible_to(self.user_id, self.visibility, viewer)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize exercise definition to dictionary for API responses."""
@@ -386,7 +430,7 @@ class ExerciseDefinition(Base):
             "username": self.athlete.username if self.athlete else None,
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
-            "is_public": self.is_public,
+            "visibility": self.visibility,
             "progression_levels": [
                 pl.to_dict() for pl in self.progression_levels.all()
             ],
