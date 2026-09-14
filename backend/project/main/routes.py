@@ -1045,9 +1045,13 @@ def follow(username: str) -> ResponseReturnValue:
     if user == current_user:
         flash("Du kannst dir nicht selber folgen.")
         return redirect(url_for("main.user", username=username))
-    current_user.follow(user)
+    current_user.request_follow(user)
+    user.add_notification(
+        "follow_request_count",
+        user.follow_requests_received.filter_by(status="pending").count(),
+    )
     db.session.commit()
-    flash("Du folgst {}!".format(username))
+    flash("Folgeanfrage an {} gesendet.".format(username))
     return redirect(url_for("main.user", username=username))
 
 

@@ -18,7 +18,7 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import { useTranslation } from "@/i18n";
-import { useUnreadMessageCount } from "@/hooks/use-notifications";
+import { useUnreadMessageCount, useFollowRequestCount } from "@/hooks/use-notifications";
 import { CONTACT_USERNAME } from "@/lib/contact";
 
 function CloseIcon(props: React.ComponentPropsWithoutRef<"svg">) {
@@ -202,6 +202,7 @@ function MobileNavigation() {
   const { t } = useTranslation();
   const navItems = useNavItems();
   const unreadCount = useUnreadMessageCount();
+  const followRequestCount = useFollowRequestCount();
 
   return (
     <Popover className="md:hidden">
@@ -246,6 +247,14 @@ function MobileNavigation() {
             </MobileNavItem>
             <MobileNavItem href={`/messages/new?to=${CONTACT_USERNAME}`}>
               {t("nav.contact")}
+            </MobileNavItem>
+            <MobileNavItem href="/follow-requests">
+              {t("nav.followRequests")}
+              {followRequestCount > 0 && (
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+                  {followRequestCount}
+                </span>
+              )}
             </MobileNavItem>
             <MobileNavItem href="/profile">{t("nav.profile")}</MobileNavItem>
           </ul>
@@ -380,6 +389,7 @@ function LanguageToggle() {
 export default function Navbar() {
   const { t } = useTranslation();
   const unreadCount = useUnreadMessageCount();
+  const followRequestCount = useFollowRequestCount();
 
   return (
     <nav className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -409,6 +419,14 @@ export default function Navbar() {
               </NavLink>
               <NavLink href={`/messages/new?to=${CONTACT_USERNAME}`}>
                 {t("nav.contact")}
+              </NavLink>
+              <NavLink href="/follow-requests">
+                {t("nav.followRequests")}
+                {followRequestCount > 0 && (
+                  <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+                    {followRequestCount}
+                  </span>
+                )}
               </NavLink>
               <NavLink href="/profile">{t("nav.profile")}</NavLink>
               <form action="/auth/logout" method="POST">

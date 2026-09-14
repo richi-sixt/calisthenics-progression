@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateProfile, useUploadProfilePicture, useDeleteAccount } from "@/hooks/use-update-profile";
+import { useFollowRequestCount } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase/client";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const updateProfile = useUpdateProfile();
   const uploadPicture = useUploadProfilePicture();
   const deleteAccount = useDeleteAccount();
+  const followRequestCount = useFollowRequestCount();
 
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -208,6 +210,14 @@ export default function ProfileScreen() {
                       <Text className="text-sm text-gray-900 dark:text-gray-100">{user.following_count} {t("profile.following")}</Text>
                     </Pressable>
                   </View>
+                  <Pressable onPress={() => router.push("/follow-requests")} className="mt-2 flex-row items-center gap-2 self-start">
+                    <Text className="text-sm text-blue-600 dark:text-blue-400">{t("nav.followRequests")}</Text>
+                    {followRequestCount > 0 && (
+                      <View className="min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5">
+                        <Text className="text-xs font-medium text-white">{followRequestCount}</Text>
+                      </View>
+                    )}
+                  </Pressable>
                 </View>
                 {user.registered_on && (
                   <View>

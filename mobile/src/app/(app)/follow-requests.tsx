@@ -1,22 +1,17 @@
 import { useState } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { useFollowers } from "@/hooks/use-social";
-import { useProfile } from "@/hooks/use-profile";
+import { useFollowRequests } from "@/hooks/use-social";
 import { FollowUserList } from "@/components/social/FollowUserList";
 import { useTranslation } from "@/i18n";
 
-export default function FollowersScreen() {
-  const { username } = useLocalSearchParams<{ username: string }>();
+export default function FollowRequestsScreen() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useFollowers(username, page);
-  const { data: profile } = useProfile();
-  const isOwnProfile = profile?.data?.username === username;
+  const { data, isLoading, error } = useFollowRequests(page);
 
   return (
     <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <FollowUserList data={data} isLoading={isLoading} error={error} mode={isOwnProfile ? "remove" : "follow"} />
+      <FollowUserList data={data} isLoading={isLoading} error={error} mode="requests" />
 
       {data?.meta && (data.meta.has_prev || data.meta.has_next) && (
         <View className="mt-4 flex-row items-center justify-between">

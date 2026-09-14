@@ -10,6 +10,7 @@ const de: Record<keyof typeof en, string> = {
   "nav.explore": "Entdecken",
   "nav.messages": "Nachrichten",
   "nav.contact": "Kontakt",
+  "nav.followRequests": "Folgeanfragen",
   "nav.profile": "Profil",
   "nav.logout": "Abmelden",
   "nav.menu": "Menü",
@@ -227,12 +228,24 @@ const de: Record<keyof typeof en, string> = {
   "social.sendMessage": "Nachricht senden",
   "social.noWorkouts": "Noch keine Workouts.",
   "social.followingPill": "Gefolgt",
+  "social.requested": "Angefragt",
+  "social.cancelling": "Abbrechen...",
+  "social.removeFollower": "Entfernen",
+  "social.removing": "Entfernen...",
 
   // Follow lists
   "followList.followersTitle": "Follower",
   "followList.followingTitle": "Gefolgt",
   "followList.loading": "Laden...",
   "followList.empty": "Noch keine Nutzer.",
+
+  // Follow requests
+  "followRequests.title": "Folgeanfragen",
+  "followRequests.empty": "Keine ausstehenden Folgeanfragen.",
+  "followRequests.accept": "Annehmen",
+  "followRequests.accepting": "Annehmen...",
+  "followRequests.deny": "Ablehnen",
+  "followRequests.denying": "Ablehnen...",
 
   // Auth
   "auth.login": "Anmelden",

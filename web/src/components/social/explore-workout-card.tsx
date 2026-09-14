@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Workout } from "@/types";
 import { useTranslation } from "@/i18n";
-import { useFollow, useUnfollow } from "@/hooks/use-social";
+import FollowButton from "@/components/social/follow-button";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -29,8 +29,6 @@ export default function ExploreWorkoutCard({
   showOwner?: boolean;
 }) {
   const { t, formatDate } = useTranslation();
-  const follow = useFollow();
-  const unfollow = useUnfollow();
   const exerciseCount = workout.exercises?.length ?? 0;
 
   return (
@@ -56,25 +54,11 @@ export default function ExploreWorkoutCard({
                   >
                     @{workout.username}
                   </Link>
-                  {workout.is_following ? (
-                    <button
-                      type="button"
-                      onClick={() => unfollow.mutate(workout.username!)}
-                      disabled={unfollow.isPending}
-                      className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    >
-                      {t("social.followingPill")}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => follow.mutate(workout.username!)}
-                      disabled={follow.isPending}
-                      className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/30"
-                    >
-                      {t("social.follow")}
-                    </button>
-                  )}
+                  <FollowButton
+                    username={workout.username}
+                    status={workout.follow_status ?? "none"}
+                    size="sm"
+                  />
                 </span>
               )}
               {workout.timestamp && (

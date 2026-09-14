@@ -21,7 +21,7 @@ class TestApiExplore:
         data = resp.get_json()
         assert len(data["data"]) == 1
         assert data["data"][0]["title"] == "Other Workout"
-        assert data["data"][0]["is_following"] is False
+        assert data["data"][0]["follow_status"] == "none"
 
     def test_explore_excludes_own(self, client, api_headers, workout):
         resp = client.get("/api/v1/explore", headers=api_headers)
@@ -72,7 +72,8 @@ class TestApiExplore:
         with app.app_context():
             u = db.session.get(User, user.id)
             u2 = db.session.get(User, second_user.id)
-            u.follow(u2)
+            u.request_follow(u2)
+            u2.accept_follow_request(u)
             db.session.add(
                 Workout(
                     title="Followers Workout",
@@ -87,7 +88,7 @@ class TestApiExplore:
         data = resp.get_json()["data"]
         assert len(data) == 1
         assert data[0]["title"] == "Followers Workout"
-        assert data[0]["is_following"] is True
+        assert data[0]["follow_status"] == "accepted"
 
     def test_explore_scope_following(
         self, client, api_headers, second_user, user, app
@@ -98,7 +99,8 @@ class TestApiExplore:
         with app.app_context():
             u = db.session.get(User, user.id)
             u2 = db.session.get(User, second_user.id)
-            u.follow(u2)
+            u.request_follow(u2)
+            u2.accept_follow_request(u)
             db.session.add(
                 Workout(
                     title="Followed User Workout",
@@ -155,7 +157,7 @@ class TestApiGetUser:
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert data["user"]["username"] == "seconduser"
-        assert data["user"]["is_following"] is False
+        assert data["user"]["follow_status"] == "none"
 
     def test_get_user_not_found(self, client, api_headers):
         resp = client.get("/api/v1/users/ghost", headers=api_headers)
@@ -195,7 +197,8 @@ class TestApiGetUser:
         with app.app_context():
             u = db.session.get(User, user.id)
             u2 = db.session.get(User, second_user.id)
-            u.follow(u2)
+            u.request_follow(u2)
+            u2.accept_follow_request(u)
             db.session.add(
                 Workout(
                     title="Followers One", user_id=second_user.id, visibility="followers"
@@ -213,35 +216,168 @@ class TestApiGetUser:
 
 
 class TestApiFollow:
-    def test_follow(self, client, api_headers, second_user):
+    def test_follow_creates_pending_request(self, client, api_headers, second_user):
         resp = client.post(
             f"/api/v1/users/{second_user.username}/follow", headers=api_headers
         )
         assert resp.status_code == 200
+        assert resp.get_json()["data"]["follow_status"] == "pending"
 
-        # Verify following
+        # Not yet an accepted follow
         resp = client.get(f"/api/v1/users/{second_user.username}", headers=api_headers)
-        assert resp.get_json()["data"]["user"]["is_following"] is True
+        assert resp.get_json()["data"]["user"]["follow_status"] == "pending"
 
     def test_follow_self(self, client, api_headers, user):
         resp = client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers)
         assert resp.status_code == 400
 
-    def test_unfollow(self, client, api_headers, second_user, app):
-        # Follow first
+    def test_follow_notifies_target(self, client, api_headers, api_headers_second, second_user):
+        client.post(f"/api/v1/users/{second_user.username}/follow", headers=api_headers)
+
+        resp = client.get("/api/v1/notifications", headers=api_headers_second)
+        names = {n["name"]: n["data"] for n in resp.get_json()["data"]}
+        assert names.get("follow_request_count") == 1
+
+    def test_follow_idempotent_when_pending(self, client, api_headers, second_user):
+        client.post(f"/api/v1/users/{second_user.username}/follow", headers=api_headers)
+        resp = client.post(
+            f"/api/v1/users/{second_user.username}/follow", headers=api_headers
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["follow_status"] == "pending"
+
+    def test_unfollow_accepted(self, client, api_headers, second_user, app):
         from project import db
         from project.models import User
 
         with app.app_context():
             u = db.session.get(User, 1)
             u2 = db.session.get(User, second_user.id)
-            u.follow(u2)
+            u.request_follow(u2)
+            u2.accept_follow_request(u)
             db.session.commit()
 
         resp = client.post(
             f"/api/v1/users/{second_user.username}/unfollow", headers=api_headers
         )
         assert resp.status_code == 200
+        assert resp.get_json()["data"]["follow_status"] == "none"
+
+    def test_unfollow_cancels_pending_request(self, client, api_headers, second_user):
+        client.post(f"/api/v1/users/{second_user.username}/follow", headers=api_headers)
+
+        resp = client.post(
+            f"/api/v1/users/{second_user.username}/unfollow", headers=api_headers
+        )
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/v1/users/{second_user.username}", headers=api_headers)
+        assert resp.get_json()["data"]["user"]["follow_status"] == "none"
+
+
+class TestApiFollowRequests:
+    def test_list_follow_requests(self, client, api_headers, api_headers_second, second_user, user):
+        client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
+
+        resp = client.get("/api/v1/follow-requests", headers=api_headers)
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert len(data) == 1
+        assert data[0]["username"] == second_user.username
+
+    def test_list_follow_requests_empty(self, client, api_headers):
+        resp = client.get("/api/v1/follow-requests", headers=api_headers)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+    def test_accept_follow_request(
+        self, client, api_headers, api_headers_second, second_user, user
+    ):
+        client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
+
+        resp = client.post(
+            f"/api/v1/follow-requests/{second_user.username}/accept", headers=api_headers
+        )
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/v1/users/{user.username}", headers=api_headers_second)
+        assert resp.get_json()["data"]["user"]["follow_status"] == "accepted"
+
+        # Request no longer pending
+        resp = client.get("/api/v1/follow-requests", headers=api_headers)
+        assert resp.get_json()["data"] == []
+
+    def test_accept_updates_notification_count(
+        self, client, api_headers, api_headers_second, second_user, user
+    ):
+        client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
+        client.post(
+            f"/api/v1/follow-requests/{second_user.username}/accept", headers=api_headers
+        )
+
+        resp = client.get("/api/v1/notifications", headers=api_headers)
+        names = {n["name"]: n["data"] for n in resp.get_json()["data"]}
+        assert names.get("follow_request_count") == 0
+
+    def test_deny_follow_request(
+        self, client, api_headers, api_headers_second, second_user, user
+    ):
+        client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
+
+        resp = client.post(
+            f"/api/v1/follow-requests/{second_user.username}/deny", headers=api_headers
+        )
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/v1/users/{user.username}", headers=api_headers_second)
+        assert resp.get_json()["data"]["user"]["follow_status"] == "none"
+
+        # Denied requester can request again
+        resp = client.post(
+            f"/api/v1/users/{user.username}/follow", headers=api_headers_second
+        )
+        assert resp.get_json()["data"]["follow_status"] == "pending"
+
+    def test_accept_not_found(self, client, api_headers):
+        resp = client.post(
+            "/api/v1/follow-requests/ghost/accept", headers=api_headers
+        )
+        assert resp.status_code == 404
+
+
+class TestApiRemoveFollower:
+    def test_remove_follower(
+        self, client, api_headers, api_headers_second, second_user, user, app
+    ):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            u = db.session.get(User, user.id)
+            u2 = db.session.get(User, second_user.id)
+            u2.request_follow(u)
+            u.accept_follow_request(u2)
+            db.session.commit()
+
+        resp = client.post(
+            f"/api/v1/users/{second_user.username}/remove-follower", headers=api_headers
+        )
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/v1/users/{user.username}", headers=api_headers_second)
+        assert resp.get_json()["data"]["user"]["follow_status"] == "none"
+
+    def test_remove_follower_self(self, client, api_headers, user):
+        resp = client.post(
+            f"/api/v1/users/{user.username}/remove-follower", headers=api_headers
+        )
+        assert resp.status_code == 400
+
+    def test_remove_follower_not_found(self, client, api_headers):
+        resp = client.post(
+            "/api/v1/users/ghost/remove-follower", headers=api_headers
+        )
+        assert resp.status_code == 404
 
 
 class TestApiFollowersList:
@@ -252,7 +388,8 @@ class TestApiFollowersList:
         with app.app_context():
             u = db.session.get(User, user.id)
             u2 = db.session.get(User, second_user.id)
-            u2.follow(u)
+            u2.request_follow(u)
+            u.accept_follow_request(u2)
             db.session.commit()
 
         resp = client.get(f"/api/v1/users/{user.username}/followers", headers=api_headers)
@@ -260,7 +397,7 @@ class TestApiFollowersList:
         data = resp.get_json()["data"]
         assert len(data) == 1
         assert data[0]["username"] == second_user.username
-        assert data[0]["is_following"] is False
+        assert data[0]["follow_status"] == "none"
 
     def test_followers_list_not_found(self, client, api_headers):
         resp = client.get("/api/v1/users/ghost/followers", headers=api_headers)
@@ -280,7 +417,8 @@ class TestApiFollowingList:
         with app.app_context():
             u = db.session.get(User, user.id)
             u2 = db.session.get(User, second_user.id)
-            u.follow(u2)
+            u.request_follow(u2)
+            u2.accept_follow_request(u)
             db.session.commit()
 
         resp = client.get(f"/api/v1/users/{user.username}/following", headers=api_headers)
@@ -288,7 +426,7 @@ class TestApiFollowingList:
         data = resp.get_json()["data"]
         assert len(data) == 1
         assert data[0]["username"] == second_user.username
-        assert data[0]["is_following"] is True
+        assert data[0]["follow_status"] == "accepted"
 
     def test_following_list_not_found(self, client, api_headers):
         resp = client.get("/api/v1/users/ghost/following", headers=api_headers)
