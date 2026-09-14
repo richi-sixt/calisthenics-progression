@@ -26,8 +26,8 @@ def upgrade():
 
     # Backfill: previously-public exercises stay public, previously-private
     # exercises become followers-only (the new default), per product decision.
-    op.execute("UPDATE exercises SET visibility = 'public' WHERE is_public = 1")
-    op.execute("UPDATE exercises SET visibility = 'followers' WHERE is_public = 0")
+    op.execute("UPDATE exercises SET visibility = 'public' WHERE is_public = true")
+    op.execute("UPDATE exercises SET visibility = 'followers' WHERE is_public = false")
 
     with op.batch_alter_table('exercises', schema=None) as batch_op:
         batch_op.drop_column('is_public')
@@ -39,8 +39,8 @@ def downgrade():
             sa.Column('is_public', sa.Boolean(), server_default='0', nullable=False)
         )
 
-    op.execute("UPDATE exercises SET is_public = 1 WHERE visibility = 'public'")
-    op.execute("UPDATE exercises SET is_public = 0 WHERE visibility != 'public'")
+    op.execute("UPDATE exercises SET is_public = true WHERE visibility = 'public'")
+    op.execute("UPDATE exercises SET is_public = false WHERE visibility != 'public'")
 
     with op.batch_alter_table('exercises', schema=None) as batch_op:
         batch_op.drop_column('visibility')
