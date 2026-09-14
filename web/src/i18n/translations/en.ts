@@ -8,6 +8,7 @@ const en = {
   "nav.explore": "Explore",
   "nav.messages": "Messages",
   "nav.contact": "Contact",
+  "nav.followRequests": "Follow Requests",
   "nav.profile": "Profile",
   "nav.logout": "Logout",
   "nav.menu": "Menu",
@@ -225,12 +226,24 @@ const en = {
   "social.sendMessage": "Send Message",
   "social.noWorkouts": "No workouts yet.",
   "social.followingPill": "Following",
+  "social.requested": "Requested",
+  "social.cancelling": "Cancelling...",
+  "social.removeFollower": "Remove",
+  "social.removing": "Removing...",
 
   // Follow lists
   "followList.followersTitle": "Followers",
   "followList.followingTitle": "Following",
   "followList.loading": "Loading...",
   "followList.empty": "No users yet.",
+
+  // Follow requests
+  "followRequests.title": "Follow Requests",
+  "followRequests.empty": "No pending follow requests.",
+  "followRequests.accept": "Accept",
+  "followRequests.accepting": "Accepting...",
+  "followRequests.deny": "Deny",
+  "followRequests.denying": "Denying...",
 
   // Auth
   "auth.login": "Login",

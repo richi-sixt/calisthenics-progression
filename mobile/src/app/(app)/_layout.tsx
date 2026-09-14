@@ -21,6 +21,7 @@ export default function AppLayout() {
       <Stack.Screen name="users/[username]/index" options={{ title: t("profile.title") }} />
       <Stack.Screen name="users/[username]/followers" options={{ title: t("followList.followersTitle") }} />
       <Stack.Screen name="users/[username]/following" options={{ title: t("followList.followingTitle") }} />
+      <Stack.Screen name="follow-requests" options={{ title: t("followRequests.title") }} />
       <Stack.Screen name="messages/new" options={{ title: t("messages.new") }} />
     </Stack>
   );

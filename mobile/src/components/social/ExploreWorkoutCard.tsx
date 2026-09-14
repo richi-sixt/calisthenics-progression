@@ -2,7 +2,7 @@ import { View, Text, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import type { Workout, Exercise } from "@/types";
 import { useTranslation, type TranslationKey } from "@/i18n";
-import { useFollow, useUnfollow } from "@/hooks/use-social";
+import { FollowButton } from "@/components/social/FollowButton";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -21,8 +21,6 @@ function formatSetDetails(exercise: Exercise, t: (key: TranslationKey) => string
 export function ExploreWorkoutCard({ workout, showOwner = true }: { workout: Workout; showOwner?: boolean }) {
   const router = useRouter();
   const { t, formatDate } = useTranslation();
-  const follow = useFollow();
-  const unfollow = useUnfollow();
   const exerciseCount = workout.exercises?.length ?? 0;
   const profilePicUrl = workout.user_image_file ? `${API_BASE}/static/profile_pics/${workout.user_image_file}` : null;
 
@@ -49,23 +47,11 @@ export function ExploreWorkoutCard({ workout, showOwner = true }: { workout: Wor
                   <Pressable onPress={() => router.push(`/users/${workout.username}`)}>
                     <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">@{workout.username}</Text>
                   </Pressable>
-                  {workout.is_following ? (
-                    <Pressable
-                      onPress={() => unfollow.mutate(workout.username!)}
-                      disabled={unfollow.isPending}
-                      className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5"
-                    >
-                      <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("social.followingPill")}</Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      onPress={() => follow.mutate(workout.username!)}
-                      disabled={follow.isPending}
-                      className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5"
-                    >
-                      <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{t("social.follow")}</Text>
-                    </Pressable>
-                  )}
+                  <FollowButton
+                    username={workout.username}
+                    status={workout.follow_status ?? "none"}
+                    size="sm"
+                  />
                 </View>
               )}
               {workout.timestamp && <Text className="text-sm text-gray-500 dark:text-gray-400">{formatDate(workout.timestamp)}</Text>}

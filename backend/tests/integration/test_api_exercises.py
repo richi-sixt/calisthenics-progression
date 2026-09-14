@@ -33,7 +33,8 @@ class TestApiListExercises:
         with app.app_context():
             follower = db.session.get(User, second_user.id)
             followed = db.session.get(User, user.id)
-            follower.follow(followed)
+            follower.request_follow(followed)
+            followed.accept_follow_request(follower)
             db.session.commit()
 
         resp = client.get("/api/v1/exercises?user=all", headers=api_headers_second)
@@ -191,7 +192,8 @@ class TestApiGetExercise:
         with app.app_context():
             follower = db.session.get(User, second_user.id)
             followed = db.session.get(User, user.id)
-            follower.follow(followed)
+            follower.request_follow(followed)
+            followed.accept_follow_request(follower)
             db.session.commit()
 
         resp = client.get(
@@ -208,7 +210,8 @@ class TestApiGetExercise:
         with app.app_context():
             follower = db.session.get(User, second_user.id)
             followed = db.session.get(User, user.id)
-            follower.follow(followed)
+            follower.request_follow(followed)
+            followed.accept_follow_request(follower)
             exercise_definition.visibility = "private"
             db.session.commit()
 
@@ -366,7 +369,8 @@ class TestApiCopyExercise:
         with app.app_context():
             follower = db.session.get(User, second_user.id)
             followed = db.session.get(User, user.id)
-            follower.follow(followed)
+            follower.request_follow(followed)
+            followed.accept_follow_request(follower)
             db.session.commit()
 
         resp = client.post(

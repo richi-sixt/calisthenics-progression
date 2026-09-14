@@ -5,8 +5,8 @@ import pytest
 __all__ = ("pytest",)
 from flask import url_for
 from project import db
-from project.models import (Exercise, ExerciseDefinition, Message,
-                            Notification, Set, User, Workout, followers)
+from project.models import (Exercise, ExerciseDefinition, Follow, Message,
+                            Notification, Set, User, Workout)
 from project.token import generate_confirmation_token
 from sqlalchemy import func
 
@@ -585,8 +585,9 @@ class TestDeleteAccountRoute:
                 .scalars()
                 .first()
             )
-            u1.follow(u2)
-            u2.follow(u1)
+            u1.request_follow(u2)
+            u2.request_follow(u1)
+            u2.accept_follow_request(u1)
             db.session.commit()
             user_id = u1.id
 
@@ -596,9 +597,8 @@ class TestDeleteAccountRoute:
                 follow_redirects=True,
             )
             result = db.session.execute(
-                db.select(followers).where(
-                    (followers.c.follower_id == user_id)
-                    | (followers.c.followed_id == user_id)
+                db.select(Follow).where(
+                    (Follow.follower_id == user_id) | (Follow.followed_id == user_id)
                 )
             ).fetchall()
             assert len(result) == 0

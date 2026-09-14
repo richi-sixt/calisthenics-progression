@@ -8,8 +8,8 @@ __all__ = ("pytest",)
 import sqlalchemy.exc
 from project import db
 from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
-                            Message, Notification, ProgressionLevel, Set, User,
-                            Workout, followers)
+                            Follow, Message, Notification, ProgressionLevel, Set,
+                            User, Workout)
 from sqlalchemy import func
 
 
@@ -48,8 +48,8 @@ class TestUserModel:
             )
             assert repr(user) == "<User testuser>"
 
-    def test_follow_user(self, app, user, second_user):
-        """Test following another user."""
+    def test_request_follow_creates_pending(self, app, user, second_user):
+        """Test that requesting to follow creates a pending relationship."""
         with app.app_context():
             user1 = (
                 db.session.execute(db.select(User).filter_by(username="testuser"))
@@ -62,16 +62,42 @@ class TestUserModel:
                 .first()
             )
 
-            assert user1.is_following(user2) is False
+            assert user1.follow_status(user2) == "none"
 
-            user1.follow(user2)
+            user1.request_follow(user2)
             db.session.commit()
 
+            assert user1.follow_status(user2) == "pending"
+            # Not an accepted follow yet, so is_following is still False
+            assert user1.is_following(user2) is False
+            assert user2.is_following(user1) is False
+
+    def test_accept_follow_request(self, app, user, second_user):
+        """Test accepting a pending follow request."""
+        with app.app_context():
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
+
+            user1.request_follow(user2)
+            db.session.commit()
+
+            user2.accept_follow_request(user1)
+            db.session.commit()
+
+            assert user1.follow_status(user2) == "accepted"
             assert user1.is_following(user2) is True
             assert user2.is_following(user1) is False
 
-    def test_unfollow_user(self, app, user, second_user):
-        """Test unfollowing a user."""
+    def test_deny_follow_request(self, app, user, second_user):
+        """Test denying a pending follow request removes it and allows re-request."""
         with app.app_context():
             user1 = (
                 db.session.execute(db.select(User).filter_by(username="testuser"))
@@ -84,16 +110,45 @@ class TestUserModel:
                 .first()
             )
 
-            user1.follow(user2)
+            user1.request_follow(user2)
+            db.session.commit()
+
+            user2.deny_follow_request(user1)
+            db.session.commit()
+
+            assert user1.follow_status(user2) == "none"
+
+            # Denied requester can request again
+            user1.request_follow(user2)
+            db.session.commit()
+            assert user1.follow_status(user2) == "pending"
+
+    def test_unfollow_user(self, app, user, second_user):
+        """Test unfollowing an accepted follow."""
+        with app.app_context():
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
+
+            user1.request_follow(user2)
+            user2.accept_follow_request(user1)
             db.session.commit()
             assert user1.is_following(user2) is True
 
             user1.unfollow(user2)
             db.session.commit()
             assert user1.is_following(user2) is False
+            assert user1.follow_status(user2) == "none"
 
-    def test_follow_idempotent(self, app, user, second_user):
-        """Test that following same user twice doesn't duplicate."""
+    def test_unfollow_cancels_pending_request(self, app, user, second_user):
+        """Test that unfollowing a pending request cancels it."""
         with app.app_context():
             user1 = (
                 db.session.execute(db.select(User).filter_by(username="testuser"))
@@ -106,11 +161,58 @@ class TestUserModel:
                 .first()
             )
 
-            user1.follow(user2)
-            user1.follow(user2)  # Follow again
+            user1.request_follow(user2)
+            db.session.commit()
+            assert user1.follow_status(user2) == "pending"
+
+            user1.unfollow(user2)
+            db.session.commit()
+            assert user1.follow_status(user2) == "none"
+
+    def test_remove_follower(self, app, user, second_user):
+        """Test removing an existing accepted follower."""
+        with app.app_context():
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
+
+            user1.request_follow(user2)
+            user2.accept_follow_request(user1)
+            db.session.commit()
+            assert user1.is_following(user2) is True
+
+            user2.remove_follower(user1)
             db.session.commit()
 
-            assert user1.followed.count() == 1
+            assert user1.is_following(user2) is False
+            assert user1.follow_status(user2) == "none"
+
+    def test_request_follow_idempotent(self, app, user, second_user):
+        """Test that requesting to follow the same user twice doesn't duplicate."""
+        with app.app_context():
+            user1 = (
+                db.session.execute(db.select(User).filter_by(username="testuser"))
+                .scalars()
+                .first()
+            )
+            user2 = (
+                db.session.execute(db.select(User).filter_by(username="seconduser"))
+                .scalars()
+                .first()
+            )
+
+            user1.request_follow(user2)
+            user1.request_follow(user2)  # Request again
+            db.session.commit()
+
+            assert user1.follow_requests_sent.count() == 1
 
     def test_followed_workouts(self, app, user, second_user, workout):
         """Test getting workouts from followed users and self."""
@@ -138,8 +240,9 @@ class TestUserModel:
             assert len(own_workouts) == 1
             assert own_workouts[0].title == "Morning Workout"
 
-            # After following, should see both
-            user1.follow(user2)
+            # After following (accepted), should see both
+            user1.request_follow(user2)
+            user2.accept_follow_request(user1)
             db.session.commit()
 
             all_workouts = db.session.execute(user1.followed_workouts()).scalars().all()
@@ -835,7 +938,7 @@ class TestUserAccountDeletion:
             )
 
     def test_follow_relationships_deleted_via_sql(self, app, user, second_user):
-        """Test that follow relationships can be deleted via direct SQL on the association table."""
+        """Test that follow relationships can be deleted via direct SQL on the followers table."""
         with app.app_context():
             u1 = (
                 db.session.execute(db.select(User).filter_by(username="testuser"))
@@ -847,23 +950,21 @@ class TestUserAccountDeletion:
                 .scalars()
                 .first()
             )
-            u1.follow(u2)
-            u2.follow(u1)
+            u1.request_follow(u2)
+            u2.request_follow(u1)
             db.session.commit()
             user_id = u1.id
 
             db.session.execute(
-                followers.delete().where(
-                    (followers.c.follower_id == user_id)
-                    | (followers.c.followed_id == user_id)
+                db.delete(Follow).where(
+                    (Follow.follower_id == user_id) | (Follow.followed_id == user_id)
                 )
             )
             db.session.commit()
 
             result = db.session.execute(
-                db.select(followers).where(
-                    (followers.c.follower_id == user_id)
-                    | (followers.c.followed_id == user_id)
+                db.select(Follow).where(
+                    (Follow.follower_id == user_id) | (Follow.followed_id == user_id)
                 )
             ).fetchall()
             assert len(result) == 0

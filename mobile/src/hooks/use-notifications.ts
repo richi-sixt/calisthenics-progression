@@ -17,3 +17,11 @@ export function useUnreadMessageCount() {
   if (!unread?.data) return 0;
   return typeof unread.data === "number" ? unread.data : 0;
 }
+
+export function useFollowRequestCount() {
+  const { data } = useNotifications();
+  const notifications = data?.data ?? [];
+  const pending = notifications.find((n) => n.name === "follow_request_count");
+  if (!pending?.data) return 0;
+  return typeof pending.data === "number" ? pending.data : 0;
+}

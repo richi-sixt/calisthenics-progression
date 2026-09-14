@@ -796,7 +796,7 @@ class TestFollowRoutes:
     """Tests for follow/unfollow routes."""
 
     def test_follow_user(self, auth_client, second_user, app):
-        """Test following another user."""
+        """Test requesting to follow another user creates a pending request."""
         with app.app_context():
             response = auth_client.get(
                 url_for("main.follow", username="seconduser"),
@@ -804,7 +804,7 @@ class TestFollowRoutes:
             )
             assert response.status_code == 200
 
-            # Verify follow relationship
+            # Verify pending follow request (not yet accepted)
             user = (
                 db.session.execute(db.select(User).filter_by(username="testuser"))
                 .scalars()
@@ -815,7 +815,8 @@ class TestFollowRoutes:
                 .scalars()
                 .first()
             )
-            assert user.is_following(second) is True
+            assert user.follow_status(second) == "pending"
+            assert user.is_following(second) is False
 
     def test_unfollow_user(self, auth_client, second_user, app):
         """Test unfollowing a user."""
@@ -831,7 +832,7 @@ class TestFollowRoutes:
                 .scalars()
                 .first()
             )
-            user.follow(second)
+            user.request_follow(second)
             db.session.commit()
 
             response = auth_client.get(

@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import type { UserWithFollowing } from "@/types";
-import { useFollow, useUnfollow } from "@/hooks/use-social";
+import FollowButton from "@/components/social/follow-button";
 import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
 export default function UserProfileHeader({ user }: { user: UserWithFollowing }) {
   const { t, formatDate } = useTranslation();
-  const follow = useFollow();
-  const unfollow = useUnfollow();
 
   const profilePicUrl = user.image_file
     ? `${API_BASE}/static/profile_pics/${user.image_file}`
@@ -54,23 +52,7 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {user.is_following ? (
-          <button
-            onClick={() => unfollow.mutate(user.username)}
-            disabled={unfollow.isPending}
-            className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
-          >
-            {unfollow.isPending ? t("social.unfollowing") : t("social.unfollow")}
-          </button>
-        ) : (
-          <button
-            onClick={() => follow.mutate(user.username)}
-            disabled={follow.isPending}
-            className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/30 disabled:opacity-50"
-          >
-            {follow.isPending ? t("social.following") : t("social.follow")}
-          </button>
-        )}
+        <FollowButton username={user.username} status={user.follow_status} />
         <Link
           href={`/messages/new?to=${user.username}`}
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"

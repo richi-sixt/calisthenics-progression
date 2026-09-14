@@ -37,17 +37,23 @@ export function useUserProfile(username: string) {
   });
 }
 
+function invalidateFollowQueries(qc: ReturnType<typeof useQueryClient>, username: string) {
+  qc.invalidateQueries({ queryKey: ["user", username] });
+  qc.invalidateQueries({ queryKey: ["explore"] });
+  qc.invalidateQueries({ queryKey: ["followers"] });
+  qc.invalidateQueries({ queryKey: ["following"] });
+  qc.invalidateQueries({ queryKey: ["follow-requests"] });
+  qc.invalidateQueries({ queryKey: ["notifications"] });
+}
+
 export function useFollow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (username: string) =>
-      api.post<{ data: { message: string } }>(`/users/${username}/follow`),
-    onSuccess: (_data, username) => {
-      qc.invalidateQueries({ queryKey: ["user", username] });
-      qc.invalidateQueries({ queryKey: ["explore"] });
-      qc.invalidateQueries({ queryKey: ["followers"] });
-      qc.invalidateQueries({ queryKey: ["following"] });
-    },
+      api.post<{ data: { follow_status: import("@/types").FollowStatus } }>(
+        `/users/${username}/follow`
+      ),
+    onSuccess: (_data, username) => invalidateFollowQueries(qc, username),
   });
 }
 
@@ -55,13 +61,47 @@ export function useUnfollow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (username: string) =>
-      api.post<{ data: { message: string } }>(`/users/${username}/unfollow`),
-    onSuccess: (_data, username) => {
-      qc.invalidateQueries({ queryKey: ["user", username] });
-      qc.invalidateQueries({ queryKey: ["explore"] });
-      qc.invalidateQueries({ queryKey: ["followers"] });
-      qc.invalidateQueries({ queryKey: ["following"] });
-    },
+      api.post<{ data: { follow_status: import("@/types").FollowStatus } }>(
+        `/users/${username}/unfollow`
+      ),
+    onSuccess: (_data, username) => invalidateFollowQueries(qc, username),
+  });
+}
+
+export function useFollowRequests(page: number = 1) {
+  return useQuery({
+    queryKey: ["follow-requests", page],
+    queryFn: () =>
+      api.get<PaginatedResponse<FollowUser>>("/follow-requests", {
+        page: String(page),
+      }),
+  });
+}
+
+export function useAcceptFollowRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api.post<{ data: { message: string } }>(`/follow-requests/${username}/accept`),
+    onSuccess: (_data, username) => invalidateFollowQueries(qc, username),
+  });
+}
+
+export function useDenyFollowRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api.post<{ data: { message: string } }>(`/follow-requests/${username}/deny`),
+    onSuccess: (_data, username) => invalidateFollowQueries(qc, username),
+  });
+}
+
+export function useRemoveFollower() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api.post<{ data: { message: string } }>(`/users/${username}/remove-follower`),
+    onSuccess: (_data, username) => invalidateFollowQueries(qc, username),
   });
 }
 

@@ -11,12 +11,30 @@ from flask_login import UserMixin
 from project import Base, db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# Followers association table for many-to-many relationship
-followers = db.Table(
-    "followers",
-    db.Column("follower_id", db.Integer, db.ForeignKey("user.id")),
-    db.Column("followed_id", db.Integer, db.ForeignKey("user.id")),
-)
+FOLLOW_STATUS_VALUES = ("pending", "accepted")
+
+
+class Follow(Base):
+    """A follow relationship between two users, pending until accepted."""
+
+    __tablename__ = "followers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    status = db.Column(
+        db.String(10), nullable=False, default="pending", server_default="pending"
+    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint("follower_id", "followed_id", name="uq_follow_pair"),
+    )
+
+    def __repr__(self) -> str:
+        """String representation of Follow."""
+        return f"<Follow {self.follower_id}->{self.followed_id} ({self.status})>"
+
 
 # Visibility tiers shared by Workout and ExerciseDefinition
 VISIBILITY_VALUES = ("public", "followers", "private")
@@ -85,13 +103,19 @@ class User(UserMixin, Base):
     last_message_read_time = db.Column(db.DateTime)
 
     # Relationships - Following system
-    followed = db.relationship(
-        "User",
-        secondary=followers,
-        primaryjoin=(followers.c.follower_id == id),
-        secondaryjoin=(followers.c.followed_id == id),
-        backref=db.backref("followers", lazy="dynamic"),
+    follow_requests_sent = db.relationship(
+        "Follow",
+        foreign_keys="Follow.follower_id",
+        backref="requester",
         lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    follow_requests_received = db.relationship(
+        "Follow",
+        foreign_keys="Follow.followed_id",
+        backref="target",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
     )
 
     # Relationships - User content
@@ -143,33 +167,81 @@ class User(UserMixin, Base):
         return check_password_hash(self.password_hash, password)
 
     # Following methods
-    def follow(self, user: "User") -> None:
-        """Follow another user if not already following."""
-        if not self.is_following(user):
-            self.followed.append(user)
+    def request_follow(self, user: "User") -> None:
+        """Request to follow another user (idempotent, creates a pending row)."""
+        existing = self.follow_requests_sent.filter_by(followed_id=user.id).first()
+        if existing is None:
+            db.session.add(
+                Follow(follower_id=self.id, followed_id=user.id, status="pending")
+            )
 
     def unfollow(self, user: "User") -> None:
-        """Unfollow a user if currently following."""
-        if self.is_following(user):
-            self.followed.remove(user)
+        """Cancel a pending request to, or stop following, another user."""
+        self.follow_requests_sent.filter_by(followed_id=user.id).delete()
+
+    def accept_follow_request(self, user: "User") -> None:
+        """Accept a pending follow request from another user."""
+        request = self.follow_requests_received.filter_by(
+            follower_id=user.id, status="pending"
+        ).first()
+        if request is not None:
+            request.status = "accepted"
+
+    def deny_follow_request(self, user: "User") -> None:
+        """Deny (delete) a pending follow request from another user."""
+        self.follow_requests_received.filter_by(
+            follower_id=user.id, status="pending"
+        ).delete()
+
+    def remove_follower(self, user: "User") -> None:
+        """Remove an existing accepted follower."""
+        self.follow_requests_received.filter_by(
+            follower_id=user.id, status="accepted"
+        ).delete()
 
     def is_following(self, user: "User") -> bool:
-        """Check if this user is following another user."""
-        return bool(self.followed.filter(followers.c.followed_id == user.id).count())
+        """Check if this user has an accepted follow of another user."""
+        return self.is_following_id(user.id)
 
     def is_following_id(self, user_id: int) -> bool:
-        """Check if this user is following the user with the given id."""
-        return bool(self.followed.filter(followers.c.followed_id == user_id).count())
+        """Check if this user has an accepted follow of the given user id."""
+        return bool(
+            self.follow_requests_sent.filter_by(
+                followed_id=user_id, status="accepted"
+            ).count()
+        )
+
+    def follow_status(self, user: "User") -> str:
+        """This user's relationship to another user: none/pending/accepted."""
+        row = self.follow_requests_sent.filter_by(followed_id=user.id).first()
+        return row.status if row is not None else "none"
+
+    @property
+    def followers(self):  # type: ignore[no-untyped-def]
+        """Query of Users who have an accepted follow of this user."""
+        return (
+            db.session.query(User)
+            .join(Follow, Follow.follower_id == User.id)
+            .filter(Follow.followed_id == self.id, Follow.status == "accepted")
+        )
+
+    @property
+    def followed(self):  # type: ignore[no-untyped-def]
+        """Query of Users this user has an accepted follow of."""
+        return (
+            db.session.query(User)
+            .join(Follow, Follow.followed_id == User.id)
+            .filter(Follow.follower_id == self.id, Follow.status == "accepted")
+        )
 
     def followed_workouts(self):  # type: ignore[return]
         """Get workouts from followed users and own workouts (excludes templates)."""
         followed = (
             db.select(Workout)
-            .join(  # type: ignore[name-defined]
-                followers, (followers.c.followed_id == Workout.user_id)  # type: ignore[name-defined]
-            )
+            .join(Follow, Follow.followed_id == Workout.user_id)  # type: ignore[name-defined]
             .filter(
-                followers.c.follower_id == self.id,
+                Follow.follower_id == self.id,
+                Follow.status == "accepted",
                 Workout.is_template == False,  # noqa: E712
                 Workout.visibility.in_(("public", "followers")),
             )

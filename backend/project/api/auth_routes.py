@@ -14,8 +14,8 @@ from PIL import Image
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import (ExerciseDefinition, Message, Notification, User,
-                            followers)
+from project.models import (ExerciseDefinition, Follow, Message, Notification,
+                            User)
 
 
 @bp.route("/auth/profile", methods=["GET"])
@@ -97,10 +97,10 @@ def api_update_profile_picture() -> ResponseReturnValue:
 def api_delete_account() -> ResponseReturnValue:
     user = g.current_api_user
 
-    # 1. Remove follow relationships from association table
+    # 1. Remove follow relationships (pending and accepted, both directions)
     db.session.execute(
-        followers.delete().where(
-            (followers.c.follower_id == user.id) | (followers.c.followed_id == user.id)
+        db.delete(Follow).where(
+            (Follow.follower_id == user.id) | (Follow.followed_id == user.id)
         )
     )
 

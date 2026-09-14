@@ -15,8 +15,8 @@ from project.auth.forms import (ChangePasswordForm, DeleteAccountForm,
                                 ResetPasswordForm, ResetPasswordRequestForm)
 from project.decorators import check_confirmed
 from project.email import send_email
-from project.models import (ExerciseDefinition, Message, Notification, User,
-                            followers)
+from project.models import (ExerciseDefinition, Follow, Message, Notification,
+                            User)
 from project.token import confirm_token, generate_confirmation_token
 from werkzeug.datastructures import FileStorage
 
@@ -141,11 +141,10 @@ def delete_account() -> ResponseReturnValue:
         if user is None:
             abort(404)
 
-        # 1. Remove follow relationships from association table
+        # 1. Remove follow relationships (pending and accepted, both directions)
         db.session.execute(
-            followers.delete().where(
-                (followers.c.follower_id == user.id)
-                | (followers.c.followed_id == user.id)
+            db.delete(Follow).where(
+                (Follow.follower_id == user.id) | (Follow.followed_id == user.id)
             )
         )
 

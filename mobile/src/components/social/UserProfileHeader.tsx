@@ -1,7 +1,7 @@
 import { View, Text, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import type { UserWithFollowing } from "@/types";
-import { useFollow, useUnfollow } from "@/hooks/use-social";
+import { FollowButton } from "@/components/social/FollowButton";
 import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
@@ -9,8 +9,6 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 export function UserProfileHeader({ user }: { user: UserWithFollowing }) {
   const router = useRouter();
   const { t, formatDate } = useTranslation();
-  const follow = useFollow();
-  const unfollow = useUnfollow();
 
   const profilePicUrl = user.image_file ? `${API_BASE}/static/profile_pics/${user.image_file}` : null;
 
@@ -40,15 +38,7 @@ export function UserProfileHeader({ user }: { user: UserWithFollowing }) {
       </View>
 
       <View className="mt-3 flex-row flex-wrap gap-2">
-        {user.is_following ? (
-          <Pressable onPress={() => unfollow.mutate(user.username)} disabled={unfollow.isPending} className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5">
-            <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{unfollow.isPending ? t("social.unfollowing") : t("social.unfollow")}</Text>
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => follow.mutate(user.username)} disabled={follow.isPending} className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5">
-            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{follow.isPending ? t("social.following") : t("social.follow")}</Text>
-          </Pressable>
-        )}
+        <FollowButton username={user.username} status={user.follow_status} />
         <Pressable
           onPress={() => router.push({ pathname: "/messages/new", params: { to: user.username } })}
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"

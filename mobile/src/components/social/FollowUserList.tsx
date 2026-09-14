@@ -1,16 +1,62 @@
 import { View, Text, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import type { FollowUser, PaginatedResponse } from "@/types";
-import { useFollow, useUnfollow } from "@/hooks/use-social";
+import { FollowButton } from "@/components/social/FollowButton";
+import { useAcceptFollowRequest, useDenyFollowRequest, useRemoveFollower } from "@/hooks/use-social";
 import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
-function FollowUserRow({ user }: { user: FollowUser }) {
-  const router = useRouter();
+export type FollowUserListMode = "follow" | "requests" | "remove";
+
+function RequestActions({ username }: { username: string }) {
   const { t } = useTranslation();
-  const follow = useFollow();
-  const unfollow = useUnfollow();
+  const accept = useAcceptFollowRequest();
+  const deny = useDenyFollowRequest();
+
+  return (
+    <View className="flex-row shrink-0 gap-2">
+      <Pressable
+        onPress={() => accept.mutate(username)}
+        disabled={accept.isPending || deny.isPending}
+        className="rounded-md bg-blue-600 px-3 py-1.5"
+      >
+        <Text className="text-xs font-medium text-white">
+          {accept.isPending ? t("followRequests.accepting") : t("followRequests.accept")}
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={() => deny.mutate(username)}
+        disabled={accept.isPending || deny.isPending}
+        className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
+      >
+        <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
+          {deny.isPending ? t("followRequests.denying") : t("followRequests.deny")}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function RemoveAction({ username }: { username: string }) {
+  const { t } = useTranslation();
+  const remove = useRemoveFollower();
+
+  return (
+    <Pressable
+      onPress={() => remove.mutate(username)}
+      disabled={remove.isPending}
+      className="shrink-0 rounded-md px-3 py-1.5"
+    >
+      <Text className="text-xs font-medium text-red-600 dark:text-red-400">
+        {remove.isPending ? t("social.removing") : t("social.removeFollower")}
+      </Text>
+    </Pressable>
+  );
+}
+
+function FollowUserRow({ user, mode }: { user: FollowUser; mode: FollowUserListMode }) {
+  const router = useRouter();
   const profilePicUrl = user.image_file ? `${API_BASE}/static/profile_pics/${user.image_file}` : null;
 
   return (
@@ -31,26 +77,12 @@ function FollowUserRow({ user }: { user: FollowUser }) {
           @{user.username}
         </Text>
       </Pressable>
-      {user.is_following ? (
-        <Pressable
-          onPress={() => unfollow.mutate(user.username)}
-          disabled={unfollow.isPending}
-          className="shrink-0 rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5"
-        >
-          <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {unfollow.isPending ? t("social.unfollowing") : t("social.unfollow")}
-          </Text>
-        </Pressable>
+      {mode === "requests" ? (
+        <RequestActions username={user.username} />
+      ) : mode === "remove" ? (
+        <RemoveAction username={user.username} />
       ) : (
-        <Pressable
-          onPress={() => follow.mutate(user.username)}
-          disabled={follow.isPending}
-          className="shrink-0 rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5"
-        >
-          <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">
-            {follow.isPending ? t("social.following") : t("social.follow")}
-          </Text>
-        </Pressable>
+        <FollowButton username={user.username} status={user.follow_status} size="sm" />
       )}
     </View>
   );
@@ -60,10 +92,12 @@ export function FollowUserList({
   data,
   isLoading,
   error,
+  mode = "follow",
 }: {
   data?: PaginatedResponse<FollowUser>;
   isLoading: boolean;
   error: unknown;
+  mode?: FollowUserListMode;
 }) {
   const { t } = useTranslation();
   const users = data?.data ?? [];
@@ -75,13 +109,17 @@ export function FollowUserList({
     return <Text className="mt-6 text-sm text-red-600 dark:text-red-400">Failed to load.</Text>;
   }
   if (users.length === 0) {
-    return <Text className="mt-6 text-sm text-gray-500 dark:text-gray-400">{t("followList.empty")}</Text>;
+    return (
+      <Text className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+        {mode === "requests" ? t("followRequests.empty") : t("followList.empty")}
+      </Text>
+    );
   }
 
   return (
     <View className="mt-4 gap-2">
       {users.map((u) => (
-        <FollowUserRow key={u.id} user={u} />
+        <FollowUserRow key={u.id} user={u} mode={mode} />
       ))}
     </View>
   );

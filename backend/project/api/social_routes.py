@@ -7,7 +7,22 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import Message, Notification, User, Workout
+from project.models import Follow, Message, Notification, User, Workout
+
+
+def _my_follow_statuses() -> dict[int, str]:
+    """Map {other_user_id: status} for the current user's outgoing follow rows."""
+    return {
+        f.followed_id: f.status for f in g.current_api_user.follow_requests_sent.all()
+    }
+
+
+def _update_follow_request_count(user: User) -> None:
+    """Refresh a user's pending-incoming-follow-request notification count."""
+    user.add_notification(
+        "follow_request_count",
+        user.follow_requests_received.filter_by(status="pending").count(),
+    )
 
 
 @bp.route("/explore", methods=["GET"])
@@ -18,7 +33,8 @@ def api_explore() -> ResponseReturnValue:
     scope = request.args.get("scope", "all")
     username = request.args.get("username")
 
-    followed_ids = {u.id for u in g.current_api_user.followed}
+    statuses = _my_follow_statuses()
+    followed_ids = {uid for uid, status in statuses.items() if status == "accepted"}
 
     query = db.select(Workout).filter(
         Workout.user_id != g.current_api_user.id,
@@ -53,7 +69,7 @@ def api_explore() -> ResponseReturnValue:
 
     def _serialize(w: Workout) -> dict:
         data = w.to_dict(include_exercises=True)
-        data["is_following"] = w.user_id in followed_ids
+        data["follow_status"] = statuses.get(w.user_id, "none")
         return data
 
     return jsonify(
@@ -98,7 +114,7 @@ def api_get_user(username: str) -> ResponseReturnValue:
     )
 
     user_data = user.to_dict()
-    user_data["is_following"] = g.current_api_user.is_following(user)
+    user_data["follow_status"] = g.current_api_user.follow_status(user)
 
     return jsonify(
         {
@@ -133,9 +149,11 @@ def api_follow(username: str) -> ResponseReturnValue:
     if user.id == g.current_api_user.id:
         return jsonify({"error": "Cannot follow yourself."}), 400
 
-    g.current_api_user.follow(user)
+    g.current_api_user.request_follow(user)
+    _update_follow_request_count(user)
     db.session.commit()
-    return jsonify({"data": {"message": f"Now following {username}."}}), 200
+    status = g.current_api_user.follow_status(user)
+    return jsonify({"data": {"follow_status": status}}), 200
 
 
 @bp.route("/users/<username>/unfollow", methods=["POST"])
@@ -153,13 +171,85 @@ def api_unfollow(username: str) -> ResponseReturnValue:
         return jsonify({"error": "Cannot unfollow yourself."}), 400
 
     g.current_api_user.unfollow(user)
+    _update_follow_request_count(user)
     db.session.commit()
-    return jsonify({"data": {"message": f"Unfollowed {username}."}}), 200
+    return jsonify({"data": {"follow_status": "none"}}), 200
+
+
+@bp.route("/follow-requests", methods=["GET"])
+@api_login_required
+@api_check_confirmed
+def api_list_follow_requests() -> ResponseReturnValue:
+    page = request.args.get("page", 1, type=int)
+    query = (
+        db.session.query(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .filter(
+            Follow.followed_id == g.current_api_user.id, Follow.status == "pending"
+        )
+        .order_by(Follow.created_at.desc())
+    )
+    return _paginated_user_list(query, page)
+
+
+@bp.route("/follow-requests/<username>/accept", methods=["POST"])
+@api_login_required
+@api_check_confirmed
+def api_accept_follow_request(username: str) -> ResponseReturnValue:
+    requester = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if requester is None:
+        return jsonify({"error": "User not found."}), 404
+
+    g.current_api_user.accept_follow_request(requester)
+    _update_follow_request_count(g.current_api_user)
+    db.session.commit()
+    return jsonify({"data": {"message": f"Accepted {username}."}}), 200
+
+
+@bp.route("/follow-requests/<username>/deny", methods=["POST"])
+@api_login_required
+@api_check_confirmed
+def api_deny_follow_request(username: str) -> ResponseReturnValue:
+    requester = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if requester is None:
+        return jsonify({"error": "User not found."}), 404
+
+    g.current_api_user.deny_follow_request(requester)
+    _update_follow_request_count(g.current_api_user)
+    db.session.commit()
+    return jsonify({"data": {"message": f"Denied {username}."}}), 200
+
+
+@bp.route("/users/<username>/remove-follower", methods=["POST"])
+@api_login_required
+@api_check_confirmed
+def api_remove_follower(username: str) -> ResponseReturnValue:
+    follower = (
+        db.session.execute(db.select(User).filter_by(username=username))
+        .scalars()
+        .first()
+    )
+    if follower is None:
+        return jsonify({"error": "User not found."}), 404
+    if follower.id == g.current_api_user.id:
+        return jsonify({"error": "Cannot remove yourself."}), 400
+
+    g.current_api_user.remove_follower(follower)
+    db.session.commit()
+    return jsonify({"data": {"message": f"Removed {username}."}}), 200
 
 
 def _paginated_user_list(query, page: int) -> ResponseReturnValue:
-    """Paginate a dynamic User relationship query and serialize as summaries."""
-    followed_ids = {u.id for u in g.current_api_user.followed}
+    """Paginate a User query and serialize rows as follow-list summaries."""
+    statuses = _my_follow_statuses()
     pagination = query.paginate(
         page=page,
         per_page=current_app.config["WORKOUTS_PER_PAGE"],
@@ -172,7 +262,7 @@ def _paginated_user_list(query, page: int) -> ResponseReturnValue:
                     "id": u.id,
                     "username": u.username,
                     "image_file": u.image_file,
-                    "is_following": u.id in followed_ids,
+                    "follow_status": statuses.get(u.id, "none"),
                 }
                 for u in pagination.items
             ],
@@ -200,7 +290,7 @@ def api_list_followers(username: str) -> ResponseReturnValue:
         return jsonify({"error": "User not found."}), 404
 
     page = request.args.get("page", 1, type=int)
-    query = user.followers.order_by(User.username.asc())  # type: ignore[attr-defined]
+    query = user.followers.order_by(User.username.asc())
     return _paginated_user_list(query, page)
 
 
