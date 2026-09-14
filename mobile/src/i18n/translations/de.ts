@@ -10,7 +10,7 @@ const de: Record<keyof typeof en, string> = {
   "nav.library": "Bibliothek",
   "nav.messages": "Nachrichten",
   "nav.contact": "Kontakt",
-  "nav.followRequests": "Folgeanfragen",
+  "nav.followRequests": "Follow-Anfragen",
   "nav.profile": "Profil",
   "nav.logout": "Abmelden",
   "nav.menu": "Menü",
@@ -233,8 +233,8 @@ const de: Record<keyof typeof en, string> = {
   "followList.empty": "Noch keine Nutzer.",
 
   // Follow requests
-  "followRequests.title": "Folgeanfragen",
-  "followRequests.empty": "Keine ausstehenden Folgeanfragen.",
+  "followRequests.title": "Follow-Anfragen",
+  "followRequests.empty": "Keine ausstehenden Follow-Anfragen.",
   "followRequests.accept": "Annehmen",
   "followRequests.accepting": "Annehmen...",
   "followRequests.deny": "Ablehnen",
