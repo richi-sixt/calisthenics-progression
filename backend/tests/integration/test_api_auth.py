@@ -284,6 +284,78 @@ class TestApiProfile:
         assert resp.status_code == 403
 
 
+class TestApiDeleteAccount:
+    """Tests for DELETE /api/v1/auth/account."""
+
+    def test_delete_account(self, client, api_headers, user, app):
+        resp = client.delete("/api/v1/auth/account", headers=api_headers)
+        assert resp.status_code == 200
+
+        with app.app_context():
+            from project import db
+
+            assert db.session.get(User, user.id) is None
+
+    def test_delete_account_with_own_workouts_and_exercises(
+        self, client, api_headers, user, workout, exercise_definition
+    ):
+        """A user's own workouts/exercises don't block account deletion."""
+        resp = client.delete("/api/v1/auth/account", headers=api_headers)
+        assert resp.status_code == 200
+
+    def test_delete_account_with_cross_user_exercise_reference(
+        self, client, api_headers, api_headers_second, user, second_user, app
+    ):
+        """Deleting an account whose exercise definition is used directly
+        (not copied) by another user's workout must not fail with a
+        foreign key violation — this is only enforced by SQLite when
+        PRAGMA foreign_keys=ON is set (see project/__init__.py), matching
+        PostgreSQL's always-on enforcement in production.
+        """
+        from datetime import datetime, timezone
+
+        from project import db
+        from project.models import Exercise, ExerciseDefinition, Workout
+
+        with app.app_context():
+            ex_def = ExerciseDefinition(
+                title="Pushups", user_id=user.id, visibility="public"
+            )
+            db.session.add(ex_def)
+            db.session.commit()
+
+            # second_user uses user's exercise directly in their own workout,
+            # without copying it first.
+            w = Workout(
+                title="Bob's Workout",
+                user_id=second_user.id,
+                timestamp=datetime.now(timezone.utc),
+            )
+            db.session.add(w)
+            db.session.flush()
+            db.session.add(
+                Exercise(
+                    exercise_order=1,
+                    exercise_definition_id=ex_def.id,
+                    workout_id=w.id,
+                )
+            )
+            db.session.commit()
+            workout_id = w.id
+
+        resp = client.delete("/api/v1/auth/account", headers=api_headers)
+        assert resp.status_code == 200
+
+        # second_user's account and workout survive; only the one exercise
+        # entry referencing the deleted exercise definition is gone.
+        resp = client.get("/api/v1/workouts", headers=api_headers_second)
+        assert resp.status_code == 200
+        with app.app_context():
+            remaining_workout = db.session.get(Workout, workout_id)
+            assert remaining_workout is not None
+            assert remaining_workout.exercises.count() == 0
+
+
 class TestDeletedRoutes:
     """Verify that old auth routes no longer exist."""
 

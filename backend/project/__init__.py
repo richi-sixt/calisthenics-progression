@@ -1,5 +1,6 @@
 import logging
 import os
+import sqlite3
 from logging.handlers import RotatingFileHandler, SMTPHandler
 from typing import Type
 
@@ -12,11 +13,29 @@ from flask_migrate import Migrate
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from project.config import Config
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
     pass
+
+
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record) -> None:
+    """Enforce foreign keys on SQLite connections (off by default).
+
+    SQLite silently ignores foreign key violations unless this pragma is
+    set per-connection; PostgreSQL (production) always enforces them. Without
+    this, a migration or query that violates a foreign key can pass every
+    local/test run on SQLite and only fail once it reaches production.
+    No-op for non-SQLite connections (e.g. production's PostgreSQL).
+    """
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 # Initialize Flask extensions without app binding

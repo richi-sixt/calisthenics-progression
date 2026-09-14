@@ -14,8 +14,8 @@ from PIL import Image
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import (ExerciseDefinition, Follow, Message, Notification,
-                            User)
+from project.models import (Exercise, ExerciseDefinition, Follow, Message,
+                            Notification, Set, User)
 
 
 @bp.route("/auth/profile", methods=["GET"])
@@ -121,12 +121,34 @@ def api_delete_account() -> ResponseReturnValue:
     # 5. Flush so Exercise rows are gone before deleting ExerciseDefinitions
     db.session.flush()
 
-    # 6. Delete exercise definitions
+    # 6. Remove other users' workout-exercise entries that reference this
+    # user's exercise definitions (a public/followers-visible exercise
+    # definition can be used directly by other users without copying it),
+    # so deleting the exercise definitions below doesn't violate a
+    # foreign key.
+    ex_def_ids = [
+        row[0]
+        for row in db.session.execute(
+            db.select(ExerciseDefinition.id).where(ExerciseDefinition.user_id == user.id)
+        )
+    ]
+    if ex_def_ids:
+        cross_exercise_ids = [
+            row[0]
+            for row in db.session.execute(
+                db.select(Exercise.id).where(Exercise.exercise_definition_id.in_(ex_def_ids))
+            )
+        ]
+        if cross_exercise_ids:
+            db.session.execute(db.delete(Set).where(Set.exercise_id.in_(cross_exercise_ids)))
+            db.session.execute(db.delete(Exercise).where(Exercise.id.in_(cross_exercise_ids)))
+
+    # 7. Delete exercise definitions
     db.session.execute(
         db.delete(ExerciseDefinition).where(ExerciseDefinition.user_id == user.id)
     )
 
-    # 7. Delete user and commit
+    # 8. Delete user and commit
     db.session.delete(user)
     db.session.commit()
 
