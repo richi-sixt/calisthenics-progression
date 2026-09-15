@@ -7,9 +7,7 @@ from datetime import date, datetime, timezone
 from time import time
 from typing import Any
 
-from flask_login import UserMixin
-from project import Base, db, login
-from werkzeug.security import check_password_hash, generate_password_hash
+from project import Base, db
 
 FOLLOW_STATUS_VALUES = ("pending", "accepted")
 
@@ -75,7 +73,7 @@ exercise_categories = db.Table(
 )
 
 
-class User(UserMixin, Base):
+class User(Base):
     """User model for authentication and profile management."""
 
     __tablename__ = "user"
@@ -85,7 +83,6 @@ class User(UserMixin, Base):
     supabase_uid = db.Column(db.String(36), unique=True, nullable=True, index=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
-    password_hash = db.Column(db.String(512))
 
     # User status fields
     admin = db.Column(db.Boolean, nullable=False, default=False)
@@ -157,14 +154,6 @@ class User(UserMixin, Base):
     def __repr__(self) -> str:
         """String representation of User."""
         return f"<User {self.username}>"
-
-    def set_password(self, password: str) -> None:
-        """Hash and set the user's password."""
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password: str) -> bool:
-        """Verify the user's password."""
-        return check_password_hash(self.password_hash, password)
 
     # Following methods
     def request_follow(self, user: "User") -> None:
@@ -291,13 +280,6 @@ class User(UserMixin, Base):
             "follower_count": self.followers.count(),
             "following_count": self.followed.count(),
         }
-
-
-# Load user for session
-@login.user_loader
-def load_user(id: str) -> User | None:
-    """Load user for Flask-Login session management."""
-    return db.session.get(User, int(id))
 
 
 class Workout(Base):

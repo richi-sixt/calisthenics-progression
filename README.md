@@ -239,7 +239,7 @@ I started this project in 2019 to learn how to build a real-world Python applica
 This project was built to gain hands-on experience with key patterns and tools found in real-world full-stack applications:
 
 - Applied the **application factory pattern** to instantiate the app with separate configurations for development, testing, and production
-- Organized features using **Flask Blueprints** for `auth`, `main`, `api`, and `errors` modules
+- Organized the REST API using **Flask Blueprints** for the `api` and `errors` modules (originally also `auth`/`main` for the legacy server-rendered app, retired once the Next.js/Expo frontends reached feature parity)
 - Modeled a non-trivial schema with **SQLAlchemy ORM**, including many-to-many relationships (followers, exercise categories), cascading deletes, and relationship loading
 - Managed schema migrations across environments using **Flask-Migrate / Alembic** without data loss
 - Implemented **Supabase Auth integration** — ES256 JWT verification via JWKS, auto-provisioning Flask users from Supabase UUIDs

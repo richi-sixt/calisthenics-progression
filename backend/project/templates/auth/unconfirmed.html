@@ -1,8 +1,0 @@
-{% extends "base.html" %}
-
-{% block app_content %}
-<h1>Hallo!</h1>
-<br>
-<p>Du hast dein Konto noch nicht best&auml;tigt. Bitte pr&uuml;f deine Mails (und die Spam-Ordner). Du solltest eine Best&auml;tigungs-E-Mail mit einem Link erhalten haben.</p>
-<p>Die Best&auml;tigungs-E-Mail nicht erhalten?<a href="{{ url_for('auth.resend_confirmation') }}"> Erneut senden</a>.</p>
-{% endblock %}

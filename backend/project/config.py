@@ -11,10 +11,7 @@ load_dotenv(os.path.join(backend_dir, ".env.local"))
 
 # main config
 class Config(object):
-    WTF_CSRF_ENABLED = True
-
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-fallback-key"
-    WTF_CSRF_SECRET_KEY = os.environ.get("WTF_CSRF_SECRET_KEY") or SECRET_KEY
 
     WORKOUTS_PER_PAGE = 100
     SQLALCHEMY_DATABASE_URI = os.environ.get(
@@ -22,7 +19,6 @@ class Config(object):
     ) or "sqlite:///" + os.path.join(backend_dir, "instance", "app.db")
     SQLALCHEMY_POOL_RECYCLE = 299
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
     JWT_EXPIRY_HOURS = int(os.environ.get("JWT_EXPIRY_HOURS", 24))
 
     # Supabase Auth

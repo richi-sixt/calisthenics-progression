@@ -16,28 +16,6 @@ from sqlalchemy import func
 class TestUserModel:
     """Tests for the User model."""
 
-    def test_password_hashing(self, app, user):
-        """Test that password hashing and verification works."""
-        with app.app_context():
-            user = (
-                db.session.execute(db.select(User).filter_by(username="testuser"))
-                .scalars()
-                .first()
-            )
-            assert user.check_password("password123") is True
-            assert user.check_password("wrongpassword") is False
-
-    def test_password_hash_is_not_plain_text(self, app, user):
-        """Test that password is stored as hash, not plain text."""
-        with app.app_context():
-            user = (
-                db.session.execute(db.select(User).filter_by(username="testuser"))
-                .scalars()
-                .first()
-            )
-            assert user.password_hash != "password123"
-            assert user.password_hash is not None
-
     def test_user_repr(self, app, user):
         """Test User string representation."""
         with app.app_context():

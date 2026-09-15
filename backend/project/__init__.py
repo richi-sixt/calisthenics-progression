@@ -5,12 +5,9 @@ from logging.handlers import RotatingFileHandler, SMTPHandler
 from typing import Type
 
 from flask import Flask
-from flask_bootstrap import Bootstrap5
 from flask_cors import CORS
-from flask_login import LoginManager
 from flask_mail import Mail
 from flask_migrate import Migrate
-from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from project.config import Config
 from sqlalchemy import event
@@ -41,10 +38,7 @@ def _enable_sqlite_foreign_keys(dbapi_connection, connection_record) -> None:
 # Initialize Flask extensions without app binding
 db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
-login = LoginManager()
 mail = Mail()
-bootstrap = Bootstrap5()
-moment = Moment()
 
 
 def create_app(config_class: Type[Config] = Config) -> Flask:
@@ -64,27 +58,12 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
     # Initialize extensions with app context
     db.init_app(app)
     migrate.init_app(app, db)
-    login.init_app(app)
     mail.init_app(app)
-    bootstrap.init_app(app)
-    moment.init_app(app)
-
-    # Configure Flask-Login after init_app
-    login.login_view = "auth.login"  # type: ignore[assignment]
-    login.login_message = "Du musst angemeldet sein, um diese Seite zu sehen."
 
     # Register blueprints
     from project.errors import bp as errors_bp
 
     app.register_blueprint(errors_bp)
-
-    from project.auth import bp as auth_bp
-
-    app.register_blueprint(auth_bp, url_prefix="/auth")
-
-    from project.main import bp as main_bp
-
-    app.register_blueprint(main_bp)
 
     from project.api import bp as api_bp
 

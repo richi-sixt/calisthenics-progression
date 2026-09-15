@@ -79,7 +79,6 @@ def user(app):
             confirmed_on=datetime.now(timezone.utc),
         )
         user.supabase_uid = supabase_uid
-        user.set_password("password123")
         db.session.add(user)
         db.session.commit()
 
@@ -103,7 +102,6 @@ def unconfirmed_user(app):
             confirmed=False,
         )
         user.supabase_uid = supabase_uid
-        user.set_password("password123")
         db.session.add(user)
         db.session.commit()
 
@@ -128,7 +126,6 @@ def second_user(app):
             confirmed_on=datetime.now(timezone.utc),
         )
         user.supabase_uid = supabase_uid
-        user.set_password("password456")
         db.session.add(user)
         db.session.commit()
 
@@ -153,7 +150,6 @@ def admin_user(app):
             confirmed_on=datetime.now(timezone.utc),
         )
         user.supabase_uid = supabase_uid
-        user.set_password("password123")
         db.session.add(user)
         db.session.commit()
 
@@ -163,27 +159,6 @@ def admin_user(app):
             .first()
         )
         yield user
-
-
-@pytest.fixture
-def auth_client(client, user, app):
-    """Create a test client logged in as the confirmed user."""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            # Flask-Login uses _user_id in session
-            sess["_user_id"] = str(user.id)
-            sess["_fresh"] = True
-    return client
-
-
-@pytest.fixture
-def unconfirmed_auth_client(client, unconfirmed_user, app):
-    """Create a test client logged in as an unconfirmed user."""
-    with app.app_context():
-        with client.session_transaction() as sess:
-            sess["_user_id"] = str(unconfirmed_user.id)
-            sess["_fresh"] = True
-    return client
 
 
 @pytest.fixture
