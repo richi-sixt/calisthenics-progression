@@ -4,9 +4,15 @@ Bucketing is done in Python rather than in SQL (e.g. no ``strftime``/
 ``date_trunc``) so the aggregation behaves identically on SQLite (dev) and
 PostgreSQL (prod) -- a raw-SQL date function that only exists on one dialect
 would silently break in the other.
+
+Stats are keyed off ``Workout.planned_date`` (the day a workout is scheduled
+for, shown as "Umplanen" in the UI and on the workouts calendar) rather than
+``Workout.timestamp`` (an immutable creation-time audit field) -- and only
+count workouts with ``is_done`` set, so a workout that's merely planned for a
+future day doesn't show up in the charts as if it had already happened.
 """
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, timedelta
 from typing import Any
 
 from flask import g, jsonify, request
@@ -30,12 +36,10 @@ def _parse_granularity(value: str | None) -> tuple[str, str | None]:
     return granularity, None
 
 
-def _parse_date_range(args: Any) -> tuple[datetime | None, datetime | None, str | None]:
-    """Parse from/to query params into a [from_dt, to_dt) UTC datetime range.
+def _parse_date_range(args: Any) -> tuple[date | None, date | None, str | None]:
+    """Parse from/to query params into an inclusive [from_date, to_date] range.
 
-    `to` defaults to today and `from` defaults to `DEFAULT_RANGE_DAYS` before
-    it. The upper bound is exclusive (one day past `to`) so same-day workouts
-    aren't dropped by a `timestamp < to` comparison.
+    `to` defaults to today and `from` defaults to `DEFAULT_RANGE_DAYS` before it.
     """
     to_str = args.get("to")
     if to_str:
@@ -55,33 +59,28 @@ def _parse_date_range(args: Any) -> tuple[datetime | None, datetime | None, str 
     else:
         from_date = to_date - timedelta(days=DEFAULT_RANGE_DAYS)
 
-    from_dt = datetime.combine(from_date, time.min, tzinfo=timezone.utc)
-    to_dt = datetime.combine(to_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
-    return from_dt, to_dt, None
+    return from_date, to_date, None
 
 
-def _bucket_key(dt: datetime, granularity: str) -> str:
-    """The period label a timestamp falls into: 'YYYY-Www' or 'YYYY-MM'."""
+def _bucket_key(d: date, granularity: str) -> str:
+    """The period label a date falls into: 'YYYY-Www' or 'YYYY-MM'."""
     if granularity == "week":
-        iso_year, iso_week, _ = dt.isocalendar()
+        iso_year, iso_week, _ = d.isocalendar()
         return f"{iso_year}-W{iso_week:02d}"
-    return f"{dt.year}-{dt.month:02d}"
+    return f"{d.year}-{d.month:02d}"
 
 
-def _period_range(
-    from_dt: datetime, to_dt_exclusive: datetime, granularity: str
-) -> list[str]:
-    """Ordered, gap-free list of period keys covering [from_dt, to_dt_exclusive).
+def _period_range(from_date: date, to_date: date, granularity: str) -> list[str]:
+    """Ordered, gap-free list of period keys covering [from_date, to_date].
 
     Pre-seeding every period (not just the ones with data) lets a period with
     zero logged sets render as 0 on a line chart instead of a silent gap.
     """
     periods: list[str] = []
     seen: set[str] = set()
-    current = from_dt.date()
-    end = to_dt_exclusive.date()
-    while current < end:
-        key = _bucket_key(datetime.combine(current, time.min), granularity)
+    current = from_date
+    while current <= to_date:
+        key = _bucket_key(current, granularity)
         if key not in seen:
             seen.add(key)
             periods.append(key)
@@ -101,13 +100,13 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
     granularity, err = _parse_granularity(request.args.get("granularity"))
     if err:
         return jsonify({"error": err}), 400
-    from_dt, to_dt, err = _parse_date_range(request.args)
-    if err or from_dt is None or to_dt is None:
+    from_date, to_date, err = _parse_date_range(request.args)
+    if err or from_date is None or to_date is None:
         return jsonify({"error": err}), 400
 
     progression = request.args.get("progression") or None
 
-    periods = _period_range(from_dt, to_dt, granularity)
+    periods = _period_range(from_date, to_date, granularity)
     buckets: dict[str, dict[str, Any]] = {
         period: {"best": 0, "total": 0, "sessions": set()} for period in periods
     }
@@ -116,15 +115,16 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
     # who owns the exercise definition -- visibility only gates whether the
     # exercise itself can be seen, not another user's private workout data.
     query = (
-        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.timestamp)
+        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.planned_date)
         .join(Exercise, Set.exercise_id == Exercise.id)
         .join(Workout, Exercise.workout_id == Workout.id)
         .filter(
             Exercise.exercise_definition_id == exercise_id,
             Workout.user_id == g.current_api_user.id,
             Workout.is_template == False,  # noqa: E712
-            Workout.timestamp >= from_dt,
-            Workout.timestamp < to_dt,
+            Workout.is_done == True,  # noqa: E712
+            Workout.planned_date >= from_date,
+            Workout.planned_date <= to_date,
         )
     )
     if progression:
@@ -132,11 +132,11 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
     rows = db.session.execute(query).all()
 
     value_field = "duration" if exercise_def.counting_type == "duration" else "reps"
-    for reps, duration, workout_id, timestamp in rows:
+    for reps, duration, workout_id, planned_date in rows:
         value = duration if value_field == "duration" else reps
         if value is None:
             continue
-        bucket = buckets[_bucket_key(timestamp, granularity)]
+        bucket = buckets[_bucket_key(planned_date, granularity)]
         bucket["best"] = max(bucket["best"], value)
         bucket["total"] += value
         bucket["sessions"].add(workout_id)
@@ -170,13 +170,13 @@ def api_workout_stats() -> ResponseReturnValue:
     granularity, err = _parse_granularity(request.args.get("granularity"))
     if err:
         return jsonify({"error": err}), 400
-    from_dt, to_dt, err = _parse_date_range(request.args)
-    if err or from_dt is None or to_dt is None:
+    from_date, to_date, err = _parse_date_range(request.args)
+    if err or from_date is None or to_date is None:
         return jsonify({"error": err}), 400
 
     category_id = request.args.get("category", type=int)
 
-    periods = _period_range(from_dt, to_dt, granularity)
+    periods = _period_range(from_date, to_date, granularity)
     buckets: dict[str, dict[str, int]] = {
         period: {
             "workout_count": 0,
@@ -193,30 +193,32 @@ def api_workout_stats() -> ResponseReturnValue:
         # Set join. Not possible to count this way when filtering by
         # category, since a workout only "belongs" to a category through a
         # set on one of its exercises -- see the session-id fallback below.
-        workout_timestamps = (
+        workout_dates = (
             db.session.execute(
-                db.select(Workout.timestamp).filter(
+                db.select(Workout.planned_date).filter(
                     Workout.user_id == g.current_api_user.id,
                     Workout.is_template == False,  # noqa: E712
-                    Workout.timestamp >= from_dt,
-                    Workout.timestamp < to_dt,
+                    Workout.is_done == True,  # noqa: E712
+                    Workout.planned_date >= from_date,
+                    Workout.planned_date <= to_date,
                 )
             )
             .scalars()
             .all()
         )
-        for timestamp in workout_timestamps:
-            buckets[_bucket_key(timestamp, granularity)]["workout_count"] += 1
+        for planned_date in workout_dates:
+            buckets[_bucket_key(planned_date, granularity)]["workout_count"] += 1
 
     set_query = (
-        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.timestamp)
+        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.planned_date)
         .join(Exercise, Set.exercise_id == Exercise.id)
         .join(Workout, Exercise.workout_id == Workout.id)
         .filter(
             Workout.user_id == g.current_api_user.id,
             Workout.is_template == False,  # noqa: E712
-            Workout.timestamp >= from_dt,
-            Workout.timestamp < to_dt,
+            Workout.is_done == True,  # noqa: E712
+            Workout.planned_date >= from_date,
+            Workout.planned_date <= to_date,
         )
     )
     if category_id is not None:
@@ -225,8 +227,8 @@ def api_workout_stats() -> ResponseReturnValue:
         ).filter(ExerciseDefinition.categories.any(ExerciseCategory.id == category_id))
 
     workout_ids_per_bucket: dict[str, set[int]] = {period: set() for period in periods}
-    for reps, duration, workout_id, timestamp in db.session.execute(set_query).all():
-        key = _bucket_key(timestamp, granularity)
+    for reps, duration, workout_id, planned_date in db.session.execute(set_query).all():
+        key = _bucket_key(planned_date, granularity)
         bucket = buckets[key]
         bucket["total_sets"] += 1
         if reps is not None:
