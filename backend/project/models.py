@@ -468,7 +468,7 @@ class ExerciseDefinition(Base):
 
     def is_visible_to(self, viewer: "User | None") -> bool:
         """Whether this exercise definition is visible to the given viewer."""
-        return is_visible_to(self.user_id, self.visibility, viewer)
+        return is_visible_to(self.user_id, self.visibility, viewer)  # type: ignore[arg-type]
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize exercise definition to dictionary for API responses."""
@@ -488,7 +488,7 @@ class ExerciseDefinition(Base):
             "progression_levels": [
                 pl.to_dict() for pl in self.progression_levels.all()
             ],
-            "category_ids": [c.id for c in self.categories],
+            "category_ids": [c.id for c in self.categories],  # type: ignore[attr-defined]
         }
 
 
