@@ -135,6 +135,7 @@ function useLibraryItems() {
     { href: "/templates", label: t("nav.templates") },
     { href: "/exercises", label: t("nav.exercises") },
     { href: "/categories", label: t("nav.categories") },
+    { href: "/statistics", label: t("nav.statistics") },
   ];
 }
 

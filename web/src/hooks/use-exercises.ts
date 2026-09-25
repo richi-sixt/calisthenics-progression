@@ -27,10 +27,11 @@ export function useExercises(
   });
 }
 
-export function useExercise(id: number) {
+export function useExercise(id: number | null) {
   return useQuery({
     queryKey: ["exercises", id],
     queryFn: () => api.get<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`),
+    enabled: id != null,
   });
 }
 
