@@ -1,6 +1,6 @@
 """Integration tests for API exercise/workout statistics endpoints."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 
 def _shift_months(d: date, months: int) -> date:
@@ -12,6 +12,18 @@ def _shift_months(d: date, months: int) -> date:
     total = d.year * 12 + (d.month - 1) + months
     year, month = divmod(total, 12)
     return date(year, month + 1, 15)
+
+
+def _mark_done(workout_id: int) -> None:
+    """Mark a workout completed -- fixtures default to is_done=False, but
+    stats only count completed workouts (a merely-planned one shouldn't show
+    up as if it had already happened)."""
+    from project import db
+    from project.models import Workout
+
+    w = db.session.get(Workout, workout_id)
+    w.is_done = True
+    db.session.commit()
 
 
 class TestApiExerciseStats:
@@ -30,6 +42,7 @@ class TestApiExerciseStats:
     def test_stats_basic_aggregation(
         self, client, api_headers, workout, exercise_definition
     ):
+        _mark_done(workout.id)
         resp = client.get(
             f"/api/v1/exercises/{exercise_definition.id}/stats", headers=api_headers
         )
@@ -45,6 +58,46 @@ class TestApiExerciseStats:
         assert buckets[current_key]["total"] == 10
         assert buckets[current_key]["session_count"] == 1
 
+    def test_stats_excludes_not_done_workouts(
+        self, client, api_headers, workout, exercise_definition
+    ):
+        # `workout` defaults to is_done=False (merely planned/logged, not yet
+        # performed) -- it must not count until marked done.
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/stats", headers=api_headers
+        )
+        assert resp.status_code == 200
+        assert all(b["total"] == 0 for b in resp.get_json()["data"]["buckets"])
+
+    def test_stats_buckets_by_planned_date_not_timestamp(
+        self, client, api_headers, workout, exercise_definition
+    ):
+        from project import db
+        from project.models import Workout
+
+        older_month = _shift_months(date.today(), -2)
+
+        w = db.session.get(Workout, workout.id)
+        # timestamp (creation time) stays "now"; only planned_date moves --
+        # stats must follow planned_date, matching the "Umplanen" date shown
+        # on the workouts page, not the immutable creation timestamp.
+        w.planned_date = older_month
+        w.is_done = True
+        db.session.commit()
+
+        from_date = _shift_months(date.today(), -3)
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/stats"
+            f"?from={from_date.isoformat()}",
+            headers=api_headers,
+        )
+        assert resp.status_code == 200
+        buckets = {b["period"]: b for b in resp.get_json()["data"]["buckets"]}
+        older_key = f"{older_month.year}-{older_month.month:02d}"
+        current_key = date.today().strftime("%Y-%m")
+        assert buckets[older_key]["total"] == 10
+        assert buckets[current_key]["total"] == 0
+
     def test_stats_best_vs_total_multiple_sets(
         self, client, api_headers, workout_with_two_exercises
     ):
@@ -58,6 +111,7 @@ class TestApiExerciseStats:
             .scalars()
             .first()
         )
+        _mark_done(workout_with_two_exercises.id)
         resp = client.get(f"/api/v1/exercises/{reps_def.id}/stats", headers=api_headers)
         assert resp.status_code == 200
         current_key = date.today().strftime("%Y-%m")
@@ -71,6 +125,7 @@ class TestApiExerciseStats:
     def test_stats_duration_exercise(
         self, client, api_headers, duration_workout, duration_exercise_definition
     ):
+        _mark_done(duration_workout.id)
         resp = client.get(
             f"/api/v1/exercises/{duration_exercise_definition.id}/stats",
             headers=api_headers,
@@ -90,15 +145,13 @@ class TestApiExerciseStats:
         from project.models import Exercise, Set, Workout
 
         older_month = _shift_months(date.today(), -2)
-        older_dt = datetime(
-            older_month.year, older_month.month, older_month.day, tzinfo=timezone.utc
-        )
 
         w1 = db.session.get(Workout, workout.id)
-        w1.timestamp = older_dt
+        w1.planned_date = older_month
+        w1.is_done = True
         db.session.commit()
 
-        w2 = Workout(title="Second Session", user_id=user.id)
+        w2 = Workout(title="Second Session", user_id=user.id, is_done=True)
         db.session.add(w2)
         db.session.flush()
         ex2 = Exercise(
@@ -131,7 +184,8 @@ class TestApiExerciseStats:
         from project.models import Workout
 
         w = db.session.get(Workout, workout.id)
-        w.timestamp = datetime.now(timezone.utc) - timedelta(days=40)
+        w.planned_date = date.today() - timedelta(days=40)
+        w.is_done = True
         db.session.commit()
 
         today = date.today().isoformat()
@@ -147,6 +201,7 @@ class TestApiExerciseStats:
     def test_stats_granularity_week(
         self, client, api_headers, workout, exercise_definition
     ):
+        _mark_done(workout.id)
         resp = client.get(
             f"/api/v1/exercises/{exercise_definition.id}/stats?granularity=week",
             headers=api_headers,
@@ -190,6 +245,7 @@ class TestApiExerciseStats:
         ex_def = db.session.get(ExerciseDefinition, exercise_definition.id)
         ex_def.visibility = "public"
         db.session.commit()
+        _mark_done(workout.id)
 
         resp_other = client.get(
             f"/api/v1/exercises/{exercise_definition.id}/stats",
@@ -238,7 +294,8 @@ class TestApiExerciseStats:
         # `workout` already has one "Standard" set (10 reps). Add a second
         # session on the same exercise definition logged at a different
         # progression level.
-        w2 = Workout(title="Advanced Session", user_id=user.id)
+        _mark_done(workout.id)
+        w2 = Workout(title="Advanced Session", user_id=user.id, is_done=True)
         db.session.add(w2)
         db.session.flush()
         ex2 = Exercise(
@@ -303,9 +360,21 @@ class TestApiWorkoutStats:
         resp = client.get("/api/v1/workouts/stats", headers=api_headers_unconfirmed)
         assert resp.status_code == 403
 
+    def test_workout_stats_excludes_not_done_workouts(
+        self, client, api_headers, workout_with_two_exercises
+    ):
+        # Default fixture is_done=False -- a planned-but-not-performed
+        # workout must not count toward frequency/volume.
+        resp = client.get("/api/v1/workouts/stats", headers=api_headers)
+        assert resp.status_code == 200
+        buckets = resp.get_json()["data"]["buckets"]
+        assert all(b["workout_count"] == 0 for b in buckets)
+        assert all(b["total_sets"] == 0 for b in buckets)
+
     def test_workout_stats_counts_sessions(
         self, client, api_headers, workout_with_two_exercises
     ):
+        _mark_done(workout_with_two_exercises.id)
         resp = client.get("/api/v1/workouts/stats", headers=api_headers)
         assert resp.status_code == 200
         data = resp.get_json()["data"]
@@ -329,7 +398,8 @@ class TestApiWorkoutStats:
         from project.models import Workout
 
         w = db.session.get(Workout, workout.id)
-        w.timestamp = datetime.now(timezone.utc) - timedelta(days=40)
+        w.planned_date = date.today() - timedelta(days=40)
+        w.is_done = True
         db.session.commit()
 
         today = date.today().isoformat()
@@ -341,6 +411,7 @@ class TestApiWorkoutStats:
         assert all(b["workout_count"] == 0 for b in buckets)
 
     def test_workout_stats_granularity_week(self, client, api_headers, workout):
+        _mark_done(workout.id)
         resp = client.get(
             "/api/v1/workouts/stats?granularity=week", headers=api_headers
         )
@@ -362,6 +433,7 @@ class TestApiWorkoutStats:
     def test_workout_stats_ownership_isolation(
         self, client, api_headers, api_headers_second, workout
     ):
+        _mark_done(workout.id)
         resp = client.get("/api/v1/workouts/stats", headers=api_headers_second)
         assert resp.status_code == 200
         assert all(b["workout_count"] == 0 for b in resp.get_json()["data"]["buckets"])
@@ -402,7 +474,7 @@ class TestApiWorkoutStats:
         core_def.categories = [core_cat]
         db.session.commit()
 
-        w1 = Workout(title="Cardio Session", user_id=user.id)
+        w1 = Workout(title="Cardio Session", user_id=user.id, is_done=True)
         db.session.add(w1)
         db.session.flush()
         ex1 = Exercise(
@@ -412,7 +484,7 @@ class TestApiWorkoutStats:
         db.session.flush()
         db.session.add(Set(set_order=1, exercise_id=ex1.id, duration=300))
 
-        w2 = Workout(title="Core Session", user_id=user.id)
+        w2 = Workout(title="Core Session", user_id=user.id, is_done=True)
         db.session.add(w2)
         db.session.flush()
         ex2 = Exercise(
