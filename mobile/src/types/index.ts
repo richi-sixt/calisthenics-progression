@@ -104,6 +104,39 @@ export interface Notification {
   data: Record<string, unknown> | null;
 }
 
+// ---- Statistics ----
+
+export type StatsGranularity = "week" | "month";
+
+export interface ExerciseStatsBucket {
+  period: string;
+  best: number;
+  total: number;
+  session_count: number;
+}
+
+export interface ExerciseStatsResponse {
+  exercise_id: number;
+  counting_type: "reps" | "duration";
+  granularity: StatsGranularity;
+  progression: string | null;
+  buckets: ExerciseStatsBucket[];
+}
+
+export interface WorkoutStatsBucket {
+  period: string;
+  workout_count: number;
+  total_sets: number;
+  total_reps: number;
+  total_duration: number;
+}
+
+export interface WorkoutStatsResponse {
+  granularity: StatsGranularity;
+  category_id: number | null;
+  buckets: WorkoutStatsBucket[];
+}
+
 // ---- API envelope types ----
 
 export interface PaginationMeta {

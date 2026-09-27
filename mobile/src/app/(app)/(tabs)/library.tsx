@@ -31,6 +31,12 @@ export default function LibraryScreen() {
         >
           <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.templates")}</Text>
         </Pressable>
+        <Pressable
+          onPress={() => router.push("/statistics")}
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
+        >
+          <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.statistics")}</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

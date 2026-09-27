@@ -15,3 +15,5 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 jest.mock("expo-localization", () => ({
   getLocales: () => [{ languageCode: "en" }],
 }));
+
+require("@shopify/react-native-skia/jestSetup.js");
