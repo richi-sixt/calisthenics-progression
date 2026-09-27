@@ -11,6 +11,7 @@ export default function AppLayout() {
       <Stack.Screen name="workouts/[id]/index" options={{ title: "Workout" }} />
       <Stack.Screen name="workouts/[id]/edit" options={{ title: t("workouts.editTitle") }} />
       <Stack.Screen name="categories" options={{ title: t("categories.title") }} />
+      <Stack.Screen name="statistics/index" options={{ title: t("statistics.title") }} />
       <Stack.Screen name="exercises/index" options={{ title: t("exercises.title") }} />
       <Stack.Screen name="exercises/new" options={{ title: t("exercises.new") }} />
       <Stack.Screen name="exercises/[id]/index" options={{ title: "Exercise" }} />
