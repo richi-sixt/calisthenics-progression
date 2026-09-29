@@ -120,6 +120,13 @@ export default function WorkoutDetailPage({
         variant="danger"
       />
 
+      {workout.notes && (
+        <div className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("workouts.notes")}</h2>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">{workout.notes}</p>
+        </div>
+      )}
+
       {workout.exercises && workout.exercises.length > 0 ? (
         <div className="mt-6 space-y-4">
           {workout.exercises.map((exercise) => (
@@ -160,6 +167,12 @@ export default function WorkoutDetailPage({
 
               {(!exercise.sets || exercise.sets.length === 0) && (
                 <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">{t("workouts.noSetsRecorded")}</p>
+              )}
+
+              {exercise.notes && (
+                <p className="mt-3 whitespace-pre-wrap break-words rounded-md bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                  {exercise.notes}
+                </p>
               )}
             </div>
           ))}

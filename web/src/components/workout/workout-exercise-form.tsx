@@ -33,6 +33,7 @@ interface SetData {
 
 interface ExerciseData {
   exercise_definition_id: string;
+  notes: string;
   sets: SetData[];
 }
 
@@ -40,6 +41,7 @@ interface WorkoutFormData {
   title: string;
   visibility: Visibility;
   planned_date: string;
+  notes: string;
   exercises: ExerciseData[];
 }
 
@@ -55,6 +57,7 @@ export default function WorkoutExerciseForm({
     exercises: unknown[];
     visibility: Visibility;
     planned_date: string;
+    notes: string | null;
   }) => void;
   isPending: boolean;
   submitLabel?: string;
@@ -77,9 +80,11 @@ export default function WorkoutExerciseForm({
       title: defaultValues?.title ?? "",
       visibility: defaultValues?.visibility ?? "followers",
       planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
+      notes: defaultValues?.notes ?? "",
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
+          notes: ex.notes ?? "",
           sets:
             ex.sets?.map((s) => ({
               progression: s.progression ?? "",
@@ -89,6 +94,7 @@ export default function WorkoutExerciseForm({
         })) ?? [
           {
             exercise_definition_id: "",
+            notes: "",
             sets: [{ progression: "", reps: "", duration: "" }],
           },
         ],
@@ -129,8 +135,10 @@ export default function WorkoutExerciseForm({
       title: data.title,
       visibility: data.visibility,
       planned_date: data.planned_date,
+      notes: data.notes.trim() || null,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
+        notes: ex.notes.trim() || null,
         sets: ex.sets.map((s) => ({
             progression: s.progression || null,
             reps: s.reps ? Number(s.reps) : null,
@@ -241,6 +249,7 @@ export default function WorkoutExerciseForm({
           onClick={() =>
             appendExercise({
               exercise_definition_id: "",
+              notes: "",
               sets: [{ progression: "", reps: "", duration: "" }],
             })
           }
@@ -248,6 +257,17 @@ export default function WorkoutExerciseForm({
         >
           {t("workoutForm.addExercise")}
         </button>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.notes")}</label>
+        <textarea
+          {...register("notes", { maxLength: 5000 })}
+          rows={3}
+          maxLength={5000}
+          className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          placeholder={t("workoutForm.notesPlaceholder")}
+        />
       </div>
 
       <button
@@ -398,6 +418,15 @@ function ExerciseBlock({
           {t("workoutForm.addSet")}
         </button>
       </div>
+
+      <textarea
+        {...register(`exercises.${exIndex}.notes`, { maxLength: 5000 })}
+        rows={2}
+        maxLength={5000}
+        className="mt-3 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+        placeholder={t("workoutForm.exerciseNotesPlaceholder")}
+        aria-label={t("workoutForm.exerciseNotes")}
+      />
     </div>
   );
 }

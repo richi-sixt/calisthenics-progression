@@ -96,6 +96,15 @@ export default function WorkoutDetailScreen() {
         </Pressable>
       </View>
 
+      {workout.notes ? (
+        <View className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("workouts.notes")}</Text>
+          <Text selectable className="mt-1 text-sm text-gray-800 dark:text-gray-200" testID="workout-notes-text">
+            {workout.notes}
+          </Text>
+        </View>
+      ) : null}
+
       {workout.exercises && workout.exercises.length > 0 ? (
         <View className="mt-6 gap-4">
           {workout.exercises.map((exercise) => (
@@ -128,6 +137,15 @@ export default function WorkoutDetailScreen() {
               ) : (
                 <Text className="mt-2 text-sm text-gray-400 dark:text-gray-500">{t("workouts.noSetsRecorded")}</Text>
               )}
+
+              {exercise.notes ? (
+                <Text
+                  selectable
+                  className="mt-3 rounded-md bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm text-gray-700 dark:text-gray-300"
+                >
+                  {exercise.notes}
+                </Text>
+              ) : null}
             </View>
           ))}
         </View>

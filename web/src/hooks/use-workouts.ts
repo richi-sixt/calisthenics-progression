@@ -64,6 +64,7 @@ export function useCreateWorkout() {
       exercises: unknown[];
       visibility?: Visibility;
       planned_date?: string | null;
+      notes?: string | null;
     }) => api.post<ApiResponse<Workout>>("/workouts", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
@@ -83,6 +84,7 @@ export function useUpdateWorkout() {
       exercises?: unknown[];
       visibility?: Visibility;
       planned_date?: string | null;
+      notes?: string | null;
     }) => api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });

@@ -9,6 +9,23 @@ from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
 from project.models import VISIBILITY_VALUES, Exercise, ExerciseDefinition, Set, Workout
 
+NOTES_MAX_LENGTH = 5000
+
+
+def _parse_notes(value: object) -> tuple[str | None, str | None]:
+    """Normalize a notes value: strip whitespace, empty becomes None.
+
+    Returns (notes, None) on success, or (None, error) on failure.
+    """
+    if value is None:
+        return None, None
+    if not isinstance(value, str):
+        return None, "Notes must be a string."
+    notes = value.strip()
+    if len(notes) > NOTES_MAX_LENGTH:
+        return None, f"Notes must be at most {NOTES_MAX_LENGTH} characters."
+    return notes or None, None
+
 
 def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | None:
     """Parse JSON exercise list and create Exercise+Set records.
@@ -24,10 +41,15 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
         if ex_def is None or not ex_def.is_visible_to(g.current_api_user):
             return f"Exercise definition {ex_def_id} not found."
 
+        notes, err = _parse_notes(ex_data.get("notes"))
+        if err:
+            return err
+
         exercise = Exercise(
             exercise_order=order,
             exercise_definition_id=ex_def_id,
             workout_id=workout.id,
+            notes=notes,
         )
         db.session.add(exercise)
         db.session.flush()
@@ -154,12 +176,17 @@ def api_create_workout() -> ResponseReturnValue:
         if err:
             return jsonify({"error": err}), 400
 
+    notes, err = _parse_notes(data.get("notes"))
+    if err:
+        return jsonify({"error": err}), 400
+
     workout = Workout(
         title=title,
         user_id=g.current_api_user.id,
         timestamp=datetime.now(timezone.utc),
         visibility=visibility,
         planned_date=planned_date,
+        notes=notes,
     )
     db.session.add(workout)
     db.session.flush()
@@ -213,6 +240,12 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
             if err:
                 return jsonify({"error": err}), 400
             workout.planned_date = parsed
+
+    if "notes" in data:
+        notes, err = _parse_notes(data["notes"])
+        if err:
+            return jsonify({"error": err}), 400
+        workout.notes = notes
 
     if "exercises" in data:
         exercises_data = data["exercises"]
@@ -293,10 +326,15 @@ def api_create_template() -> ResponseReturnValue:
     if not exercises_data:
         return jsonify({"error": "At least one exercise is required."}), 400
 
+    notes, err = _parse_notes(data.get("notes"))
+    if err:
+        return jsonify({"error": err}), 400
+
     template = Workout(
         title=title,
         user_id=g.current_api_user.id,
         is_template=True,
+        notes=notes,
     )
     db.session.add(template)
     db.session.flush()
@@ -324,6 +362,12 @@ def api_update_template(template_id: int) -> ResponseReturnValue:
 
     if "title" in data:
         template.title = data["title"].strip()
+
+    if "notes" in data:
+        notes, err = _parse_notes(data["notes"])
+        if err:
+            return jsonify({"error": err}), 400
+        template.notes = notes
 
     if "exercises" in data:
         exercises_data = data["exercises"]
@@ -368,6 +412,8 @@ def api_use_template(template_id: int) -> ResponseReturnValue:
     if template.user_id != g.current_api_user.id or not template.is_template:
         return jsonify({"error": "Forbidden."}), 403
 
+    # Workout-level notes describe a specific session, so they are not copied;
+    # per-exercise notes (form cues, targets) carry over.
     workout = Workout(
         title=template.title,
         user_id=g.current_api_user.id,
@@ -381,6 +427,7 @@ def api_use_template(template_id: int) -> ResponseReturnValue:
             exercise_order=ex.exercise_order,
             exercise_definition_id=ex.exercise_definition_id,
             workout_id=workout.id,
+            notes=ex.notes,
         )
         db.session.add(new_ex)
         db.session.flush()

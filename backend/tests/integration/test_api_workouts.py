@@ -496,3 +496,193 @@ class TestApiWorkoutsCalendar:
             headers=api_headers_unconfirmed,
         )
         assert resp.status_code == 403
+
+
+class TestApiWorkoutNotes:
+    def _exercises(self, exercise_definition, notes=None):
+        ex = {
+            "exercise_definition_id": exercise_definition.id,
+            "sets": [{"progression": "Standard", "reps": 10}],
+        }
+        if notes is not None:
+            ex["notes"] = notes
+        return [ex]
+
+    def test_create_workout_with_notes(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Noted",
+                    "notes": "  Felt strong today  ",
+                    "exercises": self._exercises(exercise_definition, "Elbows tucked"),
+                }
+            ),
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["notes"] == "Felt strong today"
+        assert data["exercises"][0]["notes"] == "Elbows tucked"
+
+    def test_create_workout_without_notes_returns_null(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {"title": "Plain", "exercises": self._exercises(exercise_definition)}
+            ),
+        )
+        data = resp.get_json()["data"]
+        assert data["notes"] is None
+        assert data["exercises"][0]["notes"] is None
+
+    def test_blank_notes_become_null(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Blank",
+                    "notes": "   ",
+                    "exercises": self._exercises(exercise_definition, ""),
+                }
+            ),
+        )
+        data = resp.get_json()["data"]
+        assert data["notes"] is None
+        assert data["exercises"][0]["notes"] is None
+
+    def test_notes_too_long_rejected(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Long",
+                    "notes": "x" * 5001,
+                    "exercises": self._exercises(exercise_definition),
+                }
+            ),
+        )
+        assert resp.status_code == 400
+
+    def test_exercise_notes_too_long_rejected(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Long",
+                    "exercises": self._exercises(exercise_definition, "x" * 5001),
+                }
+            ),
+        )
+        assert resp.status_code == 400
+
+    def test_non_string_notes_rejected(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Bad",
+                    "notes": 42,
+                    "exercises": self._exercises(exercise_definition),
+                }
+            ),
+        )
+        assert resp.status_code == 400
+
+    def test_update_workout_notes_and_clear(self, client, api_headers, workout):
+        resp = client.put(
+            f"/api/v1/workouts/{workout.id}",
+            headers=api_headers,
+            data=json.dumps({"notes": "Shoulder a bit sore"}),
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["notes"] == "Shoulder a bit sore"
+
+        resp = client.put(
+            f"/api/v1/workouts/{workout.id}",
+            headers=api_headers,
+            data=json.dumps({"notes": None}),
+        )
+        assert resp.get_json()["data"]["notes"] is None
+
+    def test_update_without_notes_key_keeps_notes(self, client, api_headers, workout):
+        client.put(
+            f"/api/v1/workouts/{workout.id}",
+            headers=api_headers,
+            data=json.dumps({"notes": "Keep me"}),
+        )
+        resp = client.put(
+            f"/api/v1/workouts/{workout.id}",
+            headers=api_headers,
+            data=json.dumps({"title": "Renamed"}),
+        )
+        assert resp.get_json()["data"]["notes"] == "Keep me"
+
+    def test_exercise_notes_survive_exercise_resave(
+        self, client, api_headers, workout, exercise_definition
+    ):
+        # PUT with exercises deletes and recreates Exercise rows.
+        resp = client.put(
+            f"/api/v1/workouts/{workout.id}",
+            headers=api_headers,
+            data=json.dumps(
+                {"exercises": self._exercises(exercise_definition, "Slow negatives")}
+            ),
+        )
+        assert resp.status_code == 200
+        resp = client.get(f"/api/v1/workouts/{workout.id}", headers=api_headers)
+        assert resp.get_json()["data"]["exercises"][0]["notes"] == "Slow negatives"
+
+    def test_template_notes_roundtrip(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/templates",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Tpl",
+                    "notes": "Push day",
+                    "exercises": self._exercises(exercise_definition, "Full ROM"),
+                }
+            ),
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["notes"] == "Push day"
+        assert data["exercises"][0]["notes"] == "Full ROM"
+
+        resp = client.put(
+            f"/api/v1/templates/{data['id']}",
+            headers=api_headers,
+            data=json.dumps({"notes": "Push day v2"}),
+        )
+        assert resp.get_json()["data"]["notes"] == "Push day v2"
+
+    def test_use_template_copies_exercise_notes_not_workout_notes(
+        self, client, api_headers, exercise_definition
+    ):
+        tpl = client.post(
+            "/api/v1/templates",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "Tpl",
+                    "notes": "Template-level",
+                    "exercises": self._exercises(exercise_definition, "Cue"),
+                }
+            ),
+        ).get_json()["data"]
+
+        resp = client.post(f"/api/v1/templates/{tpl['id']}/use", headers=api_headers)
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["notes"] is None
+        assert data["exercises"][0]["notes"] == "Cue"

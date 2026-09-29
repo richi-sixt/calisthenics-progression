@@ -304,6 +304,7 @@ class Workout(Base):
         server_default=DEFAULT_VISIBILITY,
     )
     planned_date = db.Column(db.Date, index=True, default=lambda: date.today())
+    notes = db.Column(db.Text, nullable=True)
 
     # Relationships to exercises in this workout
     exercises = db.relationship(
@@ -319,10 +320,12 @@ class Workout(Base):
         is_done: bool = False,
         visibility: str = DEFAULT_VISIBILITY,
         planned_date: date | None = None,
+        notes: str | None = None,
     ) -> None:
         """Initialize a workout session or template."""
         self.title = title
         self.user_id = user_id
+        self.notes = notes
         self.is_template = is_template
         self.is_done = is_done
         self.visibility = visibility
@@ -354,6 +357,7 @@ class Workout(Base):
             "planned_date": (
                 self.planned_date.isoformat() if self.planned_date else None
             ),
+            "notes": self.notes,
         }
         if include_exercises:
             data["exercises"] = [
@@ -501,6 +505,7 @@ class Exercise(Base):
     exercise_order = db.Column(db.Integer, nullable=False)
     workout_id = db.Column(db.Integer, db.ForeignKey("workout.id"), nullable=False)
     exercise_definition_id = db.Column(db.Integer, db.ForeignKey("exercises.id"))
+    notes = db.Column(db.Text, nullable=True)
 
     # Relationship to sets in this exercise
     sets = db.relationship(
@@ -512,11 +517,13 @@ class Exercise(Base):
         exercise_order: int,
         workout_id: int,
         exercise_definition_id: int | None = None,
+        notes: str | None = None,
     ) -> None:
         """Initialize an exercise instance within a workout."""
         self.exercise_order = exercise_order
         self.workout_id = workout_id
         self.exercise_definition_id = exercise_definition_id
+        self.notes = notes
 
     def __repr__(self) -> str:
         """String representation of Exercise instance."""
@@ -537,6 +544,7 @@ class Exercise(Base):
                 if self.exercise_definition
                 else "reps"
             ),
+            "notes": self.notes,
         }
         if include_sets:
             data["sets"] = [

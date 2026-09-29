@@ -96,6 +96,16 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # The app enables PRAGMA foreign_keys on every SQLite connection. Batch
+        # migrations (e.g. drop_column) recreate tables via DROP TABLE, which
+        # then fails for any table other tables reference. Disable enforcement
+        # for the migration run (pragma must be set outside a transaction) and
+        # verify integrity afterwards instead. PostgreSQL is unaffected.
+        is_sqlite = connection.dialect.name == "sqlite"
+        if is_sqlite:
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
@@ -104,6 +114,17 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+
+        if is_sqlite:
+            violations = connection.exec_driver_sql(
+                "PRAGMA foreign_key_check"
+            ).fetchall()
+            connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+            connection.commit()
+            if violations:
+                raise RuntimeError(
+                    f"Foreign key violations after migration: {violations}"
+                )
 
 
 if context.is_offline_mode():
