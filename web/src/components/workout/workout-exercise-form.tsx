@@ -66,7 +66,7 @@ export default function WorkoutExerciseForm({
   const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
 
   const userFilter = showOnlyMine ? "mine" : "all";
-  const { data: exData } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
+  const { data: exData, isLoading: exercisesLoading } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
   const exerciseDefs = exData?.data ?? [];
 
   const { data: catData } = useCategories();
@@ -139,6 +139,13 @@ export default function WorkoutExerciseForm({
       })),
     });
   };
+
+  // The exercise <select>s are uncontrolled: react-hook-form applies the default value
+  // when they mount, so the matching <option> must already exist. Wait for the
+  // definitions on first load, otherwise saved exercises render as "Select exercise".
+  if (exercisesLoading && defaultValues?.exercises?.length) {
+    return <p className="text-gray-500 dark:text-gray-400">{t("common.loading")}</p>;
+  }
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-6">
