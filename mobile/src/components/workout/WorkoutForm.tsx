@@ -4,7 +4,7 @@ import { useForm, useFieldArray, useWatch, Controller, type Control } from "reac
 import { format, parseISO } from "date-fns";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
-import { useTranslation, type TranslationKey } from "@/i18n";
+import { useTranslation } from "@/i18n";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import type { Workout, ExerciseDefinition, Visibility } from "@/types";
 
@@ -66,7 +66,7 @@ export function WorkoutForm({
 
   const userFilter = showOnlyMine ? "mine" : "all";
   const { data: exData } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
-  const exerciseDefs = exData?.data ?? [];
+  const exerciseDefs = useMemo(() => exData?.data ?? [], [exData]);
 
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];

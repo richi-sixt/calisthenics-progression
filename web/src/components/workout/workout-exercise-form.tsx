@@ -70,12 +70,12 @@ export default function WorkoutExerciseForm({
 
   const userFilter = showOnlyMine ? "mine" : "all";
   const { data: exData, isLoading: exercisesLoading } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
-  const exerciseDefs = exData?.data ?? [];
+  const exerciseDefs = useMemo(() => exData?.data ?? [], [exData]);
 
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
-  const { register, handleSubmit, control, watch } = useForm<WorkoutFormData>({
+  const { register, handleSubmit, control } = useForm<WorkoutFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
       visibility: defaultValues?.visibility ?? "followers",
@@ -122,7 +122,7 @@ export default function WorkoutExerciseForm({
     );
   };
 
-  const visibility = watch("visibility");
+  const visibility = useWatch({ control, name: "visibility" });
   const visibilityHint =
     visibility === "public"
       ? t("workoutForm.visibilityPublicHint")

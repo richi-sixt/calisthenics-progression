@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n";
+import { useMounted } from "@/hooks/use-mounted";
 import { CONTACT_EMAIL_USER, CONTACT_EMAIL_DOMAIN } from "@/lib/contact";
 
 export default function WelcomeInfo() {
   const { t } = useTranslation();
-  const [contactEmail, setContactEmail] = useState<{ href: string; text: string } | null>(null);
+  const mounted = useMounted();
 
-  useEffect(() => {
-    const at = String.fromCharCode(64);
-    setContactEmail({
-      href: `mailto:${CONTACT_EMAIL_USER}${at}${CONTACT_EMAIL_DOMAIN}`,
-      text: `${CONTACT_EMAIL_USER}${at}${CONTACT_EMAIL_DOMAIN}`,
-    });
-  }, []);
+  // Assembled only on the client so the address never appears in the server HTML.
+  const at = String.fromCharCode(64);
+  const contactEmail = mounted
+    ? {
+        href: `mailto:${CONTACT_EMAIL_USER}${at}${CONTACT_EMAIL_DOMAIN}`,
+        text: `${CONTACT_EMAIL_USER}${at}${CONTACT_EMAIL_DOMAIN}`,
+      }
+    : null;
 
   return (
     <div className="w-full max-w-md space-y-8 text-center">

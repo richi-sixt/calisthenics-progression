@@ -66,7 +66,7 @@ describe("WorkoutCard", () => {
   });
 
   it("shows the done badge for a finished workout", async () => {
-    const { getByText, queryAllByText } = await renderWithProviders(<WorkoutCard workout={makeWorkout({ is_done: true })} />);
+    const { queryAllByText } = await renderWithProviders(<WorkoutCard workout={makeWorkout({ is_done: true })} />);
     // "Done" appears twice: once as the status badge, once as the (now inert) action button label.
     expect(queryAllByText("Done").length).toBe(2);
   });

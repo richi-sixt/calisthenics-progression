@@ -1,5 +1,5 @@
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition, Visibility } from "@/types";
@@ -26,7 +26,7 @@ export function ExerciseForm({
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
-  const { handleSubmit, control, watch, setValue } = useForm<ExerciseFormData>({
+  const { handleSubmit, control, setValue } = useForm<ExerciseFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
       description: defaultValues?.description ?? "",
@@ -38,7 +38,7 @@ export function ExerciseForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "progression_levels" });
-  const selectedCats: number[] = watch("category_ids") ?? [];
+  const selectedCats: number[] = useWatch({ control, name: "category_ids" }) ?? [];
 
   const toggleCategory = (catId: number) => {
     const next = selectedCats.includes(catId)

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -18,6 +17,7 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import { useTranslation } from "@/i18n";
+import { useMounted } from "@/hooks/use-mounted";
 import { useUnreadMessageCount, useFollowRequestCount } from "@/hooks/use-notifications";
 import { CONTACT_USERNAME } from "@/lib/contact";
 
@@ -336,11 +336,7 @@ function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const { t } = useTranslation();
   const otherTheme = resolvedTheme === "dark" ? "light" : "dark";
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   return (
     <button
@@ -363,11 +359,7 @@ function ThemeToggle() {
 
 function LanguageToggle() {
   const { locale, setLocale, t } = useTranslation();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   return (
     <button

@@ -4,7 +4,7 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
+  useMemo,
   useCallback,
   type ReactNode,
 } from "react";
@@ -13,6 +13,7 @@ import { de as deLocale } from "date-fns/locale/de";
 import { enUS as enLocale } from "date-fns/locale/en-US";
 import en from "./translations/en";
 import de from "./translations/de";
+import { useMounted } from "@/hooks/use-mounted";
 
 type TranslationKey = keyof typeof en;
 type Locale = "en" | "de";
@@ -52,11 +53,12 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(
 );
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
-
-  useEffect(() => {
-    setLocaleState(getInitialLocale());
-  }, []);
+  // Server render and hydration use "en"; afterwards the stored/browser locale
+  // applies, unless the user picked one explicitly via setLocale.
+  const mounted = useMounted();
+  const initialLocale = useMemo<Locale>(() => (mounted ? getInitialLocale() : "en"), [mounted]);
+  const [chosenLocale, setLocaleState] = useState<Locale | null>(null);
+  const locale = chosenLocale ?? initialLocale;
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);

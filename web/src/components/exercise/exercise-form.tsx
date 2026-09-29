@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition, Visibility } from "@/types";
@@ -27,7 +27,7 @@ export default function ExerciseForm({
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
-  const { register, handleSubmit, control, watch, setValue } =
+  const { register, handleSubmit, control, setValue } =
     useForm<ExerciseFormData>({
       defaultValues: {
         title: defaultValues?.title ?? "",
@@ -46,8 +46,8 @@ export default function ExerciseForm({
     name: "progression_levels",
   });
 
-  const selectedCats: number[] = watch("category_ids") ?? [];
-  const visibility = watch("visibility");
+  const selectedCats: number[] = useWatch({ control, name: "category_ids" }) ?? [];
+  const visibility = useWatch({ control, name: "visibility" });
   const visibilityHint =
     visibility === "public"
       ? t("exerciseForm.visibilityPublicHint")
