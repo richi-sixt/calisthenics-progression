@@ -31,6 +31,7 @@ interface SetData {
 
 interface ExerciseData {
   exercise_definition_id: string;
+  notes: string;
   sets: SetData[];
 }
 
@@ -38,6 +39,7 @@ interface WorkoutFormData {
   title: string;
   visibility: Visibility;
   planned_date: string;
+  notes: string;
   exercises: ExerciseData[];
 }
 
@@ -53,6 +55,7 @@ export function WorkoutForm({
     exercises: unknown[];
     visibility: Visibility;
     planned_date: string;
+    notes: string | null;
   }) => void;
   isPending: boolean;
   submitLabel?: string;
@@ -73,9 +76,11 @@ export function WorkoutForm({
       title: defaultValues?.title ?? "",
       visibility: defaultValues?.visibility ?? "followers",
       planned_date: defaultValues?.planned_date ?? format(new Date(), "yyyy-MM-dd"),
+      notes: defaultValues?.notes ?? "",
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
+          notes: ex.notes ?? "",
           sets:
             ex.sets?.map((s) => ({
               progression: s.progression ?? "",
@@ -83,7 +88,7 @@ export function WorkoutForm({
               duration: s.duration != null ? secondsToMmss(s.duration) : "",
             })) ?? [{ progression: "", reps: "", duration: "" }],
         })) ?? [
-          { exercise_definition_id: "", sets: [{ progression: "", reps: "", duration: "" }] },
+          { exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "" }] },
         ],
     },
   });
@@ -111,8 +116,10 @@ export function WorkoutForm({
       title: data.title,
       visibility: data.visibility,
       planned_date: data.planned_date,
+      notes: data.notes.trim() || null,
       exercises: data.exercises.map((ex) => ({
         exercise_definition_id: Number(ex.exercise_definition_id),
+        notes: ex.notes.trim() || null,
         sets: ex.sets.map((s) => ({
           progression: s.progression || null,
           reps: s.reps ? Number(s.reps) : null,
@@ -229,11 +236,32 @@ export function WorkoutForm({
         ))}
         <Pressable
           onPress={() =>
-            appendExercise({ exercise_definition_id: "", sets: [{ progression: "", reps: "", duration: "" }] })
+            appendExercise({ exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "" }] })
           }
         >
           <Text className="text-sm text-blue-600 dark:text-blue-400">{t("workoutForm.addExercise")}</Text>
         </Pressable>
+      </View>
+
+      <View>
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workoutForm.notes")}</Text>
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              className="mt-1 min-h-20 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
+              placeholder={t("workoutForm.notesPlaceholder")}
+              multiline
+              textAlignVertical="top"
+              maxLength={5000}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              testID="workout-notes"
+            />
+          )}
+        />
       </View>
 
       <Pressable
@@ -400,6 +428,25 @@ function ExerciseBlock({
           <Text className="text-xs text-blue-600 dark:text-blue-400">{t("workoutForm.addSet")}</Text>
         </Pressable>
       </View>
+
+      <Controller
+        control={control}
+        name={`exercises.${exIndex}.notes`}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            className="mt-3 min-h-14 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
+            placeholder={t("workoutForm.exerciseNotesPlaceholder")}
+            accessibilityLabel={t("workoutForm.exerciseNotes")}
+            multiline
+            textAlignVertical="top"
+            maxLength={5000}
+            onBlur={onBlur}
+            onChangeText={onChange}
+            value={value}
+            testID={`exercise-notes-${exIndex}`}
+          />
+        )}
+      />
     </View>
   );
 }

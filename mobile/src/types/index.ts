@@ -39,6 +39,7 @@ export interface Workout {
   is_done: boolean;
   visibility: Visibility;
   planned_date: string | null;
+  notes: string | null;
   exercises?: Exercise[];
   follow_status?: FollowStatus;
 }
@@ -50,6 +51,7 @@ export interface Exercise {
   exercise_definition_id: number | null;
   exercise_definition_title: string | null;
   counting_type: "reps" | "duration";
+  notes: string | null;
   sets?: WorkoutSet[];
 }
 

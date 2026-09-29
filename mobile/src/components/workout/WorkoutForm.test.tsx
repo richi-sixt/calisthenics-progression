@@ -73,6 +73,7 @@ describe("WorkoutForm", () => {
           exercise_definition_id: 1,
           exercise_definition_title: "Push-Up",
           counting_type: "reps",
+          notes: null,
           sets: [{ id: 1, set_order: 1, progression: null, reps: 12, duration: null, duration_formatted: "0:00" }],
         },
         {
@@ -82,6 +83,7 @@ describe("WorkoutForm", () => {
           exercise_definition_id: 2,
           exercise_definition_title: "Plank",
           counting_type: "duration",
+          notes: "Hollow body, squeeze glutes",
           sets: [{ id: 2, set_order: 1, progression: "Standard", reps: null, duration: 125, duration_formatted: "2:05" }],
         },
       ],
@@ -93,6 +95,9 @@ describe("WorkoutForm", () => {
     expect(getByTestId("reps-0-0").props.value).toBe("12");
     // 125 seconds -> "2:05"
     expect(getByTestId("duration-1-0").props.value).toBe("2:05");
+    // Null notes become an empty field; existing notes are pre-filled.
+    expect(getByTestId("exercise-notes-0").props.value).toBe("");
+    expect(getByTestId("exercise-notes-1").props.value).toBe("Hollow body, squeeze glutes");
   });
 
   it("adds and removes exercise blocks", async () => {
@@ -182,13 +187,40 @@ describe("WorkoutForm", () => {
         title: "New Workout",
         visibility: "followers",
         planned_date: TODAY_ISO,
+        notes: null,
         exercises: [
           {
             exercise_definition_id: pushUp.id,
+            notes: null,
             sets: [{ progression: null, reps: 10, duration: null }],
           },
         ],
       })
+    );
+  });
+
+  it("submits workout and exercise notes trimmed, pre-filling from defaultValues", async () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByTestId, getByText } = await renderWithProviders(
+      <WorkoutForm defaultValues={{ notes: "Old note" }} onSubmit={onSubmit} isPending={false} />
+    );
+
+    expect(getByTestId("workout-notes").props.value).toBe("Old note");
+
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Noted");
+    await selectExercise(getByTestId, 0, pushUp);
+    await fireEvent.changeText(getByTestId("reps-0-0"), "8");
+    await fireEvent.changeText(getByTestId("workout-notes"), "  Felt strong  ");
+    await fireEvent.changeText(getByTestId("exercise-notes-0"), " Elbows tucked ");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: "Felt strong",
+          exercises: [expect.objectContaining({ notes: "Elbows tucked" })],
+        })
+      )
     );
   });
 
