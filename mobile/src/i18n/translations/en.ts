@@ -139,6 +139,7 @@ const en = {
   "exerciseForm.titlePlaceholder": "e.g. Push-ups",
   "exerciseForm.description": "Description",
   "exerciseForm.descriptionPlaceholder": "Optional description...",
+  "exerciseForm.markdownHint": "Markdown supported: **bold**, *italic*, - lists, # headings, [links](https://…)",
   "exerciseForm.countingType": "Counting Type",
   "exerciseForm.reps": "Reps",
   "exerciseForm.duration": "Duration",

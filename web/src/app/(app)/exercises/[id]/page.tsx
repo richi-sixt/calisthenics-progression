@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import ErrorMessage from "@/components/ui/error-message";
 import { useTranslation } from "@/i18n";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { Markdown } from "@/components/ui/markdown";
 
 export default function ExerciseDetailPage({
   params,
@@ -94,7 +95,7 @@ export default function ExerciseDetailPage({
       />
 
       {exercise.description && (
-        <p className="mt-4 text-gray-600 dark:text-gray-400">{exercise.description}</p>
+        <Markdown className="mt-4 text-gray-600 dark:text-gray-400">{exercise.description}</Markdown>
       )}
 
       {exercise.progression_levels.length > 0 && (

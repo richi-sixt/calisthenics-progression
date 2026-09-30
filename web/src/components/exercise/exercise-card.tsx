@@ -9,6 +9,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useMemo } from "react";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useTranslation } from "@/i18n";
+import { markdownToPlainText } from "@/lib/markdown-plain-text";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -23,6 +24,10 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
   // Map category_ids to names
+  const descriptionPreview = useMemo(
+    () => (exercise.description ? markdownToPlainText(exercise.description) : ""),
+    [exercise.description]
+  );
   const categoryNames = useMemo(() => {
     const allCats = catData?.data ?? [];
     const catMap = new Map(allCats.map((c) => [c.id, c.name]));
@@ -96,9 +101,9 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
               </span>
             ))}
           </div>
-          {exercise.description && (
+          {descriptionPreview && (
             <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
-              {exercise.description}
+              {descriptionPreview}
             </p>
           )}
           {exercise.progression_levels.length > 0 && (

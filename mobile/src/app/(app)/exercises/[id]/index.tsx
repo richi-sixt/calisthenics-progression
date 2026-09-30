@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useTranslation } from "@/i18n";
+import { Markdown } from "@/components/ui/Markdown";
 
 export default function ExerciseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,7 +56,11 @@ export default function ExerciseDetailScreen() {
         )}
       </View>
 
-      {exercise.description && <Text className="mt-4 text-gray-600 dark:text-gray-400">{exercise.description}</Text>}
+      {exercise.description && (
+        <Markdown className="mt-4" textClassName="text-gray-600 dark:text-gray-400" testID="exercise-description">
+          {exercise.description}
+        </Markdown>
+      )}
 
       {exercise.progression_levels.length > 0 && (
         <View className="mt-6">

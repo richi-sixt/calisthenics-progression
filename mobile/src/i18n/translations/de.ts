@@ -141,6 +141,7 @@ const de: Record<keyof typeof en, string> = {
   "exerciseForm.titlePlaceholder": "z.B. Liegestütze",
   "exerciseForm.description": "Beschreibung",
   "exerciseForm.descriptionPlaceholder": "Optionale Beschreibung...",
+  "exerciseForm.markdownHint": "Markdown möglich: **fett**, *kursiv*, - Listen, # Überschriften, [Links](https://…)",
   "exerciseForm.countingType": "Zählweise",
   "exerciseForm.reps": "Wiederholungen",
   "exerciseForm.duration": "Dauer",
