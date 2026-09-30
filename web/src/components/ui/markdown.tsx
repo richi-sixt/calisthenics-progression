@@ -1,5 +1,6 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ownImageUrl } from "@/lib/uploaded-images";
 
 /**
  * Element -> Tailwind class mapping. There is no typography plugin in this
@@ -47,10 +48,22 @@ const components: Components = {
   ),
   th: ({ children }) => <th className="border-b px-2 py-1 text-left font-medium dark:border-gray-700">{children}</th>,
   td: ({ children }) => <td className="border-b px-2 py-1 dark:border-gray-700">{children}</td>,
-  // Images are shown as a link for now: inline rendering of arbitrary external
-  // URLs would let any author track who views their (public) exercise.
-  img: ({ src, alt }) =>
-    typeof src === "string" && src ? (
+  // Only images uploaded to our own API render inline. Anything else stays a
+  // link: loading arbitrary external URLs would let an author track who views
+  // their (public) exercise.
+  img: ({ src, alt }) => {
+    const own = typeof src === "string" ? ownImageUrl(src) : null;
+    if (own) {
+      return (
+        <img
+          src={own}
+          alt={alt ?? ""}
+          loading="lazy"
+          className="my-2 block h-auto max-h-[32rem] w-auto max-w-full rounded-md"
+        />
+      );
+    }
+    return typeof src === "string" && src ? (
       <a
         href={src}
         target="_blank"
@@ -59,7 +72,8 @@ const components: Components = {
       >
         🖼 {alt || src}
       </a>
-    ) : null,
+    ) : null;
+  },
 };
 
 export function Markdown({ children, className }: { children: string; className?: string }) {

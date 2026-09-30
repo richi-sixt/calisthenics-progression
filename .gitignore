@@ -19,6 +19,7 @@ backend/migrations/__pycache__
 backend/.flake8
 backend/pyrightconfig.json
 backend/project/static/profile_pics
+backend/project/static/exercise_images
 
 # Node / Next.js
 node_modules

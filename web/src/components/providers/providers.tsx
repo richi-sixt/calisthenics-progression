@@ -30,10 +30,18 @@ function ThemeWatcher() {
   return null;
 }
 
+// next-themes renders an inline <script> that applies the theme before first
+// paint. It only needs to run from the server HTML; whenever React creates it
+// in the browser instead (e.g. a client-side re-render of the root), React 19
+// warns "Encountered a script tag while rendering React component". Marking
+// the client-side copy as a data block avoids that warning; the script's
+// suppressHydrationWarning (set by next-themes) covers the `type` difference.
+const themeScriptProps = typeof window === "undefined" ? undefined : { type: "application/json" };
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <LanguageProvider>
-      <ThemeProvider attribute="class" disableTransitionOnChange>
+      <ThemeProvider attribute="class" disableTransitionOnChange scriptProps={themeScriptProps}>
         <ThemeWatcher />
         <QueryProvider>{children}</QueryProvider>
       </ThemeProvider>

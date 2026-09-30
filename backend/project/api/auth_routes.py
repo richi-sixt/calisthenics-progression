@@ -14,8 +14,9 @@ from PIL import Image
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
+from project.api.upload_routes import delete_image_files
 from project.models import (Exercise, ExerciseDefinition, Follow, Message,
-                            Notification, Set, User)
+                            Notification, Set, UploadedImage, User)
 
 
 @bp.route("/auth/profile", methods=["GET"])
@@ -50,6 +51,25 @@ def api_update_profile() -> ResponseReturnValue:
     return jsonify({"data": user.to_dict()}), 200
 
 
+DEFAULT_PROFILE_PIC = "default.jpg"
+
+
+def profile_pic_dir() -> str:
+    """Directory where profile pictures are stored."""
+    configured = current_app.config.get("PROFILE_PIC_DIR")
+    return configured or os.path.join(current_app.root_path, "static", "profile_pics")
+
+
+def delete_profile_picture(filename: str | None) -> None:
+    """Remove a user's uploaded picture file; the shared default is kept."""
+    if not filename or filename == DEFAULT_PROFILE_PIC:
+        return
+    try:
+        os.remove(os.path.join(profile_pic_dir(), os.path.basename(filename)))
+    except FileNotFoundError:
+        pass
+
+
 @bp.route("/auth/profile/picture", methods=["PUT"])
 @api_login_required
 @api_check_confirmed
@@ -68,9 +88,7 @@ def api_update_profile_picture() -> ResponseReturnValue:
 
     random_hex = secrets.token_hex(8)
     picture_fn = random_hex + ext.lower()
-    picture_path = os.path.join(
-        current_app.root_path, "static/profile_pics", picture_fn
-    )
+    picture_path = os.path.join(profile_pic_dir(), picture_fn)
 
     output_size = (125, 125)
     img = Image.open(picture)  # type: ignore[arg-type]
@@ -78,13 +96,7 @@ def api_update_profile_picture() -> ResponseReturnValue:
     img.save(picture_path)
 
     user = g.current_api_user
-    # Delete old picture if not default
-    if user.image_file and user.image_file != "default.jpg":
-        old_path = os.path.join(
-            current_app.root_path, "static/profile_pics", user.image_file
-        )
-        if os.path.exists(old_path):
-            os.remove(old_path)
+    delete_profile_picture(user.image_file)
 
     user.image_file = picture_fn
     db.session.commit()
@@ -148,8 +160,19 @@ def api_delete_account() -> ResponseReturnValue:
         db.delete(ExerciseDefinition).where(ExerciseDefinition.user_id == user.id)
     )
 
-    # 8. Delete user and commit
+    # 8. Delete uploaded images (rows now, files once the commit succeeded)
+    image_filenames = list(
+        db.session.scalars(
+            db.select(UploadedImage.filename).where(UploadedImage.user_id == user.id)
+        )
+    )
+    db.session.execute(db.delete(UploadedImage).where(UploadedImage.user_id == user.id))
+
+    # 9. Delete user and commit; files only once the commit succeeded
+    profile_picture = user.image_file
     db.session.delete(user)
     db.session.commit()
+    delete_image_files(image_filenames)
+    delete_profile_picture(profile_picture)
 
     return jsonify({"data": {"message": "Account deleted."}}), 200
