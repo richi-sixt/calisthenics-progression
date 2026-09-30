@@ -79,10 +79,11 @@ export default function ExerciseForm({
         </label>
         <textarea
           {...register("description")}
-          rows={3}
+          rows={6}
           className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           placeholder={t("exerciseForm.descriptionPlaceholder")}
         />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("exerciseForm.markdownHint")}</p>
       </div>
 
       <div>

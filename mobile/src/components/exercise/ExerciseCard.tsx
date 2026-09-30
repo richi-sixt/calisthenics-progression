@@ -6,6 +6,7 @@ import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/u
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
+import { markdownToPlainText } from "@/lib/markdown";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -19,6 +20,10 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
 
+  const descriptionPreview = useMemo(
+    () => (exercise.description ? markdownToPlainText(exercise.description) : ""),
+    [exercise.description]
+  );
   const categoryNames = useMemo(() => {
     const allCats = catData?.data ?? [];
     const catMap = new Map(allCats.map((c) => [c.id, c.name]));
@@ -88,11 +93,11 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
               </View>
             ))}
           </View>
-          {exercise.description && (
+          {descriptionPreview ? (
             <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400" numberOfLines={2}>
-              {exercise.description}
+              {descriptionPreview}
             </Text>
-          )}
+          ) : null}
           {exercise.progression_levels.length > 0 && (
             <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
               {t("exercises.progressions")}{" "}

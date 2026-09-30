@@ -74,16 +74,17 @@ export function ExerciseForm({
           name="description"
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
-              className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
+              className="mt-1 min-h-32 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
               placeholder={t("exerciseForm.descriptionPlaceholder")}
               multiline
-              numberOfLines={3}
+              textAlignVertical="top"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
             />
           )}
         />
+        <Text className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("exerciseForm.markdownHint")}</Text>
       </View>
 
       <View>
