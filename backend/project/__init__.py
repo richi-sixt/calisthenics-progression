@@ -69,6 +69,10 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
 
     app.register_blueprint(api_bp, url_prefix="/api/v1")
 
+    from project.cli import register_commands
+
+    register_commands(app)
+
     # Enable CORS for API routes only
     CORS(
         app,

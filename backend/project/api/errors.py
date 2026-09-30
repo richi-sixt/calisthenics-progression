@@ -23,6 +23,11 @@ def forbidden(error: HTTPException) -> ResponseReturnValue:
     return jsonify({"error": "Forbidden."}), 403
 
 
+@bp.errorhandler(413)
+def payload_too_large(error: HTTPException) -> ResponseReturnValue:
+    return jsonify({"error": "File too large."}), 413
+
+
 @bp.errorhandler(500)
 def internal_error(error: HTTPException) -> ResponseReturnValue:
     db.session.rollback()

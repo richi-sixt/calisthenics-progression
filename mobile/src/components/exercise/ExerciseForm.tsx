@@ -1,6 +1,10 @@
+import { useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
+import * as ImagePicker from "expo-image-picker";
 import { useCategories } from "@/hooks/use-categories";
+import { useUploadImage } from "@/hooks/use-uploads";
+import { insertImageMarkdown, MAX_IMAGE_UPLOAD_BYTES } from "@/lib/uploaded-images";
 import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition, Visibility } from "@/types";
 
@@ -26,7 +30,7 @@ export function ExerciseForm({
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
-  const { handleSubmit, control, setValue } = useForm<ExerciseFormData>({
+  const { handleSubmit, control, setValue, getValues } = useForm<ExerciseFormData>({
     defaultValues: {
       title: defaultValues?.title ?? "",
       description: defaultValues?.description ?? "",
@@ -38,6 +42,39 @@ export function ExerciseForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "progression_levels" });
+
+  // Last known cursor/selection in the description, so an image is inserted
+  // where the user was typing (a ref: it must not re-render on every keystroke).
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const uploadImage = useUploadImage();
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleAddImage = async () => {
+    setUploadError(null);
+    // No permission prompt needed for the system photo picker (Expo SDK 57 docs).
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8, // re-encodes to JPEG, so HEIC photos upload fine
+      shouldDownloadFromNetwork: true,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > MAX_IMAGE_UPLOAD_BYTES) {
+      setUploadError(t("exerciseForm.imageTooLarge"));
+      return;
+    }
+    uploadImage.mutate(asset, {
+      onSuccess: (res) => {
+        const current = getValues("description");
+        const { start, end } = selectionRef.current ?? { start: current.length, end: current.length };
+        const { text, cursor } = insertImageMarkdown(current, start, end, t("exerciseForm.imageAlt"), res.data.url);
+        setValue("description", text, { shouldDirty: true });
+        selectionRef.current = { start: cursor, end: cursor };
+      },
+      onError: (err) =>
+        setUploadError(`${t("exerciseForm.imageUploadFailed")}: ${err instanceof Error ? err.message : String(err)}`),
+    });
+  };
   const selectedCats: number[] = useWatch({ control, name: "category_ids" }) ?? [];
 
   const toggleCategory = (catId: number) => {
@@ -80,11 +117,33 @@ export function ExerciseForm({
               textAlignVertical="top"
               onBlur={onBlur}
               onChangeText={onChange}
+              onSelectionChange={(e) => {
+                selectionRef.current = e.nativeEvent.selection;
+              }}
               value={value}
+              testID="exercise-description-input"
             />
           )}
         />
+        <View className="mt-1 flex-row flex-wrap items-center gap-2">
+          <Pressable
+            onPress={handleAddImage}
+            disabled={uploadImage.isPending}
+            testID="exercise-add-image"
+            className={`flex-row items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 dark:bg-gray-700 ${uploadImage.isPending ? "opacity-50" : ""}`}
+          >
+            {uploadImage.isPending && <ActivityIndicator size="small" />}
+            <Text className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              {uploadImage.isPending ? t("exerciseForm.uploadingImage") : t("exerciseForm.addImage")}
+            </Text>
+          </Pressable>
+        </View>
         <Text className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("exerciseForm.markdownHint")}</Text>
+        {uploadError ? (
+          <Text className="mt-1 text-xs text-red-600 dark:text-red-400" testID="exercise-image-error">
+            {uploadError}
+          </Text>
+        ) : null}
       </View>
 
       <View>

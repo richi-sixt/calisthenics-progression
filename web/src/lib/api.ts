@@ -30,7 +30,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  const json = await response.json();
+  // Proxies (e.g. nginx rejecting an oversized upload with 413) answer with
+  // HTML, not JSON; fall back to the status code instead of a parse error.
+  const json = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new ApiError(
@@ -84,7 +86,7 @@ export const api = {
     return handleResponse<T>(response);
   },
 
-  async upload<T>(path: string, formData: FormData): Promise<T> {
+  async upload<T>(path: string, formData: FormData, method: "PUT" | "POST" = "PUT"): Promise<T> {
     const supabase = createClient();
     const {
       data: { session },
@@ -96,7 +98,7 @@ export const api = {
     }
     // No Content-Type — browser sets multipart/form-data with boundary
     const response = await fetch(`${API_URL}${path}`, {
-      method: "PUT",
+      method,
       headers,
       body: formData,
     });

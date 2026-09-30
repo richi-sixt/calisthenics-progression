@@ -50,6 +50,28 @@ describe("Markdown", () => {
     expect(openURL).toHaveBeenCalledWith("https://example.com/a.png");
   });
 
+  it("renders our own uploaded images inline, splitting the paragraph", async () => {
+    const path = "/static/exercise_images/0123456789abcdef0123456789abcdef.webp";
+    const { getByTestId, getByText, queryByText } = await render(
+      <Markdown>{`Start here ![Start position](${path}) then pull.`}</Markdown>
+    );
+
+    const image = getByTestId("markdown-image");
+    expect(image.props.accessibilityLabel).toBe("Start position");
+    expect(JSON.stringify(image.props.source)).toContain(`https://api.test.local${path}`);
+    expect(getByText("Start here")).toBeTruthy();
+    expect(getByText("then pull.")).toBeTruthy();
+    expect(queryByText(/🖼/)).toBeNull();
+  });
+
+  it("renders an image-only paragraph without empty text blocks", async () => {
+    const path = "/static/exercise_images/0123456789abcdef0123456789abcdef.webp";
+    const { getAllByTestId, toJSON } = await render(<Markdown>{`![a](${path})\n![b](${path})`}</Markdown>);
+
+    expect(getAllByTestId("markdown-image")).toHaveLength(2);
+    expect(JSON.stringify(toJSON())).not.toMatch(/"children":\["\\n"\]/);
+  });
+
   it("shows raw HTML as literal text", async () => {
     const { getByText } = await render(<Markdown>{"Hello <b>there</b>"}</Markdown>);
 

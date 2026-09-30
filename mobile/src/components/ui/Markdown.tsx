@@ -1,14 +1,17 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Linking, Platform, Text, View } from "react-native";
+import { Image } from "expo-image";
 import type { Token, Tokens } from "marked";
 import { isSafeUrl, parseMarkdown } from "@/lib/markdown";
+import { ownImageUrl } from "@/lib/uploaded-images";
 
 /**
  * Renders a deliberately small Markdown subset (GFM) with RN primitives:
  * headings, paragraphs, bold/italic/strikethrough, inline + block code,
  * lists (incl. task lists), blockquotes, links, rules and simple tables.
  * Raw HTML is shown as literal text (same as the web renderer), and only
- * http(s)/mailto links can be opened.
+ * http(s)/mailto links can be opened. Images uploaded to our own API render
+ * inline as full-width blocks; any other image stays a link.
  *
  * RN Text styles only cascade into nested Text, not through View, so every
  * block-level Text receives `textClassName` explicitly.
@@ -63,20 +66,20 @@ function renderBlocks(tokens: Token[], textClass: string, keyPrefix: string): Re
         );
         return;
       case "paragraph":
-        nodes.push(
-          <Text key={key} className={`${textClass} ${gap}`}>
-            {renderInline(token.tokens ?? [], key)}
-          </Text>
-        );
+        nodes.push(...renderInlineBlocks(token.tokens ?? [], textClass, key, nodes.length > 0));
         return;
       case "text": {
         // Block-level text appears inside tight list items.
         const t = token as Tokens.Text;
-        nodes.push(
-          <Text key={key} className={`${textClass} ${gap}`}>
-            {t.tokens ? renderInline(t.tokens, key) : t.text}
-          </Text>
-        );
+        if (t.tokens) {
+          nodes.push(...renderInlineBlocks(t.tokens, textClass, key, nodes.length > 0));
+        } else {
+          nodes.push(
+            <Text key={key} className={`${textClass} ${gap}`}>
+              {t.text}
+            </Text>
+          );
+        }
         return;
       }
       case "list": {
@@ -151,6 +154,63 @@ function renderBlocks(tokens: Token[], textClass: string, keyPrefix: string): Re
   return nodes;
 }
 
+/**
+ * Render a paragraph's inline tokens. Our own uploaded images can't live inside
+ * a <Text>, so they split the paragraph: text runs become <Text> blocks and each
+ * image becomes a block of its own between them.
+ */
+function renderInlineBlocks(tokens: Token[], textClass: string, keyPrefix: string, hasPrevious: boolean): ReactNode[] {
+  const out: ReactNode[] = [];
+  let run: Token[] = [];
+  const gap = () => (hasPrevious || out.length > 0 ? "mt-2" : "");
+  const flush = () => {
+    const isBlank = run.every((t) => t.type === "br" || (t.type === "text" && !t.text.trim()));
+    if (run.length > 0 && !isBlank) {
+      const key = `${keyPrefix}-t${out.length}`;
+      out.push(
+        <Text key={key} className={`${textClass} ${gap()}`}>
+          {renderInline(run, key)}
+        </Text>
+      );
+    }
+    run = [];
+  };
+  tokens.forEach((token) => {
+    const own = token.type === "image" ? ownImageUrl((token as Tokens.Image).href) : null;
+    if (!own) {
+      run.push(token);
+      return;
+    }
+    flush();
+    out.push(
+      <View key={`${keyPrefix}-i${out.length}`} className={gap()}>
+        <MarkdownImage uri={own} alt={(token as Tokens.Image).text} />
+      </View>
+    );
+  });
+  flush();
+  return out;
+}
+
+function MarkdownImage({ uri, alt }: { uri: string; alt: string }) {
+  // Unknown until loaded; 4:3 keeps the layout from jumping too much.
+  const [aspectRatio, setAspectRatio] = useState(4 / 3);
+  return (
+    <Image
+      source={{ uri }}
+      accessibilityLabel={alt || undefined}
+      contentFit="contain"
+      transition={150}
+      onLoad={(e) => {
+        const { width, height } = e.source;
+        if (width > 0 && height > 0) setAspectRatio(width / height);
+      }}
+      style={{ width: "100%", aspectRatio, maxHeight: 480, borderRadius: 6 }}
+      testID="markdown-image"
+    />
+  );
+}
+
 function renderInline(tokens: Token[], keyPrefix: string): ReactNode[] {
   return tokens.map((token, i) => {
     const key = `${keyPrefix}-${i}`;
@@ -180,8 +240,9 @@ function renderInline(tokens: Token[], keyPrefix: string): ReactNode[] {
         );
       }
       case "image": {
-        // Shown as a link for now: rendering arbitrary external images would let
-        // any author track who views their (public) exercise.
+        // Not one of our uploads (those are handled in renderInlineBlocks):
+        // shown as a link, since loading arbitrary external images would let
+        // an author track who views their (public) exercise.
         const image = token as Tokens.Image;
         const label = `🖼 ${image.text || image.href}`;
         if (!isSafeUrl(image.href)) return <Text key={key}>{label}</Text>;

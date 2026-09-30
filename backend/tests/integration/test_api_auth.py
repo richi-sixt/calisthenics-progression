@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
+import pytest
 
 from project.models import User
 from tests.test_config import TestConfig
@@ -382,3 +383,55 @@ class TestDeletedRoutes:
     def test_resend_confirmation_gone(self, client):
         resp = client.post("/api/v1/auth/confirm-email/resend")
         assert resp.status_code == 404
+
+
+class TestApiProfilePicture:
+    @pytest.fixture(autouse=True)
+    def pic_dir(self, app, tmp_path):
+        app.config["PROFILE_PIC_DIR"] = str(tmp_path)
+        return tmp_path
+
+    @staticmethod
+    def _upload(client, api_headers):
+        import io
+
+        from PIL import Image
+
+        buf = io.BytesIO()
+        Image.new("RGB", (300, 300), "blue").save(buf, "PNG")
+        buf.seek(0)
+        return client.put(
+            "/api/v1/auth/profile/picture",
+            headers={"Authorization": api_headers["Authorization"]},
+            data={"picture": (buf, "me.png")},
+            content_type="multipart/form-data",
+        )
+
+    def test_upload_replaces_previous_file(self, client, api_headers, pic_dir):
+        first = self._upload(client, api_headers).get_json()["data"]["image_file"]
+        assert (pic_dir / first).exists()
+
+        second = self._upload(client, api_headers).get_json()["data"]["image_file"]
+
+        assert first != second
+        assert not (pic_dir / first).exists()
+        assert (pic_dir / second).exists()
+
+    def test_delete_account_removes_profile_picture(self, client, api_headers, pic_dir):
+        filename = self._upload(client, api_headers).get_json()["data"]["image_file"]
+
+        resp = client.delete("/api/v1/auth/account", headers=api_headers)
+
+        assert resp.status_code == 200
+        assert not (pic_dir / filename).exists()
+
+    def test_delete_account_keeps_shared_default_picture(
+        self, client, api_headers, pic_dir
+    ):
+        default = pic_dir / "default.jpg"
+        default.write_bytes(b"shared")
+
+        resp = client.delete("/api/v1/auth/account", headers=api_headers)
+
+        assert resp.status_code == 200
+        assert default.exists()

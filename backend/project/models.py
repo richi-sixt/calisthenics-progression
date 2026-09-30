@@ -758,3 +758,41 @@ class Notification(Base):
             "timestamp": self.timestamp,
             "data": self.get_data() if self.payload_json else None,
         }
+
+
+class UploadedImage(Base):
+    """An image a user uploaded for use in Markdown (exercise descriptions).
+
+    Uploads belong to the user, not to a specific exercise, so images can be
+    added while an exercise is still being created. The file lives under
+    ``static/exercise_images/<filename>``.
+    """
+
+    __tablename__ = "uploaded_image"
+
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(64), unique=True, nullable=False)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), index=True, nullable=False
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    def __init__(self, filename: str, user_id: int) -> None:
+        """Record an uploaded image file for a user."""
+        self.filename = filename
+        self.user_id = user_id
+
+    def __repr__(self) -> str:
+        """String representation of UploadedImage."""
+        return f"<UploadedImage {self.filename}>"
+
+    @property
+    def url(self) -> str:
+        """Path relative to the API origin, as stored in Markdown."""
+        return f"/static/exercise_images/{self.filename}"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize uploaded image for API responses."""
+        return {"id": self.id, "filename": self.filename, "url": self.url}

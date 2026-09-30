@@ -14,6 +14,16 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-fallback-key"
 
     WORKOUTS_PER_PAGE = 100
+
+    # Uploads. MAX_CONTENT_LENGTH caps every request body (Flask answers 413).
+    # Keep nginx's client_max_body_size at least this large.
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    # None -> project/static/exercise_images (served under /static/).
+    EXERCISE_IMAGE_DIR: str | None = None
+    # None -> project/static/profile_pics (served under /static/).
+    PROFILE_PIC_DIR: str | None = None
+    EXERCISE_IMAGE_MAX_SIDE = 1600
+    EXERCISE_IMAGE_MAX_PER_USER = 200
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL"
     ) or "sqlite:///" + os.path.join(backend_dir, "instance", "app.db")
