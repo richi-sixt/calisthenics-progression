@@ -10,13 +10,34 @@ from project.models import (VISIBILITY_VALUES, ExerciseCategory,
 from sqlalchemy import or_
 
 
+def _parse_category_ids() -> list[int] | None:
+    """Read ?category= filters as repeated params and/or comma-separated lists.
+
+    Both `?category=1&category=3` and `?category=1,3` yield [1, 3].
+    Returns None if any value is not an integer.
+    """
+    ids: list[int] = []
+    for raw in request.args.getlist("category"):
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                ids.append(int(part))
+            except ValueError:
+                return None
+    return ids
+
+
 @bp.route("/exercises", methods=["GET"])
 @api_login_required
 @api_check_confirmed
 def api_list_exercises() -> ResponseReturnValue:
     page = request.args.get("page", 1, type=int)
     user_filter = request.args.get("user", "mine")
-    selected_categories = request.args.getlist("category", type=int)
+    selected_categories = _parse_category_ids()
+    if selected_categories is None:
+        return jsonify({"error": "Invalid category filter."}), 400
 
     query = (
         db.select(ExerciseDefinition)
@@ -38,6 +59,7 @@ def api_list_exercises() -> ResponseReturnValue:
             )
         )
 
+    # AND semantics: an exercise must belong to every selected category.
     for cat_id in selected_categories:
         query = query.filter(
             ExerciseDefinition.categories.any(ExerciseCategory.id == cat_id)

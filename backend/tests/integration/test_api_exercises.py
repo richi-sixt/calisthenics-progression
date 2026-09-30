@@ -76,6 +76,57 @@ class TestApiListExercises:
         assert resp.status_code == 200
         assert len(resp.get_json()["data"]) == 1
 
+    def _exercises_with_categories(self, app, user, exercise_categories):
+        """Create three exercises: Cardio only, Core only, Cardio + Core."""
+        from project import db
+        from project.models import ExerciseCategory, ExerciseDefinition
+
+        with app.app_context():
+            cardio = db.session.get(ExerciseCategory, exercise_categories[0].id)
+            core = db.session.get(ExerciseCategory, exercise_categories[1].id)
+            for title, cats in [
+                ("Only Cardio", [cardio]),
+                ("Only Core", [core]),
+                ("Cardio And Core", [cardio, core]),
+            ]:
+                ex = ExerciseDefinition(title=title, user_id=user.id)
+                ex.categories = cats
+                db.session.add(ex)
+            db.session.commit()
+            return cardio.id, core.id
+
+    def test_filter_multiple_categories_comma_separated_is_and(
+        self, client, api_headers, user, exercise_categories, app
+    ):
+        # The web and mobile clients send ?category=1,2 (one comma-joined value).
+        cardio_id, core_id = self._exercises_with_categories(
+            app, user, exercise_categories
+        )
+        resp = client.get(
+            f"/api/v1/exercises?category={cardio_id},{core_id}", headers=api_headers
+        )
+        assert resp.status_code == 200
+        titles = [e["title"] for e in resp.get_json()["data"]]
+        assert titles == ["Cardio And Core"]
+
+    def test_filter_multiple_categories_repeated_params_is_and(
+        self, client, api_headers, user, exercise_categories, app
+    ):
+        cardio_id, core_id = self._exercises_with_categories(
+            app, user, exercise_categories
+        )
+        resp = client.get(
+            f"/api/v1/exercises?category={cardio_id}&category={core_id}",
+            headers=api_headers,
+        )
+        assert resp.status_code == 200
+        titles = [e["title"] for e in resp.get_json()["data"]]
+        assert titles == ["Cardio And Core"]
+
+    def test_filter_invalid_category_returns_400(self, client, api_headers):
+        resp = client.get("/api/v1/exercises?category=abc", headers=api_headers)
+        assert resp.status_code == 400
+
 
 class TestApiCreateExercise:
     def test_create_exercise(self, client, api_headers):
