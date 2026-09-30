@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
+
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required

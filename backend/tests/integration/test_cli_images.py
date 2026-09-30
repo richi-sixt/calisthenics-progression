@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
+
 from project import db
 from project.models import ExerciseDefinition, UploadedImage
 

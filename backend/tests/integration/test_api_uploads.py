@@ -5,6 +5,7 @@ import os
 
 import pytest
 from PIL import Image
+
 from project import db
 from project.models import UploadedImage
 

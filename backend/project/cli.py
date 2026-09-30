@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import click
 from flask import Flask
 from flask.cli import AppGroup
+
 from project import db
 from project.api.upload_routes import delete_image_files, exercise_image_dir
 from project.models import ExerciseDefinition, UploadedImage

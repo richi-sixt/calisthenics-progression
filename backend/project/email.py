@@ -5,6 +5,7 @@ from typing import Sequence
 
 from flask import current_app
 from flask_mail import Message
+
 from project import mail
 
 

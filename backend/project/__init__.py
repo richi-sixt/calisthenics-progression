@@ -9,10 +9,11 @@ from flask_cors import CORS
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from project.config import Config
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
+
+from project.config import Config
 
 
 class Base(DeclarativeBase):

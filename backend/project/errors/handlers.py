@@ -1,8 +1,9 @@
 from flask import jsonify
 from flask.typing import ResponseReturnValue
+from werkzeug.exceptions import HTTPException
+
 from project import db
 from project.errors import bp
-from werkzeug.exceptions import HTTPException
 
 
 @bp.app_errorhandler(404)

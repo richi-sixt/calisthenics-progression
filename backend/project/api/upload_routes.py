@@ -7,6 +7,7 @@ from typing import IO, Iterable
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
 from PIL import Image, ImageOps, UnidentifiedImageError
+
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required

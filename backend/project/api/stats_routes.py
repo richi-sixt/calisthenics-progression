@@ -21,8 +21,7 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
-                            Set, Workout)
+from project.models import Exercise, ExerciseCategory, ExerciseDefinition, Set, Workout
 
 GRANULARITY_VALUES = ("week", "month")
 DEFAULT_RANGE_DAYS = 365

@@ -1,0 +1,12 @@
+# Formatter settings shared by manual runs (from backend/) and pre-commit
+# (from the repo root). isort uses black's style so the two never fight.
+
+[tool.black]
+line-length = 88
+extend-exclude = "^/migrations/"
+
+[tool.isort]
+profile = "black"
+# Explicit, so the result doesn't depend on the directory isort runs from.
+known_first_party = ["project", "tests"]
+skip_glob = ["migrations/*"]

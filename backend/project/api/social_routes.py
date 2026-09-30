@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
+
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
@@ -104,13 +105,10 @@ def api_get_user(username: str) -> ResponseReturnValue:
         is_follower = g.current_api_user.is_following(user)
         allowed = ("public", "followers") if is_follower else ("public",)
         workouts_query = workouts_query.filter(Workout.visibility.in_(allowed))
-    workouts_pagination = (
-        workouts_query.order_by(Workout.timestamp.desc())
-        .paginate(
-            page=page,
-            per_page=current_app.config["WORKOUTS_PER_PAGE"],
-            error_out=False,
-        )
+    workouts_pagination = workouts_query.order_by(Workout.timestamp.desc()).paginate(
+        page=page,
+        per_page=current_app.config["WORKOUTS_PER_PAGE"],
+        error_out=False,
     )
 
     user_data = user.to_dict()
@@ -184,9 +182,7 @@ def api_list_follow_requests() -> ResponseReturnValue:
     query = (
         db.session.query(User)
         .join(Follow, Follow.follower_id == User.id)
-        .filter(
-            Follow.followed_id == g.current_api_user.id, Follow.status == "pending"
-        )
+        .filter(Follow.followed_id == g.current_api_user.id, Follow.status == "pending")
         .order_by(Follow.created_at.desc())
     )
     return _paginated_user_list(query, page)

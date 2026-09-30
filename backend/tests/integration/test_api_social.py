@@ -90,9 +90,7 @@ class TestApiExplore:
         assert data[0]["title"] == "Followers Workout"
         assert data[0]["follow_status"] == "accepted"
 
-    def test_explore_scope_following(
-        self, client, api_headers, second_user, user, app
-    ):
+    def test_explore_scope_following(self, client, api_headers, second_user, user, app):
         from project import db
         from project.models import User, Workout
 
@@ -119,9 +117,7 @@ class TestApiExplore:
         titles = [w["title"] for w in resp.get_json()["data"]]
         assert titles == ["Followed User Workout"]
 
-    def test_explore_filter_by_username(
-        self, client, api_headers, second_user, app
-    ):
+    def test_explore_filter_by_username(self, client, api_headers, second_user, app):
         from project import db
         from project.models import Workout
 
@@ -175,11 +171,15 @@ class TestApiGetUser:
             )
             db.session.add(
                 Workout(
-                    title="Followers One", user_id=second_user.id, visibility="followers"
+                    title="Followers One",
+                    user_id=second_user.id,
+                    visibility="followers",
                 )
             )
             db.session.add(
-                Workout(title="Private One", user_id=second_user.id, visibility="private")
+                Workout(
+                    title="Private One", user_id=second_user.id, visibility="private"
+                )
             )
             db.session.commit()
 
@@ -201,11 +201,15 @@ class TestApiGetUser:
             u2.accept_follow_request(u)
             db.session.add(
                 Workout(
-                    title="Followers One", user_id=second_user.id, visibility="followers"
+                    title="Followers One",
+                    user_id=second_user.id,
+                    visibility="followers",
                 )
             )
             db.session.add(
-                Workout(title="Private One", user_id=second_user.id, visibility="private")
+                Workout(
+                    title="Private One", user_id=second_user.id, visibility="private"
+                )
             )
             db.session.commit()
 
@@ -231,7 +235,9 @@ class TestApiFollow:
         resp = client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers)
         assert resp.status_code == 400
 
-    def test_follow_notifies_target(self, client, api_headers, api_headers_second, second_user):
+    def test_follow_notifies_target(
+        self, client, api_headers, api_headers_second, second_user
+    ):
         client.post(f"/api/v1/users/{second_user.username}/follow", headers=api_headers)
 
         resp = client.get("/api/v1/notifications", headers=api_headers_second)
@@ -276,7 +282,9 @@ class TestApiFollow:
 
 
 class TestApiFollowRequests:
-    def test_list_follow_requests(self, client, api_headers, api_headers_second, second_user, user):
+    def test_list_follow_requests(
+        self, client, api_headers, api_headers_second, second_user, user
+    ):
         client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
 
         resp = client.get("/api/v1/follow-requests", headers=api_headers)
@@ -296,7 +304,8 @@ class TestApiFollowRequests:
         client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
 
         resp = client.post(
-            f"/api/v1/follow-requests/{second_user.username}/accept", headers=api_headers
+            f"/api/v1/follow-requests/{second_user.username}/accept",
+            headers=api_headers,
         )
         assert resp.status_code == 200
 
@@ -312,7 +321,8 @@ class TestApiFollowRequests:
     ):
         client.post(f"/api/v1/users/{user.username}/follow", headers=api_headers_second)
         client.post(
-            f"/api/v1/follow-requests/{second_user.username}/accept", headers=api_headers
+            f"/api/v1/follow-requests/{second_user.username}/accept",
+            headers=api_headers,
         )
 
         resp = client.get("/api/v1/notifications", headers=api_headers)
@@ -339,9 +349,7 @@ class TestApiFollowRequests:
         assert resp.get_json()["data"]["follow_status"] == "pending"
 
     def test_accept_not_found(self, client, api_headers):
-        resp = client.post(
-            "/api/v1/follow-requests/ghost/accept", headers=api_headers
-        )
+        resp = client.post("/api/v1/follow-requests/ghost/accept", headers=api_headers)
         assert resp.status_code == 404
 
 
@@ -374,9 +382,7 @@ class TestApiRemoveFollower:
         assert resp.status_code == 400
 
     def test_remove_follower_not_found(self, client, api_headers):
-        resp = client.post(
-            "/api/v1/users/ghost/remove-follower", headers=api_headers
-        )
+        resp = client.post("/api/v1/users/ghost/remove-follower", headers=api_headers)
         assert resp.status_code == 404
 
 
@@ -392,7 +398,9 @@ class TestApiFollowersList:
             u.accept_follow_request(u2)
             db.session.commit()
 
-        resp = client.get(f"/api/v1/users/{user.username}/followers", headers=api_headers)
+        resp = client.get(
+            f"/api/v1/users/{user.username}/followers", headers=api_headers
+        )
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert len(data) == 1
@@ -404,7 +412,9 @@ class TestApiFollowersList:
         assert resp.status_code == 404
 
     def test_followers_list_empty(self, client, api_headers, user):
-        resp = client.get(f"/api/v1/users/{user.username}/followers", headers=api_headers)
+        resp = client.get(
+            f"/api/v1/users/{user.username}/followers", headers=api_headers
+        )
         assert resp.status_code == 200
         assert resp.get_json()["data"] == []
 
@@ -421,7 +431,9 @@ class TestApiFollowingList:
             u2.accept_follow_request(u)
             db.session.commit()
 
-        resp = client.get(f"/api/v1/users/{user.username}/following", headers=api_headers)
+        resp = client.get(
+            f"/api/v1/users/{user.username}/following", headers=api_headers
+        )
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert len(data) == 1

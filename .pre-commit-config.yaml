@@ -1,18 +1,24 @@
 repos:
   - repo: local
     hooks:
-      # - id: black
-      #   name: black
-      #   entry: black
-      #   language: system
-      #   types: [python]
+      # isort before black; both read backend/pyproject.toml (profile "black"),
+      # so they agree on import formatting.
+      - id: isort
+        name: isort
+        entry: isort
+        language: system
+        types: [python]
+        files: ^backend/
+        exclude: ^backend/migrations/
+        args: ["--settings-path", "backend"]
 
-      # - id: isort
-      #   name: isort
-      #   entry: isort
-      #   language: system
-      #   types: [python]
-      #   args: ["--profile", "black"]
+      - id: black
+        name: black
+        entry: black
+        language: system
+        types: [python]
+        files: ^backend/
+        exclude: ^backend/migrations/
 
       - id: flake8
         name: flake8

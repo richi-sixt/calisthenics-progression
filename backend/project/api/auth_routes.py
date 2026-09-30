@@ -11,12 +11,21 @@ import secrets
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
 from PIL import Image
+
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
 from project.api.upload_routes import delete_image_files
-from project.models import (Exercise, ExerciseDefinition, Follow, Message,
-                            Notification, Set, UploadedImage, User)
+from project.models import (
+    Exercise,
+    ExerciseDefinition,
+    Follow,
+    Message,
+    Notification,
+    Set,
+    UploadedImage,
+    User,
+)
 
 
 @bp.route("/auth/profile", methods=["GET"])
@@ -141,19 +150,27 @@ def api_delete_account() -> ResponseReturnValue:
     ex_def_ids = [
         row[0]
         for row in db.session.execute(
-            db.select(ExerciseDefinition.id).where(ExerciseDefinition.user_id == user.id)
+            db.select(ExerciseDefinition.id).where(
+                ExerciseDefinition.user_id == user.id
+            )
         )
     ]
     if ex_def_ids:
         cross_exercise_ids = [
             row[0]
             for row in db.session.execute(
-                db.select(Exercise.id).where(Exercise.exercise_definition_id.in_(ex_def_ids))
+                db.select(Exercise.id).where(
+                    Exercise.exercise_definition_id.in_(ex_def_ids)
+                )
             )
         ]
         if cross_exercise_ids:
-            db.session.execute(db.delete(Set).where(Set.exercise_id.in_(cross_exercise_ids)))
-            db.session.execute(db.delete(Exercise).where(Exercise.id.in_(cross_exercise_ids)))
+            db.session.execute(
+                db.delete(Set).where(Set.exercise_id.in_(cross_exercise_ids))
+            )
+            db.session.execute(
+                db.delete(Exercise).where(Exercise.id.in_(cross_exercise_ids))
+            )
 
     # 7. Delete exercise definitions
     db.session.execute(

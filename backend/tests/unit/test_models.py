@@ -6,11 +6,21 @@ import pytest
 
 __all__ = ("pytest",)
 import sqlalchemy.exc
-from project import db
-from project.models import (Exercise, ExerciseCategory, ExerciseDefinition,
-                            Follow, Message, Notification, ProgressionLevel, Set,
-                            User, Workout)
 from sqlalchemy import func
+
+from project import db
+from project.models import (
+    Exercise,
+    ExerciseCategory,
+    ExerciseDefinition,
+    Follow,
+    Message,
+    Notification,
+    ProgressionLevel,
+    Set,
+    User,
+    Workout,
+)
 
 
 class TestUserModel:

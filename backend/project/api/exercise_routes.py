@@ -2,12 +2,17 @@
 
 from flask import current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
+from sqlalchemy import or_
+
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import (VISIBILITY_VALUES, ExerciseCategory,
-                            ExerciseDefinition, ProgressionLevel)
-from sqlalchemy import or_
+from project.models import (
+    VISIBILITY_VALUES,
+    ExerciseCategory,
+    ExerciseDefinition,
+    ProgressionLevel,
+)
 
 
 def _parse_category_ids() -> list[int] | None:
