@@ -11,6 +11,8 @@ const de: Record<keyof typeof en, string> = {
   "nav.library": "Bibliothek",
   "nav.messages": "Nachrichten",
   "nav.contact": "Kontakt",
+  "legal.privacy": "Datenschutzerklärung",
+  "legal.support": "Support",
   "nav.followRequests": "Follow-Anfragen",
   "nav.profile": "Profil",
   "nav.logout": "Abmelden",

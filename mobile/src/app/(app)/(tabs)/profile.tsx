@@ -9,7 +9,8 @@ import { useFollowRequestCount } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase/client";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
-import { CONTACT_USERNAME } from "@/lib/contact";
+import { openBrowserAsync } from "expo-web-browser";
+import { CONTACT_USERNAME, LEGAL_BASE_URL } from "@/lib/contact";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -304,6 +305,15 @@ export default function ProfileScreen() {
             className="mt-3 self-start rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
           >
             <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("messages.sendMessage")}</Text>
+          </Pressable>
+        </View>
+
+        <View className="mt-6 flex-row gap-6 px-1">
+          <Pressable onPress={() => openBrowserAsync(`${LEGAL_BASE_URL}/privacy`)} accessibilityRole="link">
+            <Text className="text-sm text-blue-600 dark:text-blue-400">{t("legal.privacy")}</Text>
+          </Pressable>
+          <Pressable onPress={() => openBrowserAsync(`${LEGAL_BASE_URL}/support`)} accessibilityRole="link">
+            <Text className="text-sm text-blue-600 dark:text-blue-400">{t("legal.support")}</Text>
           </Pressable>
         </View>
 

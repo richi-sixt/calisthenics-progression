@@ -9,6 +9,8 @@ const en = {
   "nav.library": "Library",
   "nav.messages": "Messages",
   "nav.contact": "Contact",
+  "legal.privacy": "Privacy Policy",
+  "legal.support": "Support",
   "nav.followRequests": "Follow Requests",
   "nav.profile": "Profile",
   "nav.logout": "Logout",

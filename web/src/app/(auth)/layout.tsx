@@ -14,6 +14,10 @@ export default function AuthLayout({
           </h1>
         </Link>
         {children}
+        <p className="mt-8 flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <Link href="/privacy" className="hover:underline">Privacy</Link>
+          <Link href="/support" className="hover:underline">Support</Link>
+        </p>
       </div>
     </div>
   );

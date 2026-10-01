@@ -5,3 +5,7 @@ export const CONTACT_USERNAME =
   process.env.EXPO_PUBLIC_CONTACT_USERNAME ?? "calisthenics-progression";
 
 export const CONTACT_EMAIL = "calisthenics-progression@sixt.services";
+
+// Public web pages (privacy policy, support) served by the Next.js app.
+export const LEGAL_BASE_URL =
+  process.env.EXPO_PUBLIC_WEB_URL ?? "https://calisthenics-progression.sixt.services";

@@ -20,12 +20,16 @@ backend/.flake8
 backend/pyrightconfig.json
 backend/project/static/profile_pics
 backend/project/static/exercise_images
+backend/scripts
 
 # Node / Next.js
 node_modules
 web/.next
 web/out
 .env*.local
+
+# Store assets
+store-assets
 
 # Legacy root-level ignores
 pyrightconfig.json

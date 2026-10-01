@@ -72,6 +72,14 @@ export default function WelcomeInfo() {
             <span className="text-gray-400">…</span>
           )}
         </p>
+        <p className="flex justify-center gap-4 text-xs">
+          <Link href="/privacy" className="hover:underline">
+            {t("legal.privacy")}
+          </Link>
+          <Link href="/support" className="hover:underline">
+            {t("legal.support")}
+          </Link>
+        </p>
       </div>
     </div>
   );
