@@ -8,6 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useMemo } from "react";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import ReportBlockMenu from "@/components/social/report-block-menu";
 import { useTranslation } from "@/i18n";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 
@@ -153,6 +154,13 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
               >
                 {t("common.copy")}
               </button>
+            )}
+            {!isOwner && exercise.username && (
+              <ReportBlockMenu
+                username={exercise.username}
+                targetType="exercise"
+                targetId={exercise.id}
+              />
             )}
           </div>
         </div>

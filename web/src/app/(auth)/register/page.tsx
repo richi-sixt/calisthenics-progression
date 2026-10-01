@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,6 +21,11 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       setError(t("profile.passwordMismatch"));
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError(t("auth.termsRequired"));
       return;
     }
 
@@ -36,6 +42,7 @@ export default function RegisterPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { terms_accepted_at: new Date().toISOString() },
       },
     });
 
@@ -129,6 +136,22 @@ export default function RegisterPage() {
             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            required
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300"
+          />
+          <span>
+            {t("auth.acceptTerms")}{" "}
+            <Link href="/terms" target="_blank" className="text-blue-600 hover:text-blue-500">
+              {t("legal.terms")}
+            </Link>
+          </span>
+        </label>
 
         <button
           type="submit"

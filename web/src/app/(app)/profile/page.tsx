@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import ErrorMessage from "@/components/ui/error-message";
+import BlockedUsersSection from "@/components/social/blocked-users-section";
 import { useTranslation } from "@/i18n";
 import { ProfileSkeleton } from "@/components/ui/skeleton";
 
@@ -407,6 +408,8 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      <BlockedUsersSection />
 
       {/* Danger zone */}
       <div className="mt-6 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800 p-6">

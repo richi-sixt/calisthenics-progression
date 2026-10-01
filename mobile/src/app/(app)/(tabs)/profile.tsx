@@ -308,7 +308,13 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <View className="mt-6 flex-row gap-6 px-1">
+        <View className="mt-6 flex-row flex-wrap gap-x-6 gap-y-2 px-1">
+          <Pressable onPress={() => router.push("/blocked-users")} accessibilityRole="link">
+            <Text className="text-sm text-blue-600 dark:text-blue-400">{t("moderation.blockedUsers")}</Text>
+          </Pressable>
+          <Pressable onPress={() => openBrowserAsync(`${LEGAL_BASE_URL}/terms`)} accessibilityRole="link">
+            <Text className="text-sm text-blue-600 dark:text-blue-400">{t("legal.terms")}</Text>
+          </Pressable>
           <Pressable onPress={() => openBrowserAsync(`${LEGAL_BASE_URL}/privacy`)} accessibilityRole="link">
             <Text className="text-sm text-blue-600 dark:text-blue-400">{t("legal.privacy")}</Text>
           </Pressable>

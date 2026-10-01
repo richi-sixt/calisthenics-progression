@@ -2,6 +2,7 @@ import { View, Text, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import type { UserWithFollowing } from "@/types";
 import { FollowButton } from "@/components/social/FollowButton";
+import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
@@ -45,6 +46,7 @@ export function UserProfileHeader({ user }: { user: UserWithFollowing }) {
         >
           <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("social.sendMessage")}</Text>
         </Pressable>
+        <ReportBlockMenu username={user.username} targetType="user" targetId={user.id} leaveOnBlock />
       </View>
     </View>
   );

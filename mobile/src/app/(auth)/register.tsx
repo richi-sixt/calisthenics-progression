@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Switch } from "react-native";
+import { openBrowserAsync } from "expo-web-browser";
 import { useForm, Controller } from "react-hook-form";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase/client";
 import { useTranslation } from "@/i18n";
+import { LEGAL_BASE_URL } from "@/lib/contact";
 
 type RegisterForm = {
   email: string;
@@ -15,6 +17,7 @@ export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const {
     control,
     handleSubmit,
@@ -23,7 +26,14 @@ export default function RegisterScreen() {
 
   const onSubmit = async (data: RegisterForm) => {
     setError(null);
-    const { error } = await supabase.auth.signUp(data);
+    if (!acceptedTerms) {
+      setError(t("auth.termsRequired"));
+      return;
+    }
+    const { error } = await supabase.auth.signUp({
+      ...data,
+      options: { data: { terms_accepted_at: new Date().toISOString() } },
+    });
     if (error) {
       setError(error.message);
       return;
@@ -90,6 +100,20 @@ if (submitted) {
           </View>
         )}
       />
+
+      <View className="mb-4 flex-row items-center gap-3">
+        <Switch value={acceptedTerms} onValueChange={setAcceptedTerms} accessibilityLabel={t("auth.acceptTerms")} />
+        <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+          {t("auth.acceptTerms")}{" "}
+          <Text
+            className="text-blue-600 dark:text-blue-400"
+            onPress={() => openBrowserAsync(`${LEGAL_BASE_URL}/terms`)}
+            accessibilityRole="link"
+          >
+            {t("legal.terms")}
+          </Text>
+        </Text>
+      </View>
 
       {error && <Text className="text-red-500 dark:text-red-400 mb-4">{error}</Text>}
 

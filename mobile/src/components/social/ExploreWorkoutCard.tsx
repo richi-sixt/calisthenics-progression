@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import type { Workout, Exercise } from "@/types";
 import { useTranslation, type TranslationKey } from "@/i18n";
 import { FollowButton } from "@/components/social/FollowButton";
+import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -52,6 +53,7 @@ export function ExploreWorkoutCard({ workout, showOwner = true }: { workout: Wor
                     status={workout.follow_status ?? "none"}
                     size="sm"
                   />
+                  <ReportBlockMenu username={workout.username} targetType="workout" targetId={workout.id} />
                 </View>
               )}
               {workout.timestamp && <Text className="text-sm text-gray-500 dark:text-gray-400">{formatDate(workout.timestamp)}</Text>}

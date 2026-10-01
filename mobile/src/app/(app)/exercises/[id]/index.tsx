@@ -2,6 +2,7 @@ import { View, Text, Pressable, ActivityIndicator, ScrollView, Alert } from "rea
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
+import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
 import { Markdown } from "@/components/ui/Markdown";
 
@@ -53,6 +54,9 @@ export default function ExerciseDetailScreen() {
           <Pressable onPress={() => copyExercise.mutate(exerciseId)} disabled={copyExercise.isPending} className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-4 py-2">
             <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">{copyExercise.isPending ? t("exercises.copying") : t("exercises.copyToMine")}</Text>
           </Pressable>
+        )}
+        {!isOwner && exercise.username && (
+          <ReportBlockMenu username={exercise.username} targetType="exercise" targetId={exercise.id} leaveOnBlock />
         )}
       </View>
 

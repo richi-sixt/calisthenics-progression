@@ -48,11 +48,41 @@ def is_visible_to(owner_id: int, visibility: str, viewer: "User | None") -> bool
     """
     if viewer is not None and viewer.id == owner_id:
         return True
+    if viewer is not None and is_blocked_between(viewer.id, owner_id):
+        return False
     if visibility == "public":
         return True
     if visibility == "followers":
         return viewer is not None and viewer.is_following_id(owner_id)
     return False
+
+
+def blocked_user_ids(user_id: int) -> set[int]:
+    """Ids of users with a block against or from the given user (either way)."""
+    rows = db.session.execute(
+        db.select(UserBlock.blocker_id, UserBlock.blocked_id).where(
+            (UserBlock.blocker_id == user_id) | (UserBlock.blocked_id == user_id)
+        )
+    ).all()
+    return {b if a == user_id else a for a, b in rows}
+
+
+def is_blocked_between(user_id: int, other_id: int) -> bool:
+    """Whether either user has blocked the other."""
+    return (
+        db.session.execute(
+            db.select(UserBlock.id)
+            .where(
+                ((UserBlock.blocker_id == user_id) & (UserBlock.blocked_id == other_id))
+                | (
+                    (UserBlock.blocker_id == other_id)
+                    & (UserBlock.blocked_id == user_id)
+                )
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
 
 
 # Exercise categories many-to-many association table
@@ -98,6 +128,7 @@ class User(Base):
     last_seen = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     registered_on = db.Column(db.DateTime, nullable=False)
     last_message_read_time = db.Column(db.DateTime)
+    terms_accepted_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships - Following system
     follow_requests_sent = db.relationship(
@@ -796,3 +827,60 @@ class UploadedImage(Base):
     def to_dict(self) -> dict[str, Any]:
         """Serialize uploaded image for API responses."""
         return {"id": self.id, "filename": self.filename, "url": self.url}
+
+
+REPORT_TARGET_TYPES = ("user", "workout", "exercise", "message")
+REPORT_REASONS = ("spam", "harassment", "inappropriate", "illegal", "other")
+
+
+class UserBlock(Base):
+    """A user blocking another user; hides both sides from each other."""
+
+    __tablename__ = "user_block"
+
+    id = db.Column(db.Integer, primary_key=True)
+    blocker_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), index=True, nullable=False
+    )
+    blocked_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), index=True, nullable=False
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("blocker_id", "blocked_id", name="uq_user_block_pair"),
+    )
+
+    def __repr__(self) -> str:
+        """String representation of UserBlock."""
+        return f"<UserBlock {self.blocker_id}->{self.blocked_id}>"
+
+
+class Report(Base):
+    """A user's report of another user or of a piece of content."""
+
+    __tablename__ = "report"
+
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), index=True, nullable=False
+    )
+    reported_user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), index=True, nullable=False
+    )
+    target_type = db.Column(db.String(16), nullable=False)
+    target_id = db.Column(db.Integer, nullable=True)
+    reason = db.Column(db.String(16), nullable=False)
+    details = db.Column(db.String(500), nullable=True)
+    status = db.Column(
+        db.String(16), nullable=False, default="open", server_default="open"
+    )
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    def __repr__(self) -> str:
+        """String representation of Report."""
+        return f"<Report {self.id} {self.target_type}:{self.target_id} ({self.status})>"

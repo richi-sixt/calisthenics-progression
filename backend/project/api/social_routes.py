@@ -8,7 +8,15 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import Follow, Message, Notification, User, Workout
+from project.models import (
+    Follow,
+    Message,
+    Notification,
+    User,
+    Workout,
+    blocked_user_ids,
+    is_blocked_between,
+)
 
 
 def _my_follow_statuses() -> dict[int, str]:
@@ -37,8 +45,10 @@ def api_explore() -> ResponseReturnValue:
     statuses = _my_follow_statuses()
     followed_ids = {uid for uid, status in statuses.items() if status == "accepted"}
 
+    blocked_ids = blocked_user_ids(g.current_api_user.id)
     query = db.select(Workout).filter(
         Workout.user_id != g.current_api_user.id,
+        Workout.user_id.not_in(blocked_ids),
         Workout.is_template == False,  # noqa: E712
         db.or_(
             Workout.visibility == "public",
@@ -96,7 +106,10 @@ def api_get_user(username: str) -> ResponseReturnValue:
         .scalars()
         .first()
     )
-    if user is None:
+    if user is None or (
+        user.id != g.current_api_user.id
+        and is_blocked_between(g.current_api_user.id, user.id)
+    ):
         return jsonify({"error": "User not found."}), 404
 
     page = request.args.get("page", 1, type=int)
@@ -146,6 +159,8 @@ def api_follow(username: str) -> ResponseReturnValue:
         return jsonify({"error": "User not found."}), 404
     if user.id == g.current_api_user.id:
         return jsonify({"error": "Cannot follow yourself."}), 400
+    if is_blocked_between(g.current_api_user.id, user.id):
+        return jsonify({"error": "User not found."}), 404
 
     g.current_api_user.request_follow(user)
     _update_follow_request_count(user)
@@ -182,7 +197,11 @@ def api_list_follow_requests() -> ResponseReturnValue:
     query = (
         db.session.query(User)
         .join(Follow, Follow.follower_id == User.id)
-        .filter(Follow.followed_id == g.current_api_user.id, Follow.status == "pending")
+        .filter(
+            Follow.followed_id == g.current_api_user.id,
+            Follow.status == "pending",
+            User.id.not_in(blocked_user_ids(g.current_api_user.id)),
+        )
         .order_by(Follow.created_at.desc())
     )
     return _paginated_user_list(query, page)
@@ -282,11 +301,16 @@ def api_list_followers(username: str) -> ResponseReturnValue:
         .scalars()
         .first()
     )
-    if user is None:
+    if user is None or (
+        user.id != g.current_api_user.id
+        and is_blocked_between(g.current_api_user.id, user.id)
+    ):
         return jsonify({"error": "User not found."}), 404
 
     page = request.args.get("page", 1, type=int)
-    query = user.followers.order_by(User.username.asc())
+    query = user.followers.filter(
+        User.id.not_in(blocked_user_ids(g.current_api_user.id))
+    ).order_by(User.username.asc())
     return _paginated_user_list(query, page)
 
 
@@ -299,11 +323,16 @@ def api_list_following(username: str) -> ResponseReturnValue:
         .scalars()
         .first()
     )
-    if user is None:
+    if user is None or (
+        user.id != g.current_api_user.id
+        and is_blocked_between(g.current_api_user.id, user.id)
+    ):
         return jsonify({"error": "User not found."}), 404
 
     page = request.args.get("page", 1, type=int)
-    query = user.followed.order_by(User.username.asc())
+    query = user.followed.filter(
+        User.id.not_in(blocked_user_ids(g.current_api_user.id))
+    ).order_by(User.username.asc())
     return _paginated_user_list(query, page)
 
 
@@ -316,12 +345,16 @@ def api_list_messages() -> ResponseReturnValue:
     db.session.commit()
 
     page = request.args.get("page", 1, type=int)
-    pagination = g.current_api_user.messages_received.order_by(
-        Message.timestamp.desc()
-    ).paginate(
-        page=page,
-        per_page=current_app.config["WORKOUTS_PER_PAGE"],
-        error_out=False,
+    pagination = (
+        g.current_api_user.messages_received.filter(
+            Message.sender_id.not_in(blocked_user_ids(g.current_api_user.id))
+        )
+        .order_by(Message.timestamp.desc())
+        .paginate(
+            page=page,
+            per_page=current_app.config["WORKOUTS_PER_PAGE"],
+            error_out=False,
+        )
     )
     return jsonify(
         {
@@ -346,7 +379,10 @@ def api_send_message(recipient: str) -> ResponseReturnValue:
         .scalars()
         .first()
     )
-    if user is None:
+    if user is None or (
+        user.id != g.current_api_user.id
+        and is_blocked_between(g.current_api_user.id, user.id)
+    ):
         return jsonify({"error": "User not found."}), 404
 
     data = request.get_json(silent=True) or {}

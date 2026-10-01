@@ -11,12 +11,13 @@ from flask.cli import AppGroup
 
 from project import db
 from project.api.upload_routes import delete_image_files, exercise_image_dir
-from project.models import ExerciseDefinition, UploadedImage
+from project.models import ExerciseDefinition, Report, UploadedImage, User
 
 IMAGE_FILENAME = re.compile(r"[0-9a-f]{32}\.webp")
 IMAGE_REFERENCE = re.compile(r"/static/exercise_images/([0-9a-f]{32}\.webp)")
 
 images_cli = AppGroup("images", help="Manage uploaded exercise images.")
+reports_cli = AppGroup("reports", help="Review user reports.")
 
 
 @dataclass
@@ -122,6 +123,42 @@ def cleanup_orphans(do_delete: bool, min_age_hours: int) -> None:
         click.echo("Dry run - nothing deleted. Re-run with --delete to remove.")
 
 
+@reports_cli.command("list")
+@click.option("--all", "show_all", is_flag=True, help="Include resolved reports.")
+def list_reports(show_all: bool) -> None:
+    """List open reports (newest first)."""
+    query = db.select(Report).order_by(Report.created_at.desc())
+    if not show_all:
+        query = query.filter_by(status="open")
+    rows = db.session.scalars(query).all()
+    for r in rows:
+        reporter = db.session.get(User, r.reporter_id)
+        reported = db.session.get(User, r.reported_user_id)
+        click.echo(
+            f"#{r.id} [{r.status}] {r.created_at:%Y-%m-%d %H:%M} "
+            f"{r.target_type}:{r.target_id} reason={r.reason} "
+            f"reporter={reporter.username if reporter else '?'} "
+            f"reported={reported.username if reported else '?'}"
+        )
+        if r.details:
+            click.echo(f"    {r.details}")
+    if not rows:
+        click.echo("No reports.")
+
+
+@reports_cli.command("resolve")
+@click.argument("report_id", type=int)
+def resolve_report(report_id: int) -> None:
+    """Mark a report as resolved."""
+    report = db.session.get(Report, report_id)
+    if report is None:
+        raise click.ClickException(f"No report with id {report_id}.")
+    report.status = "resolved"
+    db.session.commit()
+    click.echo(f"Report #{report_id} resolved.")
+
+
 def register_commands(app: Flask) -> None:
     """Attach all CLI command groups to the app."""
     app.cli.add_command(images_cli)
+    app.cli.add_command(reports_cli)

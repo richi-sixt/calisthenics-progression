@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Linking } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Linking, Image } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase/client";
@@ -34,6 +34,11 @@ export default function LoginScreen() {
       className="flex-1 bg-white dark:bg-gray-900"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 32 }}
     >
+      <Image
+        source={require("../../../assets/images/icon.png")}
+        accessibilityIgnoresInvertColors
+        style={{ width: 120, height: 120, borderRadius: 27, alignSelf: "center", marginBottom: 24 }}
+      />
       <Text className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t("auth.login")}</Text>
 
       <Controller

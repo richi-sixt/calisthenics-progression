@@ -22,9 +22,11 @@ from project.models import (
     Follow,
     Message,
     Notification,
+    Report,
     Set,
     UploadedImage,
     User,
+    UserBlock,
 )
 
 
@@ -122,6 +124,18 @@ def api_delete_account() -> ResponseReturnValue:
     db.session.execute(
         db.delete(Follow).where(
             (Follow.follower_id == user.id) | (Follow.followed_id == user.id)
+        )
+    )
+
+    # 1b. Remove blocks (either side) and reports (reporter or reported)
+    db.session.execute(
+        db.delete(UserBlock).where(
+            (UserBlock.blocker_id == user.id) | (UserBlock.blocked_id == user.id)
+        )
+    )
+    db.session.execute(
+        db.delete(Report).where(
+            (Report.reporter_id == user.id) | (Report.reported_user_id == user.id)
         )
     )
 

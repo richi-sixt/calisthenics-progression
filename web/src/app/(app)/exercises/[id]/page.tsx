@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import ErrorMessage from "@/components/ui/error-message";
 import { useTranslation } from "@/i18n";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import ReportBlockMenu from "@/components/social/report-block-menu";
 import { Markdown } from "@/components/ui/markdown";
 
 export default function ExerciseDetailPage({
@@ -76,6 +77,14 @@ export default function ExerciseDetailPage({
             >
               {copyExercise.isPending ? t("exercises.copying") : t("exercises.copyToMine")}
             </button>
+          )}
+          {!isOwner && exercise.username && (
+            <ReportBlockMenu
+              username={exercise.username}
+              targetType="exercise"
+              targetId={exercise.id}
+              leaveOnBlock
+            />
           )}
         </div>
       </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { UserWithFollowing } from "@/types";
 import FollowButton from "@/components/social/follow-button";
+import ReportBlockMenu from "@/components/social/report-block-menu";
 import { useTranslation } from "@/i18n";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
@@ -59,6 +60,12 @@ export default function UserProfileHeader({ user }: { user: UserWithFollowing })
         >
           {t("social.sendMessage")}
         </Link>
+        <ReportBlockMenu
+          username={user.username}
+          targetType="user"
+          targetId={user.id}
+          leaveOnBlock
+        />
       </div>
     </div>
   );

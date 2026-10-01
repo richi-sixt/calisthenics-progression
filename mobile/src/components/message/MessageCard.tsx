@@ -1,6 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import type { Message } from "@/types";
+import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
 
 export function MessageCard({ message }: { message: Message }) {
@@ -15,6 +16,11 @@ export function MessageCard({ message }: { message: Message }) {
           </Pressable>
         )}
         {message.timestamp && <Text className="text-xs text-gray-400 dark:text-gray-500">{formatDate(message.timestamp, "dateTime")}</Text>}
+        {message.sender_username && (
+          <View className="ml-auto">
+            <ReportBlockMenu username={message.sender_username} targetType="message" targetId={message.id} />
+          </View>
+        )}
       </View>
       <Text className="mt-1 text-sm text-gray-700 dark:text-gray-300">{message.body}</Text>
     </View>

@@ -1,0 +1,11 @@
+<p>Hello,</p>
+<p>A user reported content on Calisthenics Progression.</p>
+<p>
+    <strong>Report #:</strong> {{ report.id }}<br>
+    <strong>Reporter:</strong> {{ reporter.username }}<br>
+    <strong>Reported user:</strong> {{ reported.username }}<br>
+    <strong>Target:</strong> {{ report.target_type }}{% if report.target_id %} #{{ report.target_id }}{% endif %}<br>
+    <strong>Reason:</strong> {{ report.reason }}<br>
+    <strong>Details:</strong> {{ report.details or '-' }}
+</p>
+<p>Review with <code>flask reports list</code> and respond within 24 hours.</p>

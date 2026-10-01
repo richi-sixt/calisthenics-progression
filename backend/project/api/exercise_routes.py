@@ -12,6 +12,7 @@ from project.models import (
     ExerciseCategory,
     ExerciseDefinition,
     ProgressionLevel,
+    blocked_user_ids,
 )
 
 
@@ -53,6 +54,9 @@ def api_list_exercises() -> ResponseReturnValue:
         query = query.filter(ExerciseDefinition.user_id == g.current_api_user.id)
     else:
         followed_ids = {u.id for u in g.current_api_user.followed}
+        query = query.filter(
+            ExerciseDefinition.user_id.not_in(blocked_user_ids(g.current_api_user.id))
+        )
         query = query.filter(
             or_(
                 ExerciseDefinition.user_id == g.current_api_user.id,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -82,28 +83,15 @@ function MoonIcon(props: React.ComponentPropsWithoutRef<"svg">) {
   );
 }
 
-function LogoMark(props: React.ComponentPropsWithoutRef<"svg">) {
+function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 1024 1024" aria-hidden="true" {...props}>
-      <rect width="1024" height="1024" rx="220" fill="#208AEF" />
-      <path
-        d="M 560.6 286.6 A 280 280 0 1 0 773.4 499.4"
-        fill="none"
-        stroke="white"
-        strokeWidth="86"
-        strokeLinecap="round"
-      />
-      <line
-        x1="531.3"
-        y1="608.7"
-        x2="800"
-        y2="340"
-        stroke="white"
-        strokeWidth="74"
-        strokeLinecap="round"
-      />
-      <path d="M 860 280 L 821.1 396.7 L 743.3 318.9 Z" fill="white" />
-    </svg>
+    <Image
+      src="/icon-192.png"
+      alt=""
+      width={24}
+      height={24}
+      className={className}
+    />
   );
 }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Workout } from "@/types";
 import { useTranslation } from "@/i18n";
 import FollowButton from "@/components/social/follow-button";
+import ReportBlockMenu from "@/components/social/report-block-menu";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -58,6 +59,11 @@ export default function ExploreWorkoutCard({
                     username={workout.username}
                     status={workout.follow_status ?? "none"}
                     size="sm"
+                  />
+                  <ReportBlockMenu
+                    username={workout.username}
+                    targetType="workout"
+                    targetId={workout.id}
                   />
                 </span>
               )}

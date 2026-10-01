@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable
 
@@ -189,6 +190,8 @@ def _get_or_create_user(payload: dict[str, Any]) -> User | None:
             confirmed=confirmed,
         )
         user.supabase_uid = supabase_uid
+        if user_meta.get("terms_accepted_at"):
+            user.terms_accepted_at = datetime.now(timezone.utc)
         db.session.add(user)
         db.session.commit()
         logger.info("Auto-created user %s for Supabase UID %s", username, supabase_uid)

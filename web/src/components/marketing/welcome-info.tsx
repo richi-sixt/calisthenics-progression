@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/marketing/brand-logo";
 import { useTranslation } from "@/i18n";
 import { useMounted } from "@/hooks/use-mounted";
 import { CONTACT_EMAIL_USER, CONTACT_EMAIL_DOMAIN } from "@/lib/contact";
@@ -21,9 +22,11 @@ export default function WelcomeInfo() {
   return (
     <div className="w-full max-w-md space-y-8 text-center">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight dark:text-gray-100">
-          {t("landing.title")}
-        </h1>
+        <BrandLogo>
+          <h1 className="text-4xl font-bold tracking-tight dark:text-gray-100">
+            {t("landing.title")}
+          </h1>
+        </BrandLogo>
         <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
           {t("landing.subtitle")}
         </p>
@@ -73,6 +76,9 @@ export default function WelcomeInfo() {
           )}
         </p>
         <p className="flex justify-center gap-4 text-xs">
+          <Link href="/terms" className="hover:underline">
+            {t("legal.terms")}
+          </Link>
           <Link href="/privacy" className="hover:underline">
             {t("legal.privacy")}
           </Link>

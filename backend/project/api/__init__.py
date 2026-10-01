@@ -9,6 +9,7 @@ from project.api import (  # isort:skip # noqa: E402, F401
     category_routes,
     errors,
     exercise_routes,
+    moderation_routes,
     social_routes,
     stats_routes,
     upload_routes,

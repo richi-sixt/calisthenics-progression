@@ -5,6 +5,7 @@ import type { ExerciseDefinition } from "@/types";
 import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
+import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
 import { markdownToPlainText } from "@/lib/markdown";
 
@@ -140,6 +141,9 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
           <Pressable onPress={() => copyExercise.mutate(exercise.id)} disabled={copyExercise.isPending} className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5">
             <Text className="text-xs font-medium text-blue-600 dark:text-blue-400">{t("common.copy")}</Text>
           </Pressable>
+        )}
+        {!isOwner && exercise.username && (
+          <ReportBlockMenu username={exercise.username} targetType="exercise" targetId={exercise.id} />
         )}
       </View>
     </View>

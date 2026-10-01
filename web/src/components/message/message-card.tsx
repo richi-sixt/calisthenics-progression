@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Message } from "@/types";
+import ReportBlockMenu from "@/components/social/report-block-menu";
 import { useTranslation } from "@/i18n";
 
 export default function MessageCard({ message }: { message: Message }) {
@@ -29,6 +30,13 @@ export default function MessageCard({ message }: { message: Message }) {
             {message.body}
           </p>
         </div>
+        {message.sender_username && (
+          <ReportBlockMenu
+            username={message.sender_username}
+            targetType="message"
+            targetId={message.id}
+          />
+        )}
       </div>
     </div>
   );
