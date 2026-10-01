@@ -504,3 +504,14 @@ class TestApiNotifications:
         resp = client.get("/api/v1/notifications", headers=api_headers)
         assert resp.status_code == 200
         assert resp.get_json()["data"] == []
+
+
+class TestEmailPrivacy:
+    def test_other_users_profile_hides_email(self, client, api_headers, second_user):
+        data = client.get("/api/v1/users/seconduser", headers=api_headers).get_json()
+        assert "email" not in data["data"]["user"]
+        assert "second@example.com" not in str(data)
+
+    def test_own_profile_includes_email(self, client, api_headers, user):
+        data = client.get("/api/v1/auth/profile", headers=api_headers).get_json()
+        assert data["data"]["email"] == "test@example.com"

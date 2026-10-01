@@ -33,7 +33,7 @@ from project.models import (
 @bp.route("/auth/profile", methods=["GET"])
 @api_login_required
 def api_get_profile() -> ResponseReturnValue:
-    return jsonify({"data": g.current_api_user.to_dict()}), 200
+    return jsonify({"data": g.current_api_user.to_dict(include_email=True)}), 200
 
 
 @bp.route("/auth/profile", methods=["PUT"])
@@ -59,7 +59,7 @@ def api_update_profile() -> ResponseReturnValue:
         user.about_me = data["about_me"]
 
     db.session.commit()
-    return jsonify({"data": user.to_dict()}), 200
+    return jsonify({"data": user.to_dict(include_email=True)}), 200
 
 
 DEFAULT_PROFILE_PIC = "default.jpg"
@@ -111,7 +111,7 @@ def api_update_profile_picture() -> ResponseReturnValue:
 
     user.image_file = picture_fn
     db.session.commit()
-    return jsonify({"data": user.to_dict()}), 200
+    return jsonify({"data": user.to_dict(include_email=True)}), 200
 
 
 @bp.route("/auth/account", methods=["DELETE"])

@@ -295,12 +295,15 @@ class User(Base):
         db.session.add(n)
         return n
 
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize user to dictionary for API responses."""
-        return {
+    def to_dict(self, include_email: bool = False) -> dict[str, Any]:
+        """Serialize user to dictionary for API responses.
+
+        The email address is private: only include it when the viewer is the
+        user themselves.
+        """
+        data: dict[str, Any] = {
             "id": self.id,
             "username": self.username,
-            "email": self.email,
             "about_me": self.about_me,
             "image_file": self.image_file,
             "confirmed": self.confirmed,
@@ -311,6 +314,9 @@ class User(Base):
             "follower_count": self.followers.count(),
             "following_count": self.followed.count(),
         }
+        if include_email:
+            data["email"] = self.email
+        return data
 
 
 class Workout(Base):
