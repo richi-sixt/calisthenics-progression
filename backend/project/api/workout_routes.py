@@ -28,6 +28,20 @@ def _parse_notes(value: object) -> tuple[str | None, str | None]:
     return notes or None, None
 
 
+MAX_DISTANCE_KM = 10000
+
+
+def _parse_distance_km(value: object) -> tuple[float | None, str | None]:
+    """Validate an optional distance in km; returns (value, error)."""
+    if value is None or value == "":
+        return None, None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None, "distance_km must be a number."
+    if not 0 <= value <= MAX_DISTANCE_KM:
+        return None, f"distance_km must be between 0 and {MAX_DISTANCE_KM}."
+    return round(float(value), 3), None
+
+
 def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | None:
     """Parse JSON exercise list and create Exercise+Set records.
 
@@ -57,12 +71,16 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
 
         sets_data = ex_data.get("sets", [])
         for set_order, set_data in enumerate(sets_data, start=1):
+            distance_km, err = _parse_distance_km(set_data.get("distance_km"))
+            if err:
+                return err
             work_set = Set(
                 set_order=set_order,
                 exercise_id=exercise.id,
                 progression=set_data.get("progression"),
                 reps=set_data.get("reps"),
                 duration=set_data.get("duration"),
+                distance_km=distance_km,
             )
             db.session.add(work_set)
 
@@ -440,6 +458,7 @@ def api_use_template(template_id: int) -> ResponseReturnValue:
                 progression=s.progression,
                 reps=s.reps,
                 duration=s.duration,
+                distance_km=s.distance_km,
             )
             db.session.add(new_set)
 

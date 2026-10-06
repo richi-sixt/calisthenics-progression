@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, ScrollView } from "react-native";
-import { useExercises, useExercise } from "@/hooks/use-exercises";
+import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useExerciseStats, useWorkoutStats } from "@/hooks/use-workout-stats";
 import { ListPickerField } from "@/components/statistics/ListPickerField";
@@ -38,7 +38,6 @@ export default function StatisticsScreen() {
   const { t } = useTranslation();
 
   const [exerciseId, setExerciseId] = useState<number | null>(null);
-  const [progression, setProgression] = useState<string | null>(null);
   const [metric, setMetric] = useState<"best" | "total">("best");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [freqMetric, setFreqMetric] = useState<FrequencyMetric>("workout_count");
@@ -48,30 +47,19 @@ export default function StatisticsScreen() {
   const to = todayStr();
   const from = monthsAgo(RANGE_MONTHS[range]);
 
-  // Progression levels are exercise-specific, so a previously selected
-  // progression no longer applies once the exercise changes.
+  // Progression steps are exercises of their own, so each one has its own stats.
   const handleExerciseChange = (id: string | null) => {
     setExerciseId(id ? Number(id) : null);
-    setProgression(null);
   };
 
   const { data: exercisesData } = useExercises(1, "mine");
   const exercises = exercisesData?.data ?? [];
-  const selectedExercise = useExercise(exerciseId);
-  const progressionLevels = selectedExercise.data?.data.progression_levels ?? [];
 
   const { data: categoriesData } = useCategories();
   const categories = categoriesData?.data ?? [];
 
-  const exerciseStats = useExerciseStats(exerciseId, from, to, granularity, progression);
+  const exerciseStats = useExerciseStats(exerciseId, from, to, granularity);
   const workoutStats = useWorkoutStats(from, to, granularity, categoryId);
-
-  const progressionItems = [
-    { id: "", label: t("statistics.progressionFilter.all") },
-    ...[...progressionLevels]
-      .sort((a, b) => a.level_order - b.level_order)
-      .map((lvl) => ({ id: lvl.name, label: lvl.name })),
-  ];
 
   const categoryItems = [
     { id: "", label: t("statistics.categoryFilter.all") },
@@ -141,18 +129,6 @@ export default function StatisticsScreen() {
             />
           )}
         </View>
-        {exerciseId != null && progressionItems.length > 1 && (
-          <View className="mt-3">
-            <ListPickerField
-              label={t("statistics.progressionFilter.label")}
-              placeholder={t("statistics.progressionFilter.all")}
-              value={progression ?? ""}
-              items={progressionItems}
-              onChange={(id) => setProgression(id || null)}
-              testID="statistics-progression-picker"
-            />
-          </View>
-        )}
         <ExerciseProgressionChart
           data={exerciseStats.data?.data}
           isLoading={exerciseStats.isLoading}

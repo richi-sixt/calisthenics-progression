@@ -13,7 +13,7 @@ export default function NewExerciseScreen() {
         isPending={createExercise.isPending}
         onSubmit={(data) => {
           createExercise.mutate(
-            { ...data, progression_levels: data.progression_levels.map((p) => p.name) },
+            { ...data, progressions: data.progressions.map((p) => p.id) },
             { onSuccess: () => router.back() }
           );
         }}

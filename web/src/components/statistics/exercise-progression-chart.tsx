@@ -46,7 +46,7 @@ export default function ExerciseProgressionChart({
     return <EmptyState title={t("statistics.progression.noData")} />;
   }
 
-  const unit = data.counting_type === "duration" ? "s" : "";
+  const unit = data.counting_type === "duration" ? "s" : data.counting_type === "km" ? " km" : "";
   const metricLabel = metric === "best" ? t("statistics.metric.best") : t("statistics.metric.total");
 
   return (

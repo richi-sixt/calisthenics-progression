@@ -145,7 +145,11 @@ export default function WorkoutDetailPage({
                       <th className="pb-2 font-medium">{t("workouts.set")}</th>
                       <th className="pb-2 font-medium">{t("workouts.progression")}</th>
                       <th className="pb-2 font-medium">
-                        {exercise.counting_type === "duration" ? t("workouts.duration") : t("workouts.reps")}
+                        {exercise.counting_type === "duration"
+                          ? t("workouts.duration")
+                          : exercise.counting_type === "km"
+                            ? t("workouts.distanceKm")
+                            : t("workouts.reps")}
                       </th>
                     </tr>
                   </thead>
@@ -157,7 +161,11 @@ export default function WorkoutDetailPage({
                         <td className="py-2 dark:text-gray-300">
                           {exercise.counting_type === "duration"
                             ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")
-                            : set.reps ?? "-"}
+                            : exercise.counting_type === "km"
+                              ? set.distance_km != null
+                                ? `${set.distance_km} km${set.duration ? ` · ${set.duration_formatted}` : ""}`
+                                : "-"
+                              : set.reps ?? "-"}
                         </td>
                       </tr>
                     ))}

@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import ExercisePreviewDialog from "@/components/exercise/exercise-preview-dialog";
 import { useTranslation } from "@/i18n";
 import type { Workout, ExerciseDefinition, Visibility } from "@/types";
 
@@ -17,7 +18,7 @@ function secondsToMmss(totalSeconds: number): string {
 
 /** Convert "mm:ss" or "m:ss" string to total seconds. Returns null if invalid. */
 function mmssToSeconds(value: string): number | null {
-  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  const match = value.match(/^(\d{1,3}):(\d{2})$/);
   if (!match) return null;
   const mins = Number(match[1]);
   const secs = Number(match[2]);
@@ -29,6 +30,7 @@ interface SetData {
   progression: string;
   reps: string;
   duration: string;
+  distance_km: string;
 }
 
 interface ExerciseData {
@@ -90,12 +92,13 @@ export default function WorkoutExerciseForm({
               progression: s.progression ?? "",
               reps: s.reps != null ? String(s.reps) : "",
               duration: s.duration != null ? secondsToMmss(s.duration) : "",
-            })) ?? [{ progression: "", reps: "", duration: "" }],
+              distance_km: s.distance_km != null ? String(s.distance_km) : "",
+            })) ?? [{ progression: "", reps: "", duration: "", distance_km: "" }],
         })) ?? [
           {
             exercise_definition_id: "",
             notes: "",
-            sets: [{ progression: "", reps: "", duration: "" }],
+            sets: [{ progression: "", reps: "", duration: "", distance_km: "" }],
           },
         ],
     },
@@ -143,6 +146,7 @@ export default function WorkoutExerciseForm({
             progression: s.progression || null,
             reps: s.reps ? Number(s.reps) : null,
             duration: s.duration ? mmssToSeconds(s.duration) : null,
+            distance_km: s.distance_km ? Number(s.distance_km) : null,
           })),
       })),
     });
@@ -250,7 +254,7 @@ export default function WorkoutExerciseForm({
             appendExercise({
               exercise_definition_id: "",
               notes: "",
-              sets: [{ progression: "", reps: "", duration: "" }],
+              sets: [{ progression: "", reps: "", duration: "", distance_km: "" }],
             })
           }
           className="text-sm text-blue-600 hover:text-blue-800"
@@ -303,7 +307,7 @@ function ExerciseBlock({
     remove: removeSet,
   } = useFieldArray({ control, name: `exercises.${exIndex}.sets` });
 
-  // Watch which exercise is selected to get its counting_type and progression_levels
+  // Watch which exercise is selected to get its counting_type
   const selectedDefId = useWatch({
     control,
     name: `exercises.${exIndex}.exercise_definition_id`,
@@ -311,8 +315,7 @@ function ExerciseBlock({
 
   const selectedDef = selectedDefId ? exerciseDefMap.get(Number(selectedDefId)) : undefined;
   const countingType = selectedDef?.counting_type ?? "reps";
-  const progressionLevels = selectedDef?.progression_levels ?? [];
-  const hasProgressionLevels = progressionLevels.length > 0;
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
@@ -328,21 +331,40 @@ function ExerciseBlock({
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          disabled={!selectedDef}
+          aria-label={t("exercises.preview")}
+          title={t("exercises.preview")}
+          className="shrink-0 rounded-full border border-gray-300 dark:border-gray-600 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40"
+        >
+          i
+        </button>
         <button type="button" onClick={onRemove} className="shrink-0 text-sm text-red-500 hover:text-red-700">
           {t("common.remove")}
         </button>
       </div>
+      <ExercisePreviewDialog
+        exerciseId={previewOpen && selectedDef ? selectedDef.id : null}
+        onClose={() => setPreviewOpen(false)}
+      />
 
       <div className="mt-3 space-y-2">
         {/* Column headers -- desktop only */}
-        <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+        <div className="hidden sm:grid grid-cols-[auto_1fr_auto] gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
           <span className="w-10">{t("workouts.set")}</span>
-          <span>{t("workouts.progression")}</span>
-          <span>{countingType === "duration" ? t("workouts.durationSeconds") : t("workouts.reps")}</span>
+          <span>
+            {countingType === "duration"
+              ? t("workouts.durationSeconds")
+              : countingType === "km"
+                ? `${t("workouts.distanceKm")} / ${t("workouts.timeOptional")}`
+                : t("workouts.reps")}
+          </span>
           <span></span>
         </div>
         {setFields.map((setField, setIndex) => (
-          <div key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2 sm:border-0 sm:p-0 sm:grid sm:grid-cols-[auto_1fr_1fr_auto] sm:gap-2 sm:items-center">
+          <div key={setField.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-2 sm:border-0 sm:p-0 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-2 sm:items-center">
             {/* Mobile: set label + remove in a row */}
             <div className="flex items-center justify-between sm:hidden mb-1.5">
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")} {setIndex + 1}</span>
@@ -358,31 +380,32 @@ function ExerciseBlock({
             {/* Desktop: set number */}
             <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 w-10">{t("workouts.set")} {setIndex + 1}</span>
 
-            {/* Progression + Reps/Duration — stack on mobile, inline on desktop */}
-            <div className="grid grid-cols-2 gap-2 sm:contents">
-              {/* Progression */}
-              {hasProgressionLevels ? (
-                <select
-                  {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
-                >
-                  <option value="">---</option>
-                  {progressionLevels.map((level) => (
-                    <option key={level.id} value={level.name}>
-                      {level.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)}
-                  className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
-                  placeholder="e.g. Standard"
-                />
-              )}
-
+            {/* Reps/Duration/Distance. Older sets may still carry a legacy progression
+                name; keep it so editing a workout doesn't wipe it. */}
+            <input type="hidden" {...register(`exercises.${exIndex}.sets.${setIndex}.progression`)} />
+            <div className="grid grid-cols-1 gap-2 sm:contents">
               {/* Reps or Duration */}
-              {countingType === "duration" ? (
+              {countingType === "km" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    {...register(`exercises.${exIndex}.sets.${setIndex}.distance_km`, { min: 0, max: 10000 })}
+                    type="number"
+                    step="any"
+                    inputMode="decimal"
+                    aria-label={t("workouts.distanceKm")}
+                    className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                    placeholder="km"
+                  />
+                  <input
+                    {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
+                      pattern: /^\d{1,3}:\d{2}$/,
+                    })}
+                    aria-label={t("workouts.timeOptional")}
+                    className="rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-sm"
+                    placeholder="mm:ss"
+                  />
+                </div>
+              ) : countingType === "duration" ? (
                 <input
                   {...register(`exercises.${exIndex}.sets.${setIndex}.duration`, {
                     pattern: /^\d{1,2}:\d{2}$/,
@@ -412,7 +435,7 @@ function ExerciseBlock({
         ))}
         <button
           type="button"
-          onClick={() => appendSet({ progression: "", reps: "", duration: "" })}
+          onClick={() => appendSet({ progression: "", reps: "", duration: "", distance_km: "" })}
           className="text-xs text-blue-600 hover:text-blue-800"
         >
           {t("workoutForm.addSet")}

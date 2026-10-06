@@ -138,3 +138,20 @@ class TestCleanupOrphans:
         result = _run(app)
         assert result.exit_code == 0
         assert "Nothing to clean up." in result.output
+
+
+class TestCleanupKeepsThumbnails:
+    def test_thumbnail_reference_protects_upload(self, app, user, image_dir):
+        kept = _add_image(app, image_dir, user.id, 7)
+        orphan = _add_image(app, image_dir, user.id, 8)
+        with app.app_context():
+            ex = ExerciseDefinition(title="Thumb", description=None, user_id=user.id)
+            ex.thumbnail = kept
+            db.session.add(ex)
+            db.session.commit()
+
+        result = _run(app, "--delete")
+        assert result.exit_code == 0
+        assert _filenames(app) == {kept}
+        assert (image_dir / kept).exists()
+        assert not (image_dir / orphan).exists()

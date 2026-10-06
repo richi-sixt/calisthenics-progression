@@ -3,14 +3,12 @@
 import { useState } from "react";
 import PageHeader from "@/components/ui/page-header";
 import ExercisePicker from "@/components/statistics/exercise-picker";
-import ProgressionFilter from "@/components/statistics/progression-filter";
 import CategorySelect from "@/components/statistics/category-select";
 import ExerciseProgressionChart from "@/components/statistics/exercise-progression-chart";
 import WorkoutFrequencyChart, {
   type FrequencyMetric,
 } from "@/components/statistics/workout-frequency-chart";
 import { useExerciseStats, useWorkoutStats } from "@/hooks/use-workout-stats";
-import { useExercise } from "@/hooks/use-exercises";
 import { useTranslation } from "@/i18n";
 import type { StatsGranularity } from "@/types";
 
@@ -68,7 +66,6 @@ export default function StatisticsPage() {
   const nowMonth = currentMonth();
 
   const [exerciseId, setExerciseId] = useState<number | null>(null);
-  const [progression, setProgression] = useState<string | null>(null);
   const [metric, setMetric] = useState<"best" | "total">("best");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [freqMetric, setFreqMetric] = useState<FrequencyMetric>("workout_count");
@@ -79,17 +76,8 @@ export default function StatisticsPage() {
   const from = firstOfMonth(fromMonth);
   const to = lastOfMonth(toMonth);
 
-  // Progression levels are exercise-specific, so a previously selected
-  // progression no longer applies once the exercise changes.
-  const handleExerciseChange = (id: number | null) => {
-    setExerciseId(id);
-    setProgression(null);
-  };
-
-  const selectedExercise = useExercise(exerciseId);
-  const progressionLevels = selectedExercise.data?.data.progression_levels ?? [];
-
-  const exerciseStats = useExerciseStats(exerciseId, from, to, granularity, progression);
+  // Progression steps are exercises of their own, so each one has its own stats.
+  const exerciseStats = useExerciseStats(exerciseId, from, to, granularity);
   const workoutStats = useWorkoutStats(from, to, granularity, categoryId);
 
   return (
@@ -97,7 +85,7 @@ export default function StatisticsPage() {
       <PageHeader title={t("statistics.title")} />
 
       <div className="mt-4 flex flex-wrap items-end gap-4">
-        <ExercisePicker value={exerciseId} onChange={handleExerciseChange} />
+        <ExercisePicker value={exerciseId} onChange={setExerciseId} />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -143,11 +131,6 @@ export default function StatisticsPage() {
           </h2>
           {exerciseId != null && (
             <div className="flex flex-wrap items-end gap-3">
-              <ProgressionFilter
-                levels={progressionLevels}
-                value={progression}
-                onChange={setProgression}
-              />
               <div className="flex gap-2">
                 <ToggleButton active={metric === "best"} onClick={() => setMetric("best")}>
                   {t("statistics.metric.best")}

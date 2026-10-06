@@ -50,7 +50,7 @@ export interface Exercise {
   workout_id: number;
   exercise_definition_id: number | null;
   exercise_definition_title: string | null;
-  counting_type: "reps" | "duration";
+  counting_type: "reps" | "duration" | "km";
   notes: string | null;
   sets?: WorkoutSet[];
 }
@@ -61,6 +61,7 @@ export interface WorkoutSet {
   progression: string | null;
   reps: number | null;
   duration: number | null;
+  distance_km: number | null;
   duration_formatted: string;
 }
 
@@ -68,15 +69,38 @@ export interface ExerciseDefinition {
   id: number;
   title: string;
   description: string | null;
-  counting_type: "reps" | "duration";
+  counting_type: "reps" | "duration" | "km";
   date_created: string | null;
   user_id: number;
   username: string | null;
   user_image_file: string | null;
   archived: boolean;
   visibility: Visibility;
+  /** Ordered child exercises (progression steps). */
+  progressions: ExerciseProgressionRef[];
+  /** Exercises this one is a progression step of. */
+  parents: { id: number; title: string }[];
+  /** @deprecated legacy shape, derived from `progressions`. */
   progression_levels: ProgressionLevel[];
   category_ids: number[];
+  used_count?: number;
+  thumbnail?: string | null;
+  thumbnail_url?: string | null;
+}
+
+export interface ExerciseWorkoutRef {
+  id: number;
+  title: string;
+  planned_date: string | null;
+  is_done: boolean;
+}
+
+export interface ExerciseProgressionRef {
+  id: number;
+  title: string;
+  step_order: number;
+  counting_type: "reps" | "duration" | "km";
+  thumbnail_url: string | null;
 }
 
 export interface ProgressionLevel {
@@ -119,7 +143,7 @@ export interface ExerciseStatsBucket {
 
 export interface ExerciseStatsResponse {
   exercise_id: number;
-  counting_type: "reps" | "duration";
+  counting_type: "reps" | "duration" | "km";
   granularity: StatsGranularity;
   progression: string | null;
   buckets: ExerciseStatsBucket[];

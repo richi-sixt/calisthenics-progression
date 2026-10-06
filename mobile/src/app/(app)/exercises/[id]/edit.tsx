@@ -24,7 +24,7 @@ export default function EditExerciseScreen() {
         isPending={updateExercise.isPending}
         onSubmit={(formData) => {
           updateExercise.mutate(
-            { id: exerciseId, ...formData, progression_levels: formData.progression_levels.map((p) => p.name) },
+            { id: exerciseId, ...formData, progressions: formData.progressions.map((p) => p.id) },
             { onSuccess: () => router.back() }
           );
         }}

@@ -22,6 +22,25 @@ const pushUp: ExerciseDefinition = {
   user_image_file: null,
   archived: false,
   visibility: "private",
+  progressions: [],
+  parents: [],
+  progression_levels: [],
+  category_ids: [],
+};
+
+const run: ExerciseDefinition = {
+  id: 3,
+  title: "Running",
+  description: null,
+  counting_type: "km",
+  date_created: null,
+  user_id: 1,
+  username: "tester",
+  user_image_file: null,
+  archived: false,
+  visibility: "private",
+  progressions: [],
+  parents: [],
   progression_levels: [],
   category_ids: [],
 };
@@ -37,12 +56,14 @@ const plank: ExerciseDefinition = {
   user_image_file: null,
   archived: false,
   visibility: "private",
+  progressions: [{ id: 10, title: "Standard", step_order: 1, counting_type: "duration", thumbnail_url: null }],
+  parents: [],
   progression_levels: [{ id: 10, name: "Standard", level_order: 1 }],
   category_ids: [],
 };
 
 beforeEach(() => {
-  (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, plank] } });
+  (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, plank, run] } });
   (useCategories as jest.Mock).mockReturnValue({ data: { data: [] } });
 });
 
@@ -74,7 +95,7 @@ describe("WorkoutForm", () => {
           exercise_definition_title: "Push-Up",
           counting_type: "reps",
           notes: null,
-          sets: [{ id: 1, set_order: 1, progression: null, reps: 12, duration: null, duration_formatted: "0:00" }],
+          sets: [{ id: 1, set_order: 1, progression: null, reps: 12, duration: null, distance_km: null, duration_formatted: "0:00" }],
         },
         {
           id: 101,
@@ -84,7 +105,7 @@ describe("WorkoutForm", () => {
           exercise_definition_title: "Plank",
           counting_type: "duration",
           notes: "Hollow body, squeeze glutes",
-          sets: [{ id: 2, set_order: 1, progression: "Standard", reps: null, duration: 125, duration_formatted: "2:05" }],
+          sets: [{ id: 2, set_order: 1, progression: "Standard", reps: null, duration: 125, distance_km: null, duration_formatted: "2:05" }],
         },
       ],
     };
@@ -130,36 +151,82 @@ describe("WorkoutForm", () => {
     expect(queryByTestId("set-remove-0-1")).toBeNull();
   });
 
-  it("switches the reps/duration field and shows a progression picker based on the selected exercise", async () => {
+  it("switches the reps/duration field based on the selected exercise", async () => {
     const { getByTestId, queryByTestId } = await renderForm();
 
-    // No exercise selected yet -> defaults to a reps field, freeform progression text input.
+    // No exercise selected yet -> defaults to a reps field.
     expect(queryByTestId("reps-0-0")).toBeTruthy();
     expect(queryByTestId("duration-0-0")).toBeNull();
-    expect(queryByTestId("progression-input-0-0")).toBeTruthy();
+    // Progressions are exercises of their own now: no per-set progression input.
+    expect(queryByTestId("progression-input-0-0")).toBeNull();
     expect(queryByTestId("progression-chips-0-0")).toBeNull();
 
     await selectExercise(getByTestId, 0, plank);
 
     await waitFor(() => expect(queryByTestId("duration-0-0")).toBeTruthy());
     expect(queryByTestId("reps-0-0")).toBeNull();
-    // Plank has progression levels, so the freeform text input is replaced by chips.
-    expect(queryByTestId("progression-chips-0-0")).toBeTruthy();
-    expect(queryByTestId("progression-input-0-0")).toBeNull();
   });
 
-  it("selects a progression level by tapping its chip", async () => {
+  it("shows distance + optional time inputs for a km exercise and submits both", async () => {
     const onSubmit = jest.fn();
-    const { getByPlaceholderText, getByTestId, getByText } = await renderWithProviders(
+    const { getByPlaceholderText, getByTestId, queryByTestId, getByText } = await renderWithProviders(
       <WorkoutForm onSubmit={onSubmit} isPending={false} />
     );
 
-    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Plank Day");
-    await selectExercise(getByTestId, 0, plank);
-    await waitFor(() => expect(getByTestId("progression-chips-0-0")).toBeTruthy());
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Run Day");
+    await selectExercise(getByTestId, 0, run);
+    await waitFor(() => expect(queryByTestId("distance-0-0")).toBeTruthy());
+    expect(queryByTestId("reps-0-0")).toBeNull();
 
-    await fireEvent.press(getByTestId("progression-chip-0-0-10"));
-    await fireEvent.changeText(getByTestId("duration-0-0"), "0:30");
+    // German decimal comma is accepted; time stays optional on the second set.
+    await fireEvent.changeText(getByTestId("distance-0-0"), "5,5");
+    await fireEvent.changeText(getByTestId("duration-0-0"), "30:00");
+    await fireEvent.press(getByText("+ Add set"));
+    await fireEvent.changeText(getByTestId("distance-0-1"), "2");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exercises: [
+            expect.objectContaining({
+              sets: [
+                expect.objectContaining({ distance_km: 5.5, duration: 1800 }),
+                expect.objectContaining({ distance_km: 2, duration: null }),
+              ],
+            }),
+          ],
+        })
+      )
+    );
+  });
+
+  it("keeps a legacy per-set progression name when editing an existing workout", async () => {
+    const onSubmit = jest.fn();
+    const { getByTestId, getByText } = await renderWithProviders(
+      <WorkoutForm
+        onSubmit={onSubmit}
+        isPending={false}
+        defaultValues={{
+          title: "Old",
+          exercises: [
+            {
+              id: 1,
+              exercise_order: 1,
+              workout_id: 1,
+              exercise_definition_id: 2,
+              exercise_definition_title: "Plank",
+              counting_type: "duration",
+              notes: null,
+              sets: [
+                { id: 1, set_order: 1, progression: "Standard", reps: null, duration: 30, distance_km: null, duration_formatted: "0:30" },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+    expect(getByTestId("duration-0-0").props.value).toBe("0:30");
     await fireEvent.press(getByText("Save"));
 
     await waitFor(() =>
@@ -192,7 +259,7 @@ describe("WorkoutForm", () => {
           {
             exercise_definition_id: pushUp.id,
             notes: null,
-            sets: [{ progression: null, reps: 10, duration: null }],
+            sets: [{ progression: null, reps: 10, duration: null, distance_km: null }],
           },
         ],
       })

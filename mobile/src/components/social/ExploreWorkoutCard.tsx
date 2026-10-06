@@ -12,6 +12,7 @@ function formatSetDetails(exercise: Exercise, t: (key: TranslationKey) => string
   if (sets.length === 0) return null;
   return sets
     .map((s) => {
+      if (s.distance_km != null) return `${s.distance_km} km`;
       if (s.reps != null) return `${s.reps} ${t("workouts.reps")}`;
       if (s.duration != null) return s.duration_formatted || "00:00";
       return exercise.counting_type === "duration" ? "00:00" : `0 ${t("workouts.reps")}`;

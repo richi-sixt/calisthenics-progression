@@ -119,7 +119,11 @@ export default function WorkoutDetailScreen() {
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")}</Text>
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.progression")}</Text>
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {exercise.counting_type === "duration" ? t("workouts.duration") : t("workouts.reps")}
+                      {exercise.counting_type === "duration"
+                        ? t("workouts.duration")
+                        : exercise.counting_type === "km"
+                          ? t("workouts.distanceKm")
+                          : t("workouts.reps")}
                     </Text>
                   </View>
                   {exercise.sets.map((set) => (
@@ -129,7 +133,11 @@ export default function WorkoutDetailScreen() {
                       <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">
                         {exercise.counting_type === "duration"
                           ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")
-                          : (set.reps ?? "-")}
+                          : exercise.counting_type === "km"
+                            ? set.distance_km != null
+                              ? `${set.distance_km} km${set.duration ? ` · ${set.duration_formatted}` : ""}`
+                              : "-"
+                            : (set.reps ?? "-")}
                       </Text>
                     </View>
                   ))}
