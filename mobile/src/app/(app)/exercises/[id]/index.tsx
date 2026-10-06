@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ActivityIndicator, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
+import { useExercise, useExerciseWorkouts, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
@@ -13,6 +13,7 @@ export default function ExerciseDetailScreen() {
   const { t } = useTranslation();
   const { data, isLoading, error } = useExercise(exerciseId);
   const { data: profile } = useProfile();
+  const { data: workoutsData } = useExerciseWorkouts(exerciseId);
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
 
@@ -66,21 +67,62 @@ export default function ExerciseDetailScreen() {
         </Markdown>
       )}
 
-      {exercise.progression_levels.length > 0 && (
+      {exercise.parents.length > 0 && (
+        <View className="mt-4 flex-row flex-wrap items-center gap-x-1">
+          <Text className="text-sm text-gray-500 dark:text-gray-400">{t("exercises.partOf")}</Text>
+          {exercise.parents.map((parent, i) => (
+            <Pressable key={parent.id} onPress={() => router.push(`/exercises/${parent.id}`)} testID={`exercise-parent-${parent.id}`}>
+              <Text className="text-sm text-blue-600 dark:text-blue-400">
+                {parent.title}
+                {i < exercise.parents.length - 1 ? "," : ""}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {exercise.progressions.length > 0 && (
         <View className="mt-6">
           <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</Text>
           <View className="mt-2 gap-1">
-            {exercise.progression_levels.slice().sort((a, b) => a.level_order - b.level_order).map((level) => (
-              <View key={level.id} className="flex-row items-center gap-2">
+            {exercise.progressions.map((step, index) => (
+              <Pressable
+                key={step.id}
+                onPress={() => router.push(`/exercises/${step.id}`)}
+                testID={`exercise-progression-${step.id}`}
+                className="flex-row items-center gap-2"
+              >
                 <View className="h-5 w-5 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                  <Text className="text-xs font-medium text-gray-900 dark:text-gray-100">{level.level_order}</Text>
+                  <Text className="text-xs font-medium text-gray-900 dark:text-gray-100">{index + 1}</Text>
                 </View>
-                <Text className="text-sm text-gray-600 dark:text-gray-400">{level.name}</Text>
-              </View>
+                <Text className="text-sm text-gray-600 dark:text-gray-400">{step.title}</Text>
+              </Pressable>
             ))}
           </View>
         </View>
       )}
+
+      <View className="mt-8">
+        <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.recentWorkouts")}</Text>
+        {workoutsData && workoutsData.data.length === 0 && (
+          <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("exercises.neverUsed")}</Text>
+        )}
+        <View className="mt-2 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+          {workoutsData?.data.map((w, i) => (
+            <Pressable
+              key={w.id}
+              testID={`exercise-workout-${w.id}`}
+              onPress={() => router.push(`/workouts/${w.id}`)}
+              className={`flex-row items-center justify-between gap-3 px-3 py-2.5 ${i > 0 ? "border-t border-gray-200 dark:border-gray-700" : ""}`}
+            >
+              <Text className="flex-1 text-sm text-gray-900 dark:text-gray-100" numberOfLines={1}>{w.title}</Text>
+              <Text className="text-xs text-gray-500 dark:text-gray-400">
+                {w.planned_date ? new Date(`${w.planned_date}T00:00:00`).toLocaleDateString() : t("exercises.noDate")}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     </ScrollView>
   );
 }

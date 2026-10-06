@@ -34,17 +34,27 @@ class OrphanReport:
 
 
 def referenced_image_filenames() -> set[str]:
-    """Filenames linked from any exercise description (all users, incl. archived).
+    """Filenames used by any exercise, as thumbnail or in its description.
+
+    Covers all users, incl. archived exercises.
 
     Copying an exercise copies its description, so an upload can be referenced
     from another user's exercise — never limit this to the uploader's own.
     """
+    thumbnails = set(
+        db.session.scalars(
+            db.select(ExerciseDefinition.thumbnail).where(
+                ExerciseDefinition.thumbnail.is_not(None)
+            )
+        )
+    )
     descriptions = db.session.scalars(
         db.select(ExerciseDefinition.description).where(
             ExerciseDefinition.description.contains("/static/exercise_images/")
         )
     )
-    return {m for text in descriptions if text for m in IMAGE_REFERENCE.findall(text)}
+    linked = {m for text in descriptions if text for m in IMAGE_REFERENCE.findall(text)}
+    return linked | thumbnails
 
 
 def find_orphaned_images(min_age: timedelta) -> OrphanReport:

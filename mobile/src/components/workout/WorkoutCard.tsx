@@ -13,9 +13,11 @@ function formatSetSummary(exercise: Exercise, t: (key: TranslationKey) => string
 
   const totalReps = sets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
   const totalDuration = sets.reduce((sum, s) => sum + (s.duration ?? 0), 0);
+  const totalKm = Math.round(sets.reduce((sum, s) => sum + (s.distance_km ?? 0), 0) * 1000) / 1000;
 
   const parts: string[] = [`${sets.length} ${sets.length === 1 ? t("workouts.set") : t("workouts.sets")}`];
   if (totalReps > 0) parts.push(`${totalReps} ${t("workouts.reps")}`);
+  if (totalKm > 0) parts.push(`${totalKm} km`);
   if (totalDuration > 0) {
     const mins = Math.floor(totalDuration / 60);
     const secs = totalDuration % 60;

@@ -138,15 +138,14 @@ class TestApiCreateExercise:
                     "title": "Pull-ups",
                     "description": "Standard pull-ups",
                     "counting_type": "reps",
-                    "progression_levels": ["Beginner", "Intermediate", "Advanced"],
                 }
             ),
         )
         assert resp.status_code == 201
         data = resp.get_json()["data"]
         assert data["title"] == "Pull-ups"
-        assert len(data["progression_levels"]) == 3
-        assert data["progression_levels"][0]["name"] == "Beginner"
+        assert data["progressions"] == []
+        assert data["progression_levels"] == []
 
     def test_create_exercise_duplicate_title(
         self, client, api_headers, exercise_definition
@@ -293,6 +292,7 @@ class TestApiUpdateExercise:
             data=json.dumps(
                 {
                     "title": "Diamond Push-ups",
+                    # Legacy name list from older app versions: accepted, ignored.
                     "progression_levels": ["Easy", "Hard"],
                 }
             ),
@@ -300,7 +300,7 @@ class TestApiUpdateExercise:
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert data["title"] == "Diamond Push-ups"
-        assert len(data["progression_levels"]) == 2
+        assert data["progressions"] == []
 
     def test_update_exercise_visibility(self, client, api_headers, exercise_definition):
         resp = client.put(
@@ -429,3 +429,164 @@ class TestApiCopyExercise:
             headers=api_headers_second,
         )
         assert resp.status_code == 201
+
+
+class TestApiExerciseUsage:
+    def test_used_count_zero_when_unused(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.get("/api/v1/exercises", headers=api_headers)
+        assert resp.get_json()["data"][0]["used_count"] == 0
+
+    def test_used_count_in_list_and_detail(
+        self, client, api_headers, exercise_definition, workout
+    ):
+        resp = client.get("/api/v1/exercises", headers=api_headers)
+        assert resp.get_json()["data"][0]["used_count"] == 1
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}", headers=api_headers
+        )
+        assert resp.get_json()["data"]["used_count"] == 1
+
+    def test_workouts_list_for_exercise(
+        self, client, api_headers, exercise_definition, workout
+    ):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/workouts",
+            headers=api_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        assert [w["title"] for w in data] == ["Morning Workout"]
+        assert set(data[0]) == {"id", "title", "planned_date", "is_done"}
+
+    def test_workouts_list_empty_when_unused(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/workouts",
+            headers=api_headers,
+        )
+        assert resp.get_json()["data"] == []
+
+    def test_workouts_list_404_for_invisible_exercise(
+        self, client, api_headers_second, exercise_definition
+    ):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/workouts",
+            headers=api_headers_second,
+        )
+        assert resp.status_code == 404
+
+
+THUMB = "a" * 32 + ".webp"
+OTHER_THUMB = "b" * 32 + ".webp"
+
+
+def _add_upload(app, user_id, filename):
+    from project import db
+    from project.models import UploadedImage
+
+    with app.app_context():
+        db.session.add(UploadedImage(filename=filename, user_id=user_id))
+        db.session.commit()
+
+
+class TestApiExerciseThumbnail:
+    def test_no_thumbnail_by_default(self, client, api_headers, exercise_definition):
+        data = client.get("/api/v1/exercises", headers=api_headers).get_json()["data"]
+        assert data[0]["thumbnail"] is None
+        assert data[0]["thumbnail_url"] is None
+
+    def test_falls_back_to_first_description_image(self, client, api_headers):
+        desc = f"Intro\n\n![x](/static/exercise_images/{THUMB})\n\n![y](/static/exercise_images/{OTHER_THUMB})"
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": "Pike", "description": desc}),
+        )
+        data = resp.get_json()["data"]
+        assert data["thumbnail"] is None
+        assert data["thumbnail_url"] == f"/static/exercise_images/{THUMB}"
+
+    def test_create_with_own_thumbnail(self, app, client, api_headers, user):
+        _add_upload(app, user.id, THUMB)
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": "Pike", "thumbnail": THUMB}),
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["thumbnail"] == THUMB
+        assert data["thumbnail_url"] == f"/static/exercise_images/{THUMB}"
+
+    def test_explicit_thumbnail_beats_description_image(
+        self, app, client, api_headers, user
+    ):
+        _add_upload(app, user.id, THUMB)
+        desc = f"![y](/static/exercise_images/{OTHER_THUMB})"
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": "Pike", "description": desc, "thumbnail": THUMB}),
+        )
+        assert resp.get_json()["data"]["thumbnail_url"].endswith(THUMB)
+
+    def test_rejects_thumbnail_not_uploaded_by_user(
+        self, app, client, api_headers, second_user
+    ):
+        _add_upload(app, second_user.id, THUMB)
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": "Pike", "thumbnail": THUMB}),
+        )
+        assert resp.status_code == 400
+
+    def test_rejects_malformed_thumbnail(self, client, api_headers):
+        for bad in ("../../etc/passwd", "x.webp", 5):
+            resp = client.post(
+                "/api/v1/exercises",
+                headers=api_headers,
+                data=json.dumps({"title": "Pike", "thumbnail": bad}),
+            )
+            assert resp.status_code == 400, bad
+
+    def test_update_and_clear_thumbnail(
+        self, app, client, api_headers, user, exercise_definition
+    ):
+        _add_upload(app, user.id, THUMB)
+        url = f"/api/v1/exercises/{exercise_definition.id}"
+        resp = client.put(
+            url, headers=api_headers, data=json.dumps({"thumbnail": THUMB})
+        )
+        assert resp.get_json()["data"]["thumbnail"] == THUMB
+        resp = client.put(
+            url, headers=api_headers, data=json.dumps({"thumbnail": None})
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["thumbnail"] is None
+
+    def test_copy_keeps_thumbnail_and_stays_editable(
+        self, app, client, api_headers, api_headers_second, user
+    ):
+        _add_upload(app, user.id, THUMB)
+        original = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps(
+                {"title": "Pike", "thumbnail": THUMB, "visibility": "public"}
+            ),
+        ).get_json()["data"]
+        copy = client.post(
+            f"/api/v1/exercises/{original['id']}/copy", headers=api_headers_second
+        ).get_json()["data"]
+        assert copy["thumbnail"] == THUMB
+        # Re-sending the unchanged value (form round-trip) must not be rejected.
+        resp = client.put(
+            f"/api/v1/exercises/{copy['id']}",
+            headers=api_headers_second,
+            data=json.dumps({"thumbnail": THUMB, "title": "Mine"}),
+        )
+        assert resp.status_code == 200

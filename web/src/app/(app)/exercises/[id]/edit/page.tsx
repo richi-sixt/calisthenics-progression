@@ -41,7 +41,7 @@ export default function EditExercisePage({
               {
                 id: exerciseId,
                 ...data,
-                progression_levels: data.progression_levels.map((p) => p.name),
+                progressions: data.progressions.map((p) => p.id),
               },
               { onSuccess: () => router.push(`/exercises/${exerciseId}`) }
             );

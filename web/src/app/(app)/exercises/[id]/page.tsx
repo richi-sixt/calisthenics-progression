@@ -2,7 +2,12 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useExercise, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
+import {
+  useExercise,
+  useExerciseWorkouts,
+  useDeleteExercise,
+  useCopyExercise,
+} from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useRouter } from "next/navigation";
 import ErrorMessage from "@/components/ui/error-message";
@@ -22,6 +27,7 @@ export default function ExerciseDetailPage({
   const router = useRouter();
   const { data, isLoading, error } = useExercise(exerciseId);
   const { data: profile } = useProfile();
+  const { data: workoutsData } = useExerciseWorkouts(exerciseId);
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -107,23 +113,63 @@ export default function ExerciseDetailPage({
         <Markdown className="mt-4 text-gray-600 dark:text-gray-400">{exercise.description}</Markdown>
       )}
 
-      {exercise.progression_levels.length > 0 && (
+      {exercise.parents.length > 0 && (
+        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          {t("exercises.partOf")}{" "}
+          {exercise.parents.map((parent, i) => (
+            <span key={parent.id}>
+              {i > 0 && ", "}
+              <Link href={`/exercises/${parent.id}`} className="text-blue-600 hover:text-blue-800">
+                {parent.title}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
+
+      {exercise.progressions.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</h2>
           <ol className="mt-2 space-y-1">
-            {exercise.progression_levels
-              .sort((a, b) => a.level_order - b.level_order)
-              .map((level) => (
-                <li key={level.id} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium">
-                    {level.level_order}
-                  </span>
-                  {level.name}
-                </li>
-              ))}
+            {exercise.progressions.map((step, index) => (
+              <li key={step.id} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium">
+                  {index + 1}
+                </span>
+                <Link href={`/exercises/${step.id}`} className="hover:text-blue-600">
+                  {step.title}
+                </Link>
+              </li>
+            ))}
           </ol>
         </div>
       )}
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          {t("exercises.recentWorkouts")}
+        </h2>
+        {workoutsData && workoutsData.data.length === 0 && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("exercises.neverUsed")}</p>
+        )}
+        <ul className="mt-2 divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700">
+          {workoutsData?.data.map((w) => (
+            <li key={w.id}>
+              <Link
+                href={`/workouts/${w.id}`}
+                className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <span className="min-w-0 truncate text-gray-900 dark:text-gray-100">{w.title}</span>
+                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                  {w.planned_date
+                    ? new Date(`${w.planned_date}T00:00:00`).toLocaleDateString()
+                    : t("exercises.noDate")}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

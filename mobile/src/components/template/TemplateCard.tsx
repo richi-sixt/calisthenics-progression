@@ -11,6 +11,7 @@ function formatTemplateSets(exercise: Exercise, t: (key: TranslationKey) => stri
   const parts: string[] = [`${sets.length} ${sets.length === 1 ? t("workouts.set") : t("workouts.sets")}`];
   const setDetails = sets
     .map((s) => {
+      if (s.distance_km != null && s.distance_km > 0) return `${s.distance_km} km`;
       if (s.reps != null && s.reps > 0) return `${s.reps} ${t("workouts.reps")}`;
       if (s.duration != null && s.duration > 0) {
         const mins = Math.floor(s.duration / 60);

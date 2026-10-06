@@ -8,6 +8,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
 import { markdownToPlainText } from "@/lib/markdown";
+import { ownImageUrl } from "@/lib/uploaded-images";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -35,6 +36,8 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
     ? `${API_BASE}/static/profile_pics/${exercise.user_image_file}`
     : null;
 
+  const thumbnailUrl = ownImageUrl(exercise.thumbnail_url);
+
   const confirmArchive = () => {
     Alert.alert(t("exercises.archiveConfirmTitle"), t("exercises.archiveConfirmMessage"), [
       { text: t("common.cancel"), style: "cancel" },
@@ -45,7 +48,16 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   return (
     <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <View className="flex-row gap-3">
-        {profilePicUrl ? (
+        {thumbnailUrl ? (
+          <Pressable onPress={() => router.push(`/exercises/${exercise.id}`)}>
+            <Image
+              source={{ uri: thumbnailUrl }}
+              testID={`exercise-thumbnail-${exercise.id}`}
+              className="h-16 w-16 rounded-md bg-gray-100 dark:bg-gray-700"
+              resizeMode="cover"
+            />
+          </Pressable>
+        ) : profilePicUrl ? (
           <Image source={{ uri: profilePicUrl }} className="h-10 w-10 rounded-full" />
         ) : (
           <View className="h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
@@ -57,10 +69,24 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
         <Pressable className="flex-1" onPress={() => router.push(`/exercises/${exercise.id}`)}>
           <Text className="text-lg font-semibold text-gray-900 dark:text-gray-100">{exercise.title}</Text>
           <View className="mt-1 flex-row flex-wrap items-center gap-2">
-            {exercise.username && <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">{exercise.username}</Text>}
+            {exercise.username && (
+              <View className="flex-row items-center gap-1.5">
+                {thumbnailUrl && profilePicUrl && <Image source={{ uri: profilePicUrl }} className="h-5 w-5 rounded-full" />}
+                <Text className="text-sm font-medium text-blue-600 dark:text-blue-400">{exercise.username}</Text>
+              </View>
+            )}
             <View className="rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5">
               <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">{exercise.counting_type}</Text>
             </View>
+            {(exercise.used_count ?? 0) > 0 && (
+              <View
+                accessibilityLabel={t("exercises.usedTitle", { count: exercise.used_count ?? 0 })}
+                testID={`used-badge-${exercise.id}`}
+                className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5"
+              >
+                <Text className="text-xs font-medium text-green-700 dark:text-green-400">✓ {t("exercises.used")}</Text>
+              </View>
+            )}
             {isOwner && (
               <View
                 className={`rounded-full px-2.5 py-0.5 ${
@@ -99,14 +125,14 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
               {descriptionPreview}
             </Text>
           ) : null}
-          {exercise.progression_levels.length > 0 && (
+          {exercise.progressions.length > 0 && (
             <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              {t("exercises.progressions")}{" "}
-              {exercise.progression_levels
-                .slice()
-                .sort((a, b) => a.level_order - b.level_order)
-                .map((l) => l.name)
-                .join(" → ")}
+              {t("exercises.progressions")} {exercise.progressions.map((p) => p.title).join(" → ")}
+            </Text>
+          )}
+          {exercise.parents.length > 0 && (
+            <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {t("exercises.partOf")} {exercise.parents.map((p) => p.title).join(", ")}
             </Text>
           )}
         </Pressable>

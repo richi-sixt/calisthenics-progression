@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useTranslation } from "@/i18n";
+import { ExercisePreviewModal } from "@/components/exercise/ExercisePreviewModal";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import type { Workout, ExerciseDefinition, Visibility } from "@/types";
 
@@ -15,7 +16,7 @@ function secondsToMmss(totalSeconds: number): string {
 }
 
 function mmssToSeconds(value: string): number | null {
-  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  const match = value.match(/^(\d{1,3}):(\d{2})$/);
   if (!match) return null;
   const mins = Number(match[1]);
   const secs = Number(match[2]);
@@ -23,10 +24,16 @@ function mmssToSeconds(value: string): number | null {
   return mins * 60 + secs;
 }
 
+function parseKm(value: string): number | null {
+  const n = Number(value.replace(",", "."));
+  return value.trim() && Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 interface SetData {
   progression: string;
   reps: string;
   duration: string;
+  distance_km: string;
 }
 
 interface ExerciseData {
@@ -86,9 +93,10 @@ export function WorkoutForm({
               progression: s.progression ?? "",
               reps: s.reps != null ? String(s.reps) : "",
               duration: s.duration != null ? secondsToMmss(s.duration) : "",
-            })) ?? [{ progression: "", reps: "", duration: "" }],
+              distance_km: s.distance_km != null ? String(s.distance_km) : "",
+            })) ?? [{ progression: "", reps: "", duration: "", distance_km: "" }],
         })) ?? [
-          { exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "" }] },
+          { exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] },
         ],
     },
   });
@@ -124,6 +132,7 @@ export function WorkoutForm({
           progression: s.progression || null,
           reps: s.reps ? Number(s.reps) : null,
           duration: s.duration ? mmssToSeconds(s.duration) : null,
+          distance_km: parseKm(s.distance_km),
         })),
       })),
     });
@@ -236,7 +245,7 @@ export function WorkoutForm({
         ))}
         <Pressable
           onPress={() =>
-            appendExercise({ exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "" }] })
+            appendExercise({ exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] })
           }
         >
           <Text className="text-sm text-blue-600 dark:text-blue-400">{t("workoutForm.addExercise")}</Text>
@@ -298,8 +307,7 @@ function ExerciseBlock({
   const selectedDefId = useWatch({ control, name: `exercises.${exIndex}.exercise_definition_id` });
   const selectedDef = selectedDefId ? exerciseDefMap.get(Number(selectedDefId)) : undefined;
   const countingType = selectedDef?.counting_type ?? "reps";
-  const progressionLevels = selectedDef?.progression_levels ?? [];
-  const hasProgressionLevels = progressionLevels.length > 0;
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
@@ -318,10 +326,23 @@ function ExerciseBlock({
             />
           )}
         />
+        <Pressable
+          onPress={() => setPreviewOpen(true)}
+          disabled={!selectedDef}
+          accessibilityLabel={t("exercises.preview")}
+          testID={`exercise-preview-${exIndex}`}
+          className={`h-7 w-7 items-center justify-center rounded-full border border-gray-300 dark:border-gray-600 ${selectedDef ? "" : "opacity-40"}`}
+        >
+          <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400">i</Text>
+        </Pressable>
         <Pressable onPress={onRemove} testID={`exercise-remove-${exIndex}`}>
           <Text className="text-sm text-red-500 dark:text-red-400">{t("common.remove")}</Text>
         </Pressable>
       </View>
+      <ExercisePreviewModal
+        exerciseId={previewOpen && selectedDef ? selectedDef.id : null}
+        onClose={() => setPreviewOpen(false)}
+      />
 
       <View className="mt-3 gap-2">
         {setFields.map((setField, setIndex) => (
@@ -333,65 +354,40 @@ function ExerciseBlock({
               </Pressable>
             </View>
 
-            {hasProgressionLevels && (
-              <View className="mb-2">
-                <Controller
-                  control={control}
-                  name={`exercises.${exIndex}.sets.${setIndex}.progression`}
-                  render={({ field: { onChange, value } }) => (
-                    <View
-                      className="flex-row flex-wrap gap-1.5"
-                      testID={`progression-chips-${exIndex}-${setIndex}`}
-                    >
-                      <Pressable
-                        onPress={() => onChange("")}
-                        testID={`progression-chip-${exIndex}-${setIndex}-none`}
-                        className={`rounded-full px-2.5 py-1 ${value === "" ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
-                      >
-                        <Text
-                          className={`text-xs font-medium ${value === "" ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
-                        >
-                          ---
-                        </Text>
-                      </Pressable>
-                      {progressionLevels.map((level) => (
-                        <Pressable
-                          key={level.id}
-                          onPress={() => onChange(level.name)}
-                          testID={`progression-chip-${exIndex}-${setIndex}-${level.id}`}
-                          className={`rounded-full px-2.5 py-1 ${value === level.name ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
-                        >
-                          <Text
-                            className={`text-xs font-medium ${value === level.name ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
-                          >
-                            {level.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                />
-              </View>
-            )}
-
             <View className="flex-row gap-2">
-              {!hasProgressionLevels && (
-                <Controller
-                  control={control}
-                  name={`exercises.${exIndex}.sets.${setIndex}.progression`}
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput
-                      className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
-                      placeholder="e.g. Standard"
-                      onChangeText={onChange}
-                      value={value}
-                      testID={`progression-input-${exIndex}-${setIndex}`}
-                    />
-                  )}
-                />
-              )}
-
-              {countingType === "duration" ? (
+              {countingType === "km" ? (
+                <View className="flex-1 flex-row gap-2">
+                  <Controller
+                    control={control}
+                    name={`exercises.${exIndex}.sets.${setIndex}.distance_km`}
+                    render={({ field: { onChange, value } }) => (
+                      <TextInput
+                        className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
+                        placeholder="km"
+                        accessibilityLabel={t("workouts.distanceKm")}
+                        keyboardType="decimal-pad"
+                        onChangeText={onChange}
+                        value={value}
+                        testID={`distance-${exIndex}-${setIndex}`}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name={`exercises.${exIndex}.sets.${setIndex}.duration`}
+                    render={({ field: { onChange, value } }) => (
+                      <TextInput
+                        className="flex-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-sm"
+                        placeholder="mm:ss"
+                        accessibilityLabel={t("workouts.timeOptional")}
+                        onChangeText={onChange}
+                        value={value}
+                        testID={`duration-${exIndex}-${setIndex}`}
+                      />
+                    )}
+                  />
+                </View>
+              ) : countingType === "duration" ? (
                 <Controller
                   control={control}
                   name={`exercises.${exIndex}.sets.${setIndex}.duration`}
@@ -424,7 +420,7 @@ function ExerciseBlock({
             </View>
           </View>
         ))}
-        <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "" })} testID={`add-set-${exIndex}`}>
+        <Pressable onPress={() => appendSet({ progression: "", reps: "", duration: "", distance_km: "" })} testID={`add-set-${exIndex}`}>
           <Text className="text-xs text-blue-600 dark:text-blue-400">{t("workoutForm.addSet")}</Text>
         </Pressable>
       </View>

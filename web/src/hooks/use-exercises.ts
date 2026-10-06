@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   ExerciseDefinition,
+  ExerciseWorkoutRef,
   PaginatedResponse,
   ApiResponse,
   Visibility,
@@ -35,6 +36,17 @@ export function useExercise(id: number | null) {
   });
 }
 
+export function useExerciseWorkouts(id: number | null, limit: number = 10) {
+  return useQuery({
+    queryKey: ["exercises", id, "workouts", limit],
+    queryFn: () =>
+      api.get<ApiResponse<ExerciseWorkoutRef[]>>(`/exercises/${id}/workouts`, {
+        limit: String(limit),
+      }),
+    enabled: id != null,
+  });
+}
+
 export function useCreateExercise() {
   const qc = useQueryClient();
   return useMutation({
@@ -43,8 +55,9 @@ export function useCreateExercise() {
       description?: string;
       counting_type: string;
       visibility?: Visibility;
-      progression_levels?: string[];
+      progressions?: number[];
       category_ids?: number[];
+      thumbnail?: string | null;
     }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
   });

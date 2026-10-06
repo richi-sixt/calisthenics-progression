@@ -24,7 +24,7 @@ export default function NewExercisePage() {
             createExercise.mutate(
               {
                 ...data,
-                progression_levels: data.progression_levels.map((p) => p.name),
+                progressions: data.progressions.map((p) => p.id),
               },
               { onSuccess: () => router.push("/exercises") }
             );

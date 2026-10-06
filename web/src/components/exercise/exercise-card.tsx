@@ -11,6 +11,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import ReportBlockMenu from "@/components/social/report-block-menu";
 import { useTranslation } from "@/i18n";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
+import { ownImageUrl } from "@/lib/uploaded-images";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 
@@ -39,10 +40,22 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
     ? `${API_BASE}/static/profile_pics/${exercise.user_image_file}`
     : null;
 
+  const thumbnailUrl = ownImageUrl(exercise.thumbnail_url);
+
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
       <div className="flex min-w-0 gap-3">
-        {exercise.username && (
+        {thumbnailUrl ? (
+          <Link href={`/exercises/${exercise.id}`} className="flex-shrink-0">
+            <img
+              src={thumbnailUrl}
+              alt=""
+              loading="lazy"
+              className="h-16 w-16 rounded-md object-cover bg-gray-100 dark:bg-gray-700"
+            />
+          </Link>
+        ) : (
+          exercise.username && (
           <Link href={`/users/${exercise.username}`} className="flex-shrink-0">
             {profilePicUrl ? (
               <img
@@ -56,6 +69,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
               </div>
             )}
           </Link>
+          )
         )}
         <div className="min-w-0 flex-1">
           <Link
@@ -68,14 +82,25 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
             {exercise.username && (
               <Link
                 href={`/users/${exercise.username}`}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800"
               >
+                {thumbnailUrl && profilePicUrl && (
+                  <img src={profilePicUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                )}
                 {exercise.username}
               </Link>
             )}
             <span className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               {exercise.counting_type}
             </span>
+            {(exercise.used_count ?? 0) > 0 && (
+              <span
+                title={t("exercises.usedTitle", { count: exercise.used_count ?? 0 })}
+                className="inline-flex rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400"
+              >
+                ✓ {t("exercises.used")}
+              </span>
+            )}
             {isOwner && (
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -107,13 +132,14 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
               {descriptionPreview}
             </p>
           )}
-          {exercise.progression_levels.length > 0 && (
+          {exercise.progressions.length > 0 && (
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              {t("exercises.progressions")}{" "}
-              {exercise.progression_levels
-                .sort((a, b) => a.level_order - b.level_order)
-                .map((l) => l.name)
-                .join(" → ")}
+              {t("exercises.progressions")} {exercise.progressions.map((p) => p.title).join(" → ")}
+            </p>
+          )}
+          {exercise.parents.length > 0 && (
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {t("exercises.partOf")} {exercise.parents.map((p) => p.title).join(", ")}
             </p>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2">

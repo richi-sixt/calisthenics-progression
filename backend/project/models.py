@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime, timezone
 from time import time
 from typing import Any
@@ -404,6 +405,11 @@ class Workout(Base):
         return data
 
 
+EXERCISE_IMAGE_URL_PREFIX = "/static/exercise_images/"
+EXERCISE_IMAGE_FILENAME = re.compile(r"[0-9a-f]{32}\.webp")
+EXERCISE_IMAGE_REFERENCE = re.compile(r"/static/exercise_images/([0-9a-f]{32}\.webp)")
+
+
 class ExerciseDefinition(Base):
     """Exercise definition model (exercise library/templates).
 
@@ -443,18 +449,38 @@ class ExerciseDefinition(Base):
         default=DEFAULT_VISIBILITY,
         server_default=DEFAULT_VISIBILITY,
     )
+    # Filename of an UploadedImage shown on cards; None -> first description image.
+    thumbnail = db.Column(db.String(64), nullable=True)
 
     # Relationships to actual exercise instances
     exercise = db.relationship(
         "Exercise", backref="exercise_definition", lazy="dynamic"
     )
 
-    # Ordered list of user-defined progression levels for this exercise
+    # DEPRECATED: free-text progression levels, superseded by ExerciseProgression
+    # (child exercises). Kept read-only until a cleanup migration drops the table.
     progression_levels = db.relationship(
         "ProgressionLevel",
         backref="exercise_definition",
         cascade="all, delete-orphan",
         order_by="ProgressionLevel.level_order",
+        lazy="dynamic",
+    )
+
+    # Progression steps: this exercise (parent) -> easier/harder exercises (children)
+    progression_links = db.relationship(
+        "ExerciseProgression",
+        foreign_keys="ExerciseProgression.parent_id",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        order_by="ExerciseProgression.step_order",
+        lazy="dynamic",
+    )
+    parent_links = db.relationship(
+        "ExerciseProgression",
+        foreign_keys="ExerciseProgression.child_id",
+        back_populates="child",
+        cascade="all, delete-orphan",
         lazy="dynamic",
     )
 
@@ -483,7 +509,7 @@ class ExerciseDefinition(Base):
             description: Detailed description of the exercise.
             user_id: ID of the user creating this exercise definition.
             date_created: Timestamp when the exercise definition was created.
-            counting_type: How sets are counted - "reps" or "duration".
+            counting_type: How sets are counted - "reps", "duration" or "km".
             visibility: Who can see this exercise - "public", "followers", or
                 "private".
 
@@ -511,8 +537,41 @@ class ExerciseDefinition(Base):
         """Whether this exercise definition is visible to the given viewer."""
         return is_visible_to(self.user_id, self.visibility, viewer)  # type: ignore[arg-type]
 
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize exercise definition to dictionary for API responses."""
+    @property
+    def thumbnail_url(self) -> str | None:
+        """Explicit thumbnail, else the first own image in the description."""
+        if self.thumbnail and EXERCISE_IMAGE_FILENAME.fullmatch(self.thumbnail):
+            return f"{EXERCISE_IMAGE_URL_PREFIX}{self.thumbnail}"
+        match = EXERCISE_IMAGE_REFERENCE.search(self.description or "")
+        return f"{EXERCISE_IMAGE_URL_PREFIX}{match.group(1)}" if match else None
+
+    def to_dict(self, viewer: "User | None" = None) -> dict[str, Any]:
+        """Serialize exercise definition to dictionary for API responses.
+
+        With a `viewer`, linked exercises the viewer may not see are left out.
+        """
+
+        def shown(other: "ExerciseDefinition") -> bool:
+            return not other.archived and (
+                viewer is None or other.is_visible_to(viewer)
+            )
+
+        progressions = [
+            {
+                "id": link.child.id,
+                "title": link.child.title,
+                "step_order": link.step_order,
+                "counting_type": link.child.counting_type,
+                "thumbnail_url": link.child.thumbnail_url,
+            }
+            for link in self.progression_links.all()
+            if shown(link.child)
+        ]
+        parents = [
+            {"id": link.parent.id, "title": link.parent.title}
+            for link in self.parent_links.all()
+            if shown(link.parent)
+        ]
         return {
             "id": self.id,
             "title": self.title,
@@ -526,8 +585,15 @@ class ExerciseDefinition(Base):
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
             "visibility": self.visibility,
+            "thumbnail": self.thumbnail,
+            "thumbnail_url": self.thumbnail_url,
+            "progressions": progressions,
+            "parents": parents,
+            # Legacy shape for app versions that predate child-exercise
+            # progressions (read-only, derived from `progressions`).
             "progression_levels": [
-                pl.to_dict() for pl in self.progression_levels.all()
+                {"id": p["id"], "name": p["title"], "level_order": p["step_order"]}
+                for p in progressions
             ],
             "category_ids": [c.id for c in self.categories],  # type: ignore[attr-defined]
         }
@@ -600,6 +666,7 @@ class Set(Base):
     progression = db.Column(db.String(80), index=True)
     reps = db.Column(db.Integer)
     duration = db.Column(db.Integer)
+    distance_km = db.Column(db.Float, nullable=True)
     exercise_id = db.Column(db.Integer, db.ForeignKey("exercise.id"), nullable=False)
 
     def __init__(
@@ -609,6 +676,7 @@ class Set(Base):
         progression: str | None = None,
         reps: int | None = None,
         duration: int | None = None,
+        distance_km: float | None = None,
     ) -> None:
         """Initialize a set with an exercise."""
         self.set_order = set_order
@@ -616,6 +684,7 @@ class Set(Base):
         self.progression = progression
         self.reps = reps
         self.duration = duration
+        self.distance_km = distance_km
 
     @property
     def duration_formatted(self) -> str:
@@ -638,8 +707,47 @@ class Set(Base):
             "progression": self.progression,
             "reps": self.reps,
             "duration": self.duration,
+            "distance_km": self.distance_km,
             "duration_formatted": self.duration_formatted,
         }
+
+
+class ExerciseProgression(Base):
+    """Link making `child` a progression step of `parent` (both exercises)."""
+
+    __tablename__ = "exercise_progression"
+    __table_args__: Any = (
+        db.UniqueConstraint("parent_id", "child_id", name="uq_exercise_progression"),
+        {},
+    )
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    parent_id = db.Column(
+        db.Integer, db.ForeignKey("exercises.id"), nullable=False, index=True
+    )
+    child_id = db.Column(
+        db.Integer, db.ForeignKey("exercises.id"), nullable=False, index=True
+    )
+    step_order = db.Column(db.Integer, nullable=False)
+
+    parent = db.relationship(
+        "ExerciseDefinition",
+        foreign_keys=[parent_id],
+        back_populates="progression_links",
+    )
+    child = db.relationship(
+        "ExerciseDefinition", foreign_keys=[child_id], back_populates="parent_links"
+    )
+
+    def __init__(self, parent_id: int, child_id: int, step_order: int) -> None:
+        """Link a child exercise as a progression step of a parent."""
+        self.parent_id = parent_id
+        self.child_id = child_id
+        self.step_order = step_order
+
+    def __repr__(self) -> str:
+        """String representation of ExerciseProgression."""
+        return f"<ExerciseProgression {self.parent_id}->{self.child_id} #{self.step_order}>"
 
 
 class ProgressionLevel(Base):

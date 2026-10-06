@@ -1,20 +1,22 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent } from "react";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
 import { useUploadImage } from "@/hooks/use-uploads";
-import { insertImageMarkdown, MAX_IMAGE_UPLOAD_BYTES } from "@/lib/uploaded-images";
+import { insertImageMarkdown, MAX_IMAGE_UPLOAD_BYTES, ownImageUrl } from "@/lib/uploaded-images";
+import ProgressionEditor, { type ProgressionItem } from "@/components/exercise/progression-editor";
 import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition, Visibility } from "@/types";
 
 interface ExerciseFormData {
   title: string;
   description: string;
-  counting_type: "reps" | "duration";
+  counting_type: "reps" | "duration" | "km";
   visibility: Visibility;
-  progression_levels: { name: string }[];
+  progressions: ProgressionItem[];
   category_ids: number[];
+  thumbnail: string | null;
 }
 
 export default function ExerciseForm({
@@ -37,17 +39,17 @@ export default function ExerciseForm({
         description: defaultValues?.description ?? "",
         counting_type: defaultValues?.counting_type ?? "reps",
         visibility: defaultValues?.visibility ?? "followers",
-        progression_levels:
-          defaultValues?.progression_levels?.map((p) => ({ name: p.name })) ??
-          [],
+        progressions: defaultValues?.progressions?.map((p) => ({ id: p.id, title: p.title })) ?? [],
         category_ids: defaultValues?.category_ids ?? [],
+        thumbnail: defaultValues?.thumbnail ?? null,
       },
     });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "progression_levels",
-  });
+  const progressions = useWatch({ control, name: "progressions" }) ?? [];
+  const progressionExcludes = [
+    ...(defaultValues?.id != null ? [defaultValues.id] : []),
+    ...(defaultValues?.parents?.map((p) => p.id) ?? []),
+  ];
 
   const selectedCats: number[] = useWatch({ control, name: "category_ids" }) ?? [];
   const visibility = useWatch({ control, name: "visibility" });
@@ -88,6 +90,28 @@ export default function ExerciseForm({
       },
       onError: (err) =>
         setUploadError(`${t("exerciseForm.imageUploadFailed")}: ${err instanceof Error ? err.message : String(err)}`),
+    });
+  };
+
+  const thumbnail = useWatch({ control, name: "thumbnail" });
+  const thumbnailPreview = thumbnail ? ownImageUrl(`/static/exercise_images/${thumbnail}`) : null;
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+  const uploadThumbnail = useUploadImage();
+  const [thumbError, setThumbError] = useState<string | null>(null);
+
+  const handleThumbSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setThumbError(null);
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setThumbError(t("exerciseForm.imageTooLarge"));
+      return;
+    }
+    uploadThumbnail.mutate(file, {
+      onSuccess: (res) => setValue("thumbnail", res.data.filename, { shouldDirty: true }),
+      onError: (err) =>
+        setThumbError(`${t("exerciseForm.imageUploadFailed")}: ${err instanceof Error ? err.message : String(err)}`),
     });
   };
 
@@ -146,6 +170,47 @@ export default function ExerciseForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t("exerciseForm.thumbnail")}
+        </label>
+        <div className="mt-1 flex items-center gap-3">
+          {thumbnailPreview && (
+            <img
+              src={thumbnailPreview}
+              alt={t("exerciseForm.thumbnailAlt")}
+              className="h-16 w-16 rounded-md object-cover bg-gray-100 dark:bg-gray-700"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => thumbInputRef.current?.click()}
+            disabled={uploadThumbnail.isPending}
+            className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          >
+            {uploadThumbnail.isPending ? t("exerciseForm.uploadingImage") : t("exerciseForm.setThumbnail")}
+          </button>
+          {thumbnail && (
+            <button
+              type="button"
+              onClick={() => setValue("thumbnail", null, { shouldDirty: true })}
+              className="text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400"
+            >
+              {t("exerciseForm.removeThumbnail")}
+            </button>
+          )}
+          <input
+            ref={thumbInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleThumbSelected}
+            className="hidden"
+          />
+        </div>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("exerciseForm.thumbnailHint")}</p>
+        {thumbError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{thumbError}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("exerciseForm.countingType")}
         </label>
         <div className="mt-1 flex gap-4">
@@ -160,6 +225,10 @@ export default function ExerciseForm({
               {...register("counting_type")}
             />
             {t("exerciseForm.duration")}
+          </label>
+          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
+            <input type="radio" value="km" {...register("counting_type")} />
+            {t("exerciseForm.km")}
           </label>
         </div>
       </div>
@@ -183,34 +252,13 @@ export default function ExerciseForm({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("exerciseForm.progressionLevels")}
         </label>
-        <div className="mt-2 space-y-2">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex items-center gap-2">
-              <span className="w-6 text-xs text-gray-400 dark:text-gray-500">{index + 1}.</span>
-              <input
-                {...register(`progression_levels.${index}.name`, {
-                  required: true,
-                })}
-                className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-                placeholder={t("exerciseForm.levelPlaceholder")}
-              />
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                className="text-sm text-red-400 hover:text-red-600"
-              >
-                {t("common.remove")}
-              </button>
-            </div>
-          ))}
+        <div className="mt-2">
+          <ProgressionEditor
+            value={progressions}
+            onChange={(next) => setValue("progressions", next, { shouldDirty: true })}
+            excludeIds={progressionExcludes}
+          />
         </div>
-        <button
-          type="button"
-          onClick={() => append({ name: "" })}
-          className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-        >
-          {t("exerciseForm.addLevel")}
-        </button>
       </div>
 
       {categories.length > 0 && (

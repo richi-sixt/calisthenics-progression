@@ -114,7 +114,13 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
     # who owns the exercise definition -- visibility only gates whether the
     # exercise itself can be seen, not another user's private workout data.
     query = (
-        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.planned_date)
+        db.select(
+            Set.reps,
+            Set.duration,
+            Set.distance_km,
+            Exercise.workout_id,
+            Workout.planned_date,
+        )
         .join(Exercise, Set.exercise_id == Exercise.id)
         .join(Workout, Exercise.workout_id == Workout.id)
         .filter(
@@ -130,9 +136,13 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
         query = query.filter(Set.progression == progression)
     rows = db.session.execute(query).all()
 
-    value_field = "duration" if exercise_def.counting_type == "duration" else "reps"
-    for reps, duration, workout_id, planned_date in rows:
-        value = duration if value_field == "duration" else reps
+    for reps, duration, distance_km, workout_id, planned_date in rows:
+        if exercise_def.counting_type == "duration":
+            value = duration
+        elif exercise_def.counting_type == "km":
+            value = distance_km
+        else:
+            value = reps
         if value is None:
             continue
         bucket = buckets[_bucket_key(planned_date, granularity)]
@@ -150,8 +160,8 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
                 "buckets": [
                     {
                         "period": period,
-                        "best": buckets[period]["best"],
-                        "total": buckets[period]["total"],
+                        "best": round(buckets[period]["best"], 3),
+                        "total": round(buckets[period]["total"], 3),
                         "session_count": len(buckets[period]["sessions"]),
                     }
                     for period in periods
@@ -176,12 +186,13 @@ def api_workout_stats() -> ResponseReturnValue:
     category_id = request.args.get("category", type=int)
 
     periods = _period_range(from_date, to_date, granularity)
-    buckets: dict[str, dict[str, int]] = {
+    buckets: dict[str, dict[str, float]] = {
         period: {
             "workout_count": 0,
             "total_sets": 0,
             "total_reps": 0,
             "total_duration": 0,
+            "total_distance_km": 0.0,
         }
         for period in periods
     }
@@ -209,7 +220,13 @@ def api_workout_stats() -> ResponseReturnValue:
             buckets[_bucket_key(planned_date, granularity)]["workout_count"] += 1
 
     set_query = (
-        db.select(Set.reps, Set.duration, Exercise.workout_id, Workout.planned_date)
+        db.select(
+            Set.reps,
+            Set.duration,
+            Set.distance_km,
+            Exercise.workout_id,
+            Workout.planned_date,
+        )
         .join(Exercise, Set.exercise_id == Exercise.id)
         .join(Workout, Exercise.workout_id == Workout.id)
         .filter(
@@ -226,7 +243,9 @@ def api_workout_stats() -> ResponseReturnValue:
         ).filter(ExerciseDefinition.categories.any(ExerciseCategory.id == category_id))
 
     workout_ids_per_bucket: dict[str, set[int]] = {period: set() for period in periods}
-    for reps, duration, workout_id, planned_date in db.session.execute(set_query).all():
+    for reps, duration, distance_km, workout_id, planned_date in db.session.execute(
+        set_query
+    ).all():
         key = _bucket_key(planned_date, granularity)
         bucket = buckets[key]
         bucket["total_sets"] += 1
@@ -234,6 +253,10 @@ def api_workout_stats() -> ResponseReturnValue:
             bucket["total_reps"] += reps
         if duration is not None:
             bucket["total_duration"] += duration
+        if distance_km is not None:
+            bucket["total_distance_km"] = round(
+                bucket["total_distance_km"] + distance_km, 3
+            )
         workout_ids_per_bucket[key].add(workout_id)
 
     if category_id is not None:
