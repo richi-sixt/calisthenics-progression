@@ -15,8 +15,10 @@ from project.models import (
     ExerciseDefinition,
     ExerciseProgression,
     UploadedImage,
+    User,
     Workout,
     blocked_user_ids,
+    serialize_exercise_definitions,
 )
 
 COUNTING_TYPES = ("reps", "duration", "km")
@@ -159,6 +161,16 @@ def api_list_exercises() -> ResponseReturnValue:
         .filter_by(archived=False)
         .order_by(ExerciseDefinition.title.asc())
     )
+    username = request.args.get("username")
+    if username:
+        target = (
+            db.session.execute(db.select(User).filter_by(username=username))
+            .scalars()
+            .first()
+        )
+        if target is None:
+            return jsonify({"error": "User not found."}), 404
+        user_filter = "user"
     if user_filter == "mine":
         query = query.filter(ExerciseDefinition.user_id == g.current_api_user.id)
     else:
@@ -176,6 +188,10 @@ def api_list_exercises() -> ResponseReturnValue:
                 ),
             )
         )
+        if user_filter == "following":
+            query = query.filter(ExerciseDefinition.user_id.in_(followed_ids))
+        elif user_filter == "user":
+            query = query.filter(ExerciseDefinition.user_id == target.id)
 
     # AND semantics: an exercise must belong to every selected category.
     for cat_id in selected_categories:
@@ -193,11 +209,10 @@ def api_list_exercises() -> ResponseReturnValue:
     return jsonify(
         {
             "data": [
-                {
-                    **e.to_dict(viewer=g.current_api_user),
-                    "used_count": usage.get(e.id, 0),
-                }
-                for e in pagination.items
+                {**d, "used_count": usage.get(d["id"], 0)}
+                for d in serialize_exercise_definitions(
+                    pagination.items, viewer=g.current_api_user
+                )
             ],
             "meta": {
                 "page": pagination.page,

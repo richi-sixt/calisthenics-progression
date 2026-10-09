@@ -117,4 +117,12 @@ export function useUpdateWorkout() {
   });
 }
 
+export function useCopyWorkout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.post<ApiResponse<Workout>>(`/workouts/${id}/copy`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
+  });
+}
+
 export { ApiError };

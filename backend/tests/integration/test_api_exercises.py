@@ -42,6 +42,83 @@ class TestApiListExercises:
         titles = [e["title"] for e in resp.get_json()["data"]]
         assert titles == ["Push-ups"]
 
+    def _follow(self, app, follower_id, followed_id):
+        from project import db
+        from project.models import User
+
+        with app.app_context():
+            follower = db.session.get(User, follower_id)
+            followed = db.session.get(User, followed_id)
+            follower.request_follow(followed)
+            followed.accept_follow_request(follower)
+            db.session.commit()
+
+    def test_list_following_only_followed_users(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        # Not following yet -> nothing.
+        resp = client.get(
+            "/api/v1/exercises?user=following", headers=api_headers_second
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+        self._follow(app, second_user.id, user.id)
+        resp = client.get(
+            "/api/v1/exercises?user=following", headers=api_headers_second
+        )
+        assert [e["title"] for e in resp.get_json()["data"]] == ["Push-ups"]
+
+    def test_list_following_excludes_own_and_public_of_unfollowed(
+        self, client, api_headers, exercise_definition, app
+    ):
+        from project import db
+        from project.models import ExerciseDefinition
+
+        with app.app_context():
+            ex = db.session.get(ExerciseDefinition, exercise_definition.id)
+            ex.visibility = "public"
+            db.session.commit()
+
+        resp = client.get("/api/v1/exercises?user=following", headers=api_headers)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+    def test_list_by_username(
+        self, client, api_headers_second, exercise_definition, second_user, user, app
+    ):
+        self._follow(app, second_user.id, user.id)
+        resp = client.get(
+            "/api/v1/exercises?user=all&username=testuser", headers=api_headers_second
+        )
+        assert resp.status_code == 200
+        assert [e["title"] for e in resp.get_json()["data"]] == ["Push-ups"]
+
+        resp = client.get(
+            "/api/v1/exercises?username=seconduser", headers=api_headers_second
+        )
+        assert resp.get_json()["data"] == []
+
+    def test_list_by_username_respects_visibility(
+        self, client, api_headers_second, exercise_definition
+    ):
+        resp = client.get(
+            "/api/v1/exercises?username=testuser", headers=api_headers_second
+        )
+        assert resp.status_code == 200
+        assert resp.get_json()["data"] == []
+
+    def test_list_by_unknown_username_404(self, client, api_headers):
+        resp = client.get("/api/v1/exercises?username=nobody", headers=api_headers)
+        assert resp.status_code == 404
+
+    def test_list_unknown_user_filter_falls_back_to_all(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.get("/api/v1/exercises?user=garbage", headers=api_headers)
+        assert resp.status_code == 200
+        assert [e["title"] for e in resp.get_json()["data"]] == ["Push-ups"]
+
     def test_list_all_includes_others_public_exercises(
         self, client, api_headers_second, exercise_definition, app
     ):

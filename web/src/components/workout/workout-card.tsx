@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import type { Workout } from "@/types";
-import { useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
+import { useToggleDone, useDeleteWorkout, useUpdateWorkout, useCopyWorkout } from "@/hooks/use-workouts";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useTranslation, type TranslationKey } from "@/i18n";
 
@@ -38,6 +39,8 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
   const updateWorkout = useUpdateWorkout();
+  const copyWorkout = useCopyWorkout();
+  const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const todayIso = format(new Date(), "yyyy-MM-dd");
@@ -148,6 +151,17 @@ export default function WorkoutCard({ workout }: { workout: Workout }) {
               className="bg-transparent text-xs text-gray-700 dark:text-gray-300 focus:outline-none"
             />
           </label>
+          <button
+            onClick={() =>
+              copyWorkout.mutate(workout.id, {
+                onSuccess: (data) => router.push(`/workouts/${data.data.id}/edit`),
+              })
+            }
+            disabled={copyWorkout.isPending}
+            className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            {copyWorkout.isPending ? t("workouts.copying") : t("common.copy")}
+          </button>
           <Link
             href={`/workouts/${workout.id}/edit`}
             className="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"

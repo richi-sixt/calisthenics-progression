@@ -8,7 +8,14 @@ from flask.typing import ResponseReturnValue
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
-from project.models import VISIBILITY_VALUES, Exercise, ExerciseDefinition, Set, Workout
+from project.models import (
+    VISIBILITY_VALUES,
+    Exercise,
+    ExerciseDefinition,
+    Set,
+    Workout,
+    serialize_workouts,
+)
 
 NOTES_MAX_LENGTH = 5000
 
@@ -129,7 +136,7 @@ def api_list_workouts() -> ResponseReturnValue:
     )
     return jsonify(
         {
-            "data": [w.to_dict(include_exercises=True) for w in pagination.items],
+            "data": serialize_workouts(pagination.items),
             "meta": {
                 "page": pagination.page,
                 "per_page": pagination.per_page,
@@ -329,7 +336,7 @@ def api_list_templates() -> ResponseReturnValue:
         .scalars()
         .all()
     )
-    return jsonify({"data": [t.to_dict(include_exercises=True) for t in templates]})
+    return jsonify({"data": serialize_workouts(templates)})
 
 
 @bp.route("/templates", methods=["POST"])
@@ -420,6 +427,33 @@ def api_delete_template(template_id: int) -> ResponseReturnValue:
     return jsonify({"data": {"message": "Template deleted."}}), 200
 
 
+def _clone_exercises(
+    source: Workout, target: Workout, *, copy_exercise_notes: bool
+) -> None:
+    """Copy exercises and sets from source into target (target must be flushed)."""
+    for ex in source.exercises.order_by(Exercise.exercise_order).all():  # type: ignore[union-attr]
+        new_ex = Exercise(
+            exercise_order=ex.exercise_order,
+            exercise_definition_id=ex.exercise_definition_id,
+            workout_id=target.id,
+            notes=ex.notes if copy_exercise_notes else None,
+        )
+        db.session.add(new_ex)
+        db.session.flush()
+
+        for s in ex.sets.order_by(Set.set_order).all():
+            db.session.add(
+                Set(
+                    set_order=s.set_order,
+                    exercise_id=new_ex.id,
+                    progression=s.progression,
+                    reps=s.reps,
+                    duration=s.duration,
+                    distance_km=s.distance_km,
+                )
+            )
+
+
 @bp.route("/templates/<int:template_id>/use", methods=["POST"])
 @api_login_required
 @api_check_confirmed
@@ -440,27 +474,35 @@ def api_use_template(template_id: int) -> ResponseReturnValue:
     )
     db.session.add(workout)
     db.session.flush()
+    _clone_exercises(template, workout, copy_exercise_notes=True)
 
-    for ex in template.exercises.order_by(Exercise.exercise_order).all():  # type: ignore[union-attr]
-        new_ex = Exercise(
-            exercise_order=ex.exercise_order,
-            exercise_definition_id=ex.exercise_definition_id,
-            workout_id=workout.id,
-            notes=ex.notes,
-        )
-        db.session.add(new_ex)
-        db.session.flush()
+    db.session.commit()
+    return jsonify({"data": workout.to_dict(include_exercises=True)}), 201
 
-        for s in ex.sets.order_by(Set.set_order).all():
-            new_set = Set(
-                set_order=s.set_order,
-                exercise_id=new_ex.id,
-                progression=s.progression,
-                reps=s.reps,
-                duration=s.duration,
-                distance_km=s.distance_km,
-            )
-            db.session.add(new_set)
+
+@bp.route("/workouts/<int:workout_id>/copy", methods=["POST"])
+@api_login_required
+@api_check_confirmed
+def api_copy_workout(workout_id: int) -> ResponseReturnValue:
+    """Duplicate a workout (pending or done) as a new pending workout.
+
+    Notes are not copied: they describe a performed session.
+    """
+    source = db.session.get(Workout, workout_id)
+    if source is None or source.is_template:
+        return jsonify({"error": "Workout not found."}), 404
+    if source.user_id != g.current_api_user.id:
+        return jsonify({"error": "Forbidden."}), 403
+
+    workout = Workout(
+        title=source.title,
+        user_id=g.current_api_user.id,
+        timestamp=datetime.now(timezone.utc),
+        visibility=source.visibility,
+    )
+    db.session.add(workout)
+    db.session.flush()
+    _clone_exercises(source, workout, copy_exercise_notes=False)
 
     db.session.commit()
     return jsonify({"data": workout.to_dict(include_exercises=True)}), 201

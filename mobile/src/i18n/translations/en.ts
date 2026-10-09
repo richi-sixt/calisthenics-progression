@@ -107,6 +107,7 @@ const en = {
   "workouts.private": "Private",
   "workouts.plannedFor": "Planned for {{date}}",
   "workouts.replan": "Re-plan",
+  "workouts.copying": "Copying...",
 
   // Calendar
   "calendar.today": "Today",
@@ -150,8 +151,9 @@ const en = {
   "exercises.title": "Exercises",
   "exercises.new": "New Exercise",
   "exercises.editTitle": "Edit Exercise",
-  "exercises.mine": "My Exercises",
-  "exercises.all": "All Exercises",
+  "exercises.mine": "Mine",
+  "exercises.following": "Following",
+  "exercises.all": "All",
   "exercises.loading": "Loading exercises...",
   "exercises.loadingOne": "Loading exercise...",
   "exercises.empty": "No exercises yet",

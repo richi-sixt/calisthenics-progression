@@ -21,7 +21,6 @@ backend/pyrightconfig.json
 backend/project/static/profile_pics
 backend/project/static/exercise_images
 backend/scripts
-supabase
 
 # Node / Next.js
 node_modules

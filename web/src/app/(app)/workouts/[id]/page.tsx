@@ -8,6 +8,7 @@ import {
   useToggleDone,
   useDeleteWorkout,
   useUpdateWorkout,
+  useCopyWorkout,
 } from "@/hooks/use-workouts";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
@@ -26,6 +27,7 @@ export default function WorkoutDetailPage({
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
   const updateWorkout = useUpdateWorkout();
+  const copyWorkout = useCopyWorkout();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (isLoading) {
@@ -50,7 +52,7 @@ export default function WorkoutDetailPage({
         &larr; {t("common.backTo", { page: t("nav.workouts").toLowerCase() })}
       </Link>
 
-      <div className="mt-4 flex items-start justify-between">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold dark:text-gray-100">{workout.title}</h1>
           {workout.timestamp && (
@@ -79,6 +81,17 @@ export default function WorkoutDetailPage({
               className="bg-transparent text-sm text-gray-700 dark:text-gray-300 focus:outline-none"
             />
           </label>
+          <button
+            onClick={() =>
+              copyWorkout.mutate(workoutId, {
+                onSuccess: (data) => router.push(`/workouts/${data.data.id}/edit`),
+              })
+            }
+            disabled={copyWorkout.isPending}
+            className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            {copyWorkout.isPending ? t("workouts.copying") : t("common.copy")}
+          </button>
           <Link
             href={`/workouts/${workoutId}/edit`}
             className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"

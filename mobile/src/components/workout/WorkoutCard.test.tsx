@@ -6,7 +6,8 @@ import { WorkoutCard } from "@/components/workout/WorkoutCard";
 import { api } from "@/lib/api";
 import type { Workout } from "@/types";
 
-jest.mock("expo-router", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+const mockPush = jest.fn();
+jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
 
 jest.mock("@/lib/api", () => ({
   api: { post: jest.fn(), put: jest.fn(), delete: jest.fn() },
@@ -118,6 +119,16 @@ describe("WorkoutCard", () => {
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith("/workouts/42", { planned_date: firstOfMonth })
     );
+  });
+
+  it("copies the workout and opens the copy for editing", async () => {
+    (api.post as jest.Mock).mockResolvedValue({ data: { id: 99 } });
+    const { getByTestId } = await renderWithProviders(<WorkoutCard workout={makeWorkout({ id: 5 })} />);
+
+    await fireEvent.press(getByTestId("copy-button-5"));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/workouts/5/copy"));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/workouts/99/edit"));
   });
 
   it("deletes the workout after the confirmation alert is accepted", async () => {
