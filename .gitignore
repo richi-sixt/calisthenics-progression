@@ -21,10 +21,7 @@ backend/pyrightconfig.json
 backend/project/static/profile_pics
 backend/project/static/exercise_images
 backend/scripts
-<<<<<<< Updated upstream
-=======
 /supabase
->>>>>>> Stashed changes
 
 # Node / Next.js
 node_modules
