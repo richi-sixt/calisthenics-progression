@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { format, parseISO } from "date-fns";
-import { useWorkout, useToggleDone, useDeleteWorkout, useUpdateWorkout } from "@/hooks/use-workouts";
+import { useWorkout, useToggleDone, useDeleteWorkout, useUpdateWorkout, useCopyWorkout } from "@/hooks/use-workouts";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { useTranslation } from "@/i18n";
 
@@ -15,6 +15,7 @@ export default function WorkoutDetailScreen() {
   const toggleDone = useToggleDone();
   const deleteWorkout = useDeleteWorkout();
   const updateWorkout = useUpdateWorkout();
+  const copyWorkout = useCopyWorkout();
   const [replanOpen, setReplanOpen] = useState(false);
   const [replanMonth, setReplanMonth] = useState(() => new Date());
 
@@ -72,6 +73,20 @@ export default function WorkoutDetailScreen() {
           className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
         >
           <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() =>
+            copyWorkout.mutate(workoutId, {
+              onSuccess: (data) => router.push(`/workouts/${data.data.id}/edit`),
+            })
+          }
+          disabled={copyWorkout.isPending}
+          testID="copy-button"
+          className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-2"
+        >
+          <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            {copyWorkout.isPending ? t("workouts.copying") : t("common.copy")}
+          </Text>
         </Pressable>
         <Pressable
           onPress={() => setReplanOpen(true)}

@@ -16,6 +16,7 @@ from project.models import (
     Workout,
     blocked_user_ids,
     is_blocked_between,
+    serialize_workouts,
 )
 
 
@@ -78,14 +79,18 @@ def api_explore() -> ResponseReturnValue:
         error_out=False,
     )
 
-    def _serialize(w: Workout) -> dict:
-        data = w.to_dict(include_exercises=True)
+    def _serialize(w: Workout, data: dict) -> dict:
         data["follow_status"] = statuses.get(w.user_id, "none")
         return data
 
     return jsonify(
         {
-            "data": [_serialize(w) for w in pagination.items],
+            "data": [
+                _serialize(w, d)
+                for w, d in zip(
+                    pagination.items, serialize_workouts(pagination.items), strict=True
+                )
+            ],
             "meta": {
                 "page": pagination.page,
                 "per_page": pagination.per_page,
@@ -131,9 +136,7 @@ def api_get_user(username: str) -> ResponseReturnValue:
         {
             "data": {
                 "user": user_data,
-                "workouts": [
-                    w.to_dict(include_exercises=True) for w in workouts_pagination.items
-                ],
+                "workouts": serialize_workouts(workouts_pagination.items),
             },
             "meta": {
                 "page": workouts_pagination.page,

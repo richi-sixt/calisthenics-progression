@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import date, datetime, timezone
 from time import time
 from typing import Any
+
+from sqlalchemy.orm import joinedload
 
 from project import Base, db
 
@@ -330,7 +333,7 @@ class Workout(Base):
     timestamp = db.Column(
         db.DateTime, index=True, default=lambda: datetime.now(timezone.utc)
     )
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
     is_template = db.Column(
         db.Boolean, nullable=False, default=False, server_default="0"
     )
@@ -380,8 +383,16 @@ class Workout(Base):
         """String representation of Workout."""
         return f"<Workout {self.title}>"
 
-    def to_dict(self, include_exercises: bool = False) -> dict[str, Any]:
-        """Serialize workout to dictionary for API responses."""
+    def to_dict(
+        self,
+        include_exercises: bool = False,
+        exercises: "list[dict[str, Any]] | None" = None,
+    ) -> dict[str, Any]:
+        """Serialize workout to dictionary for API responses.
+
+        `exercises` carries already-serialized exercises (see
+        `serialize_workouts`) so lists don't query per workout.
+        """
         data: dict[str, Any] = {
             "id": self.id,
             "title": self.title,
@@ -397,7 +408,9 @@ class Workout(Base):
             ),
             "notes": self.notes,
         }
-        if include_exercises:
+        if exercises is not None:
+            data["exercises"] = exercises
+        elif include_exercises:
             data["exercises"] = [
                 ex.to_dict(include_sets=True)
                 for ex in self.exercises.order_by(Exercise.exercise_order).all()  # type: ignore[union-attr]
@@ -441,7 +454,9 @@ class ExerciseDefinition(Base):
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
+    )
     archived = db.Column(db.Boolean, nullable=False, default=False)
     visibility = db.Column(
         db.String(10),
@@ -545,11 +560,22 @@ class ExerciseDefinition(Base):
         match = EXERCISE_IMAGE_REFERENCE.search(self.description or "")
         return f"{EXERCISE_IMAGE_URL_PREFIX}{match.group(1)}" if match else None
 
-    def to_dict(self, viewer: "User | None" = None) -> dict[str, Any]:
+    def to_dict(
+        self,
+        viewer: "User | None" = None,
+        progression_links: "list[ExerciseProgression] | None" = None,
+        parent_links: "list[ExerciseProgression] | None" = None,
+    ) -> dict[str, Any]:
         """Serialize exercise definition to dictionary for API responses.
 
         With a `viewer`, linked exercises the viewer may not see are left out.
+        Lists serialized in bulk pass the links in (see
+        `serialize_exercise_definitions`) to avoid one query per exercise.
         """
+        if progression_links is None:
+            progression_links = self.progression_links.all()  # type: ignore[attr-defined]
+        if parent_links is None:
+            parent_links = self.parent_links.all()  # type: ignore[attr-defined]
 
         def shown(other: "ExerciseDefinition") -> bool:
             return not other.archived and (
@@ -564,12 +590,12 @@ class ExerciseDefinition(Base):
                 "counting_type": link.child.counting_type,
                 "thumbnail_url": link.child.thumbnail_url,
             }
-            for link in self.progression_links.all()
+            for link in progression_links
             if shown(link.child)
         ]
         parents = [
             {"id": link.parent.id, "title": link.parent.title}
-            for link in self.parent_links.all()
+            for link in parent_links
             if shown(link.parent)
         ]
         return {
@@ -606,8 +632,12 @@ class Exercise(Base):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     exercise_order = db.Column(db.Integer, nullable=False)
-    workout_id = db.Column(db.Integer, db.ForeignKey("workout.id"), nullable=False)
-    exercise_definition_id = db.Column(db.Integer, db.ForeignKey("exercises.id"))
+    workout_id = db.Column(
+        db.Integer, db.ForeignKey("workout.id"), nullable=False, index=True
+    )
+    exercise_definition_id = db.Column(
+        db.Integer, db.ForeignKey("exercises.id"), index=True
+    )
     notes = db.Column(db.Text, nullable=True)
 
     # Relationship to sets in this exercise
@@ -667,7 +697,9 @@ class Set(Base):
     reps = db.Column(db.Integer)
     duration = db.Column(db.Integer)
     distance_km = db.Column(db.Float, nullable=True)
-    exercise_id = db.Column(db.Integer, db.ForeignKey("exercise.id"), nullable=False)
+    exercise_id = db.Column(
+        db.Integer, db.ForeignKey("exercise.id"), nullable=False, index=True
+    )
 
     def __init__(
         self,
@@ -998,3 +1030,110 @@ class Report(Base):
     def __repr__(self) -> str:
         """String representation of Report."""
         return f"<Report {self.id} {self.target_type}:{self.target_id} ({self.status})>"
+
+
+def _preload_users(user_ids: set[int]) -> None:
+    """Load users into the session so `.athlete` lookups hit the identity map."""
+    if user_ids:
+        db.session.execute(db.select(User).filter(User.id.in_(user_ids))).all()
+
+
+def serialize_workouts(workouts: Sequence[Workout]) -> list[dict[str, Any]]:
+    """Serialize workouts with exercises and sets in a fixed number of queries.
+
+    Equivalent to `[w.to_dict(include_exercises=True) for w in workouts]`.
+    """
+    ids = [w.id for w in workouts]
+    if not ids:
+        return []
+    _preload_users({w.user_id for w in workouts if w.user_id is not None})
+
+    exercises = (
+        db.session.execute(
+            db.select(Exercise)
+            .filter(Exercise.workout_id.in_(ids))
+            .options(
+                joinedload(Exercise.exercise_definition).lazyload(
+                    ExerciseDefinition.categories
+                )
+            )
+            .order_by(Exercise.workout_id, Exercise.exercise_order)
+        )
+        .scalars()
+        .all()
+    )
+    sets_by_exercise: dict[int, list[Set]] = {}
+    if exercises:
+        for s in (
+            db.session.execute(
+                db.select(Set)
+                .filter(Set.exercise_id.in_([e.id for e in exercises]))
+                .order_by(Set.exercise_id, Set.set_order)
+            )
+            .scalars()
+            .all()
+        ):
+            sets_by_exercise.setdefault(s.exercise_id, []).append(s)
+
+    by_workout: dict[int, list[dict[str, Any]]] = {}
+    for ex in exercises:
+        data = ex.to_dict()
+        data["sets"] = [s.to_dict() for s in sets_by_exercise.get(ex.id, [])]
+        by_workout.setdefault(ex.workout_id, []).append(data)
+
+    return [w.to_dict(exercises=by_workout.get(w.id, [])) for w in workouts]
+
+
+def serialize_exercise_definitions(
+    definitions: Sequence[ExerciseDefinition], viewer: "User | None" = None
+) -> list[dict[str, Any]]:
+    """Serialize exercise definitions with their progression links in bulk.
+
+    Equivalent to `[d.to_dict(viewer=viewer) for d in definitions]`.
+    """
+    ids = [d.id for d in definitions]
+    if not ids:
+        return []
+    _preload_users({d.user_id for d in definitions})
+
+    children: dict[int, list[ExerciseProgression]] = {}
+    for link in (
+        db.session.execute(
+            db.select(ExerciseProgression)
+            .filter(ExerciseProgression.parent_id.in_(ids))
+            .options(
+                joinedload(ExerciseProgression.child).lazyload(
+                    ExerciseDefinition.categories
+                )
+            )
+            .order_by(ExerciseProgression.parent_id, ExerciseProgression.step_order)
+        )
+        .scalars()
+        .all()
+    ):
+        children.setdefault(link.parent_id, []).append(link)
+
+    parents: dict[int, list[ExerciseProgression]] = {}
+    for link in (
+        db.session.execute(
+            db.select(ExerciseProgression)
+            .filter(ExerciseProgression.child_id.in_(ids))
+            .options(
+                joinedload(ExerciseProgression.parent).lazyload(
+                    ExerciseDefinition.categories
+                )
+            )
+        )
+        .scalars()
+        .all()
+    ):
+        parents.setdefault(link.child_id, []).append(link)
+
+    return [
+        d.to_dict(
+            viewer=viewer,
+            progression_links=children.get(d.id, []),
+            parent_links=parents.get(d.id, []),
+        )
+        for d in definitions
+    ]

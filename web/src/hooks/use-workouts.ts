@@ -94,3 +94,12 @@ export function useUpdateWorkout() {
 }
 
 export { ApiError };
+
+export function useCopyWorkout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.post<ApiResponse<Workout>>(`/workouts/${id}/copy`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workouts"] }),
+  });
+}

@@ -109,6 +109,7 @@ const de: Record<keyof typeof en, string> = {
   "workouts.private": "Privat",
   "workouts.plannedFor": "Geplant für {{date}}",
   "workouts.replan": "Umplanen",
+  "workouts.copying": "Kopiere...",
 
   // Calendar
   "calendar.today": "Heute",
@@ -152,8 +153,9 @@ const de: Record<keyof typeof en, string> = {
   "exercises.title": "Übungen",
   "exercises.new": "Neue Übung",
   "exercises.editTitle": "Übung bearbeiten",
-  "exercises.mine": "Meine Übungen",
-  "exercises.all": "Alle Übungen",
+  "exercises.mine": "Meine",
+  "exercises.following": "Gefolgt",
+  "exercises.all": "Alle",
   "exercises.loading": "Übungen werden geladen...",
   "exercises.loadingOne": "Übung wird geladen...",
   "exercises.empty": "Noch keine Übungen",

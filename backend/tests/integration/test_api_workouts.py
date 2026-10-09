@@ -438,6 +438,135 @@ class TestApiTemplates:
         assert resp.status_code == 403
 
 
+class TestApiWorkoutListQueries:
+    def test_list_query_count_does_not_grow_with_workouts(
+        self, app, client, api_headers, workout, workout_with_two_exercises
+    ):
+        from sqlalchemy import event
+
+        from project import db
+
+        def count_list_queries() -> int:
+            statements: list[str] = []
+
+            def before(conn, cursor, statement, *args):
+                statements.append(statement)
+
+            event.listen(db.engine, "before_cursor_execute", before)
+            try:
+                resp = client.get("/api/v1/workouts", headers=api_headers)
+            finally:
+                event.remove(db.engine, "before_cursor_execute", before)
+            assert resp.status_code == 200
+            return len(statements), len(resp.get_json()["data"])
+
+        n_queries, n_workouts = count_list_queries()
+        assert n_workouts == 2
+        # auth + count + page + users + exercises + sets (no per-row queries)
+        assert n_queries <= 10
+
+
+class TestApiCopyWorkout:
+    def test_copy_pending_workout(self, client, api_headers, workout):
+        resp = client.post(f"/api/v1/workouts/{workout.id}/copy", headers=api_headers)
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["id"] != workout.id
+        assert data["title"] == workout.title
+        assert data["is_done"] is False
+        assert data["is_template"] is False
+        assert data["planned_date"] == date.today().isoformat()
+        assert len(data["exercises"]) == 1
+        sets = data["exercises"][0]["sets"]
+        assert len(sets) == 1
+        assert sets[0]["reps"] == 10
+        assert sets[0]["progression"] == "Standard"
+
+    def test_copy_done_workout_is_pending(self, client, api_headers, workout):
+        from project import db
+        from project.models import Workout
+
+        w = db.session.get(Workout, workout.id)
+        w.is_done = True
+        db.session.commit()
+
+        resp = client.post(f"/api/v1/workouts/{workout.id}/copy", headers=api_headers)
+        assert resp.status_code == 201
+        assert resp.get_json()["data"]["is_done"] is False
+        assert db.session.get(Workout, workout.id).is_done is True
+
+    def test_copy_preserves_exercise_order(
+        self, client, api_headers, workout_with_two_exercises
+    ):
+        src = client.get(
+            f"/api/v1/workouts/{workout_with_two_exercises.id}", headers=api_headers
+        ).get_json()["data"]
+        resp = client.post(
+            f"/api/v1/workouts/{workout_with_two_exercises.id}/copy",
+            headers=api_headers,
+        )
+        copy = resp.get_json()["data"]
+        assert [e["exercise_order"] for e in copy["exercises"]] == [
+            e["exercise_order"] for e in src["exercises"]
+        ]
+        assert len(copy["exercises"]) == 2
+
+    def test_copy_does_not_copy_notes(self, client, api_headers, exercise_definition):
+        created = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "With notes",
+                    "notes": "Felt strong",
+                    "exercises": [
+                        {
+                            "exercise_definition_id": exercise_definition.id,
+                            "exercise_order": 1,
+                            "notes": "Hard today",
+                            "sets": [{"set_order": 1, "reps": 5}],
+                        }
+                    ],
+                }
+            ),
+        ).get_json()["data"]
+
+        resp = client.post(
+            f"/api/v1/workouts/{created['id']}/copy", headers=api_headers
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        assert data["notes"] is None
+        assert data["exercises"][0]["notes"] is None
+        assert data["exercises"][0]["sets"][0]["reps"] == 5
+
+    def test_copy_not_found(self, client, api_headers):
+        resp = client.post("/api/v1/workouts/99999/copy", headers=api_headers)
+        assert resp.status_code == 404
+
+    def test_copy_forbidden(self, client, api_headers_second, workout):
+        resp = client.post(
+            f"/api/v1/workouts/{workout.id}/copy", headers=api_headers_second
+        )
+        assert resp.status_code == 403
+
+    def test_copy_requires_auth(self, client, workout):
+        resp = client.post(f"/api/v1/workouts/{workout.id}/copy")
+        assert resp.status_code == 401
+
+    def test_copy_unconfirmed(self, client, api_headers_unconfirmed, workout):
+        resp = client.post(
+            f"/api/v1/workouts/{workout.id}/copy", headers=api_headers_unconfirmed
+        )
+        assert resp.status_code == 403
+
+    def test_copy_template_not_found(self, client, api_headers, workout_template):
+        resp = client.post(
+            f"/api/v1/workouts/{workout_template.id}/copy", headers=api_headers
+        )
+        assert resp.status_code == 404
+
+
 class TestApiWorkoutsCalendar:
     def test_calendar_returns_dates_with_workouts(self, client, api_headers, workout):
         month = date.today().strftime("%Y-%m")

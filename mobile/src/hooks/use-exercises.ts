@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ExerciseDefinition, ExerciseWorkoutRef, PaginatedResponse, ApiResponse, Visibility } from "@/types";
 
-export function useExercises(page: number = 1, userFilter: string = "mine", categoryIds?: number[]) {
+export function useExercises(page: number = 1, userFilter: string = "mine", categoryIds?: number[], username?: string) {
   const params: Record<string, string> = { page: String(page), user: userFilter };
+  if (username) params.username = username;
   if (categoryIds && categoryIds.length > 0) {
     params.category = categoryIds.join(",");
   }
   return useQuery({
-    queryKey: ["exercises", page, userFilter, categoryIds],
+    queryKey: ["exercises", page, userFilter, categoryIds, username],
     queryFn: () => api.get<PaginatedResponse<ExerciseDefinition>>("/exercises", params),
   });
 }

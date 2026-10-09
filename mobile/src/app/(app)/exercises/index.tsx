@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl } from "react-native";
+import { View, Text, Pressable, FlatList, RefreshControl, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { useExercises } from "@/hooks/use-exercises";
+import { useFollowing } from "@/hooks/use-social";
+import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { ExerciseCard } from "@/components/exercise/ExerciseCard";
 import { CardListSkeleton, ExerciseCardSkeleton } from "@/components/ui/skeleton";
@@ -12,9 +14,14 @@ export default function ExercisesScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const [userFilter, setUserFilter] = useState<"mine" | "all">("mine");
+  const [userFilter, setUserFilter] = useState<"mine" | "following" | "all">("mine");
+  const [username, setUsername] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const { data: profile } = useProfile();
+  const { data: followingData } = useFollowing(profile?.data?.username ?? "");
+  const followingUsers = followingData?.data ?? [];
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const { data, isLoading, error, refetch, isRefetching } = useExercises(page, userFilter, categoryIds);
+  const { data, isLoading, error, refetch, isRefetching } = useExercises(page, userFilter, categoryIds, username || undefined);
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
@@ -29,17 +36,43 @@ export default function ExercisesScreen() {
   return (
     <View className="flex-1 bg-white dark:bg-gray-900 p-4">
       <View className="flex-row items-center justify-between">
-        <View className="flex-row gap-2">
-          <Pressable onPress={() => { setUserFilter("mine"); setPage(1); }} className={`rounded-md px-3 py-1.5 ${userFilter === "mine" ? "bg-gray-900 dark:bg-gray-100" : "bg-gray-100 dark:bg-gray-700"}`}>
-            <Text className={`text-sm font-medium ${userFilter === "mine" ? "text-white dark:text-gray-900" : "text-gray-600 dark:text-gray-400"}`}>{t("exercises.mine")}</Text>
-          </Pressable>
-          <Pressable onPress={() => { setUserFilter("all"); setPage(1); }} className={`rounded-md px-3 py-1.5 ${userFilter === "all" ? "bg-gray-900 dark:bg-gray-100" : "bg-gray-100 dark:bg-gray-700"}`}>
-            <Text className={`text-sm font-medium ${userFilter === "all" ? "text-white dark:text-gray-900" : "text-gray-600 dark:text-gray-400"}`}>{t("exercises.all")}</Text>
-          </Pressable>
-        </View>
+        <View />
         <Pressable onPress={() => router.push("/exercises/new")} className="rounded-md bg-blue-600 px-4 py-2">
           <Text className="text-sm font-medium text-white">{t("exercises.new")}</Text>
         </Pressable>
+      </View>
+
+      <View className="mt-3 flex-row flex-wrap items-center gap-2">
+        <View className="flex-row overflow-hidden rounded-md border border-gray-300 dark:border-gray-600">
+          {(["mine", "following", "all"] as const).map((f) => {
+            const active = userFilter === f && !username;
+            return (
+              <Pressable
+                key={f}
+                onPress={() => { setUserFilter(f); setUsername(""); setPage(1); }}
+                testID={`exercises-scope-${f}`}
+                className={`px-3 py-1.5 ${active ? "bg-blue-600" : "bg-transparent"}`}
+              >
+                <Text className={`text-xs font-medium ${active ? "text-white" : "text-gray-600 dark:text-gray-400"}`}>
+                  {t(`exercises.${f}` as const)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {followingUsers.length > 0 && (
+          <Pressable
+            onPress={() => setPickerOpen(true)}
+            testID="exercises-user-filter"
+            className={`flex-row items-center gap-1 rounded-md border px-3 py-1.5 ${username ? "border-blue-600" : "border-gray-300 dark:border-gray-600"}`}
+          >
+            <Text className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              {username ? `@${username}` : t("explore.filterByUser")}
+            </Text>
+            <Text className="text-gray-400 dark:text-gray-500">▾</Text>
+          </Pressable>
+        )}
       </View>
 
       {categories.length > 0 && (
@@ -77,6 +110,33 @@ export default function ExercisesScreen() {
           </Pressable>
         </View>
       )}
+      <Modal visible={pickerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setPickerOpen(false)}>
+        <View className="flex-1 bg-white dark:bg-gray-900 pt-4">
+          <View className="flex-row items-center justify-between px-4 pb-3">
+            <Text className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("explore.filterByUser")}</Text>
+            <Pressable onPress={() => setPickerOpen(false)} testID="exercises-user-filter-close">
+              <Text className="text-sm text-blue-600 dark:text-blue-400">{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+          <FlatList
+            data={followingUsers}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  setUsername(item.username);
+                  setPage(1);
+                  setPickerOpen(false);
+                }}
+                testID={`exercises-user-filter-option-${item.username}`}
+                className="border-b border-gray-100 dark:border-gray-800 px-4 py-3"
+              >
+                <Text className="text-sm text-gray-900 dark:text-gray-100">@{item.username}</Text>
+              </Pressable>
+            )}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }

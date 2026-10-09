@@ -13,17 +13,21 @@ import type {
 export function useExercises(
   page: number = 1,
   userFilter: string = "mine",
-  categoryIds?: number[]
+  categoryIds?: number[],
+  username?: string
 ) {
   const params: Record<string, string> = {
     page: String(page),
     user: userFilter,
   };
+  if (username) {
+    params.username = username;
+  }
   if (categoryIds && categoryIds.length > 0) {
     params.category = categoryIds.join(",");
   }
   return useQuery({
-    queryKey: ["exercises", page, userFilter, categoryIds],
+    queryKey: ["exercises", page, userFilter, categoryIds, username],
     queryFn: () => api.get<PaginatedResponse<ExerciseDefinition>>("/exercises", params),
   });
 }
