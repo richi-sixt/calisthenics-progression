@@ -156,7 +156,6 @@ export default function WorkoutDetailPage({
                   <thead>
                     <tr className="border-b dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
                       <th className="pb-2 font-medium">{t("workouts.set")}</th>
-                      <th className="pb-2 font-medium">{t("workouts.progression")}</th>
                       <th className="pb-2 font-medium">
                         {exercise.counting_type === "duration"
                           ? t("workouts.duration")
@@ -170,7 +169,6 @@ export default function WorkoutDetailPage({
                     {exercise.sets.map((set) => (
                       <tr key={set.id} className="border-b last:border-0 dark:border-gray-700">
                         <td className="py-2 text-gray-600 dark:text-gray-400">{set.set_order}</td>
-                        <td className="py-2 dark:text-gray-300">{set.progression ?? "-"}</td>
                         <td className="py-2 dark:text-gray-300">
                           {exercise.counting_type === "duration"
                             ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")

@@ -132,7 +132,6 @@ export default function WorkoutDetailScreen() {
                 <View className="mt-3">
                   <View className="flex-row border-b border-gray-200 dark:border-gray-700 pb-2">
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.set")}</Text>
-                    <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("workouts.progression")}</Text>
                     <Text className="flex-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                       {exercise.counting_type === "duration"
                         ? t("workouts.duration")
@@ -144,7 +143,6 @@ export default function WorkoutDetailScreen() {
                   {exercise.sets.map((set) => (
                     <View key={set.id} className="flex-row border-b border-gray-100 dark:border-gray-700 py-2">
                       <Text className="flex-1 text-sm text-gray-600 dark:text-gray-400">{set.set_order}</Text>
-                      <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">{set.progression ?? "-"}</Text>
                       <Text className="flex-1 text-sm text-gray-700 dark:text-gray-300">
                         {exercise.counting_type === "duration"
                           ? set.duration_formatted || (set.duration ? `${set.duration}s` : "-")
