@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/react-native";
 import { renderWithProviders } from "@/test-utils";
-import CatalogScreen from "./catalog";
+import CatalogScreen from "@/app/(app)/catalog";
 import {
   useCatalogExercises,
   useImportCatalogExercise,
