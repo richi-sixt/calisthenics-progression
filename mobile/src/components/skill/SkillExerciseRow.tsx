@@ -1,5 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import { parseISO } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { formatSkillValue } from "@/components/skill/format";
 import type { SkillExercise } from "@/types";
@@ -15,7 +16,7 @@ export function SkillExerciseRow({
   isNext: boolean;
 }) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, formatDate } = useTranslation();
   const percent = Math.min(100, Math.round((exercise.best / exercise.target_value) * 100));
 
   return (
@@ -63,7 +64,7 @@ export function SkillExerciseRow({
       </View>
       {exercise.last_done_date && (
         <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-          {t("skills.lastDone", { date: exercise.last_done_date })}
+          {t("skills.lastDone", { date: formatDate(parseISO(exercise.last_done_date)) })}
         </Text>
       )}
     </Pressable>

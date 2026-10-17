@@ -61,7 +61,7 @@ describe("WorkoutCard", () => {
   it("shows the pending badge and a 'Mark done' button for an unfinished workout", async () => {
     const { getByText, queryByText } = await renderWithProviders(<WorkoutCard workout={makeWorkout({ is_done: false })} />);
     expect(getByText("Leg day")).toBeTruthy();
-    expect(getByText("pendent")).toBeTruthy();
+    expect(getByText("pending")).toBeTruthy();
     expect(getByText("Mark done")).toBeTruthy();
     expect(queryByText("Done")).toBeNull();
   });

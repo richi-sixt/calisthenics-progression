@@ -46,4 +46,12 @@ describe("SkillExerciseRow", () => {
     await fireEvent.press(getByTestId("skill-exercise-7"));
     expect(mockPush).toHaveBeenCalledWith("/exercises/7");
   });
+
+  it("shows the last done date in the locale format used elsewhere in the app", async () => {
+    const { getByText } = await renderWithProviders(
+      <SkillExerciseRow exercise={make({ last_done_date: "2026-10-17" })} index={0} isNext={false} />
+    );
+    // "short" format, same as the profile (not the raw ISO date)
+    expect(getByText(/Last done Oct 17, 2026/)).toBeTruthy();
+  });
 });

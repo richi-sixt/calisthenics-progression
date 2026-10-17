@@ -75,7 +75,7 @@ export default function CatalogPage() {
           setSearch(e.target.value);
           setPage(1);
         }}
-        placeholder={t("catalog.searchPlaceholder")}
+        placeholder={tab === "skills" ? t("catalog.searchSkills") : t("catalog.searchPlaceholder")}
         aria-label={t("catalog.searchPlaceholder")}
         className="mt-3 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
       />

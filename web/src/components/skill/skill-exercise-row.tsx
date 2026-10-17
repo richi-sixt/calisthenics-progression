@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { parseISO } from "date-fns";
 import { useTranslation } from "@/i18n";
 import type { SkillExercise } from "@/types";
 import { formatSkillValue } from "@/components/skill/format";
@@ -15,7 +16,7 @@ export default function SkillExerciseRow({
   index: number;
   isNext: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, formatDate } = useTranslation();
   const percent = Math.min(100, Math.round((exercise.best / exercise.target_value) * 100));
 
   return (
@@ -76,7 +77,7 @@ export default function SkillExerciseRow({
       </div>
       {exercise.last_done_date && (
         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-          {t("skills.lastDone", { date: exercise.last_done_date })}
+          {t("skills.lastDone", { date: formatDate(parseISO(exercise.last_done_date)) })}
         </p>
       )}
     </li>

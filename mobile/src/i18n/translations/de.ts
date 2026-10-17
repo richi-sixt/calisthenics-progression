@@ -265,6 +265,7 @@ const de: Record<keyof typeof en, string> = {
   "catalog.title": "App-Bibliothek",
   "catalog.intro": "Fertige Übungen für alle. Übernimm die, die du brauchst, in deine eigenen Übungen.",
   "catalog.searchPlaceholder": "Übungen suchen",
+  "catalog.searchSkills": "Skills suchen",
   "catalog.import": "Übernehmen",
   "catalog.importing": "Wird übernommen...",
   "catalog.imported": "In meinen Übungen",
