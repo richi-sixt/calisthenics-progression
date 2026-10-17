@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useExercises } from "@/hooks/use-exercises";
+import { useCatalogExercises } from "@/hooks/use-catalog";
 import { useTranslation } from "@/i18n";
 
 export interface ProgressionItem {
@@ -106,14 +107,19 @@ export default function ProgressionEditor({
   value,
   onChange,
   excludeIds = [],
+  catalog = false,
 }: {
   value: ProgressionItem[];
   onChange: (next: ProgressionItem[]) => void;
   /** Exercises that must not be offered (the exercise itself, its parents). */
   excludeIds?: number[];
+  /** Offer app-library entries (admin editing the catalog) instead of own exercises. */
+  catalog?: boolean;
 }) {
   const { t } = useTranslation();
-  const { data } = useExercises(1, "mine");
+  const { data: ownData } = useExercises(1, "mine");
+  const { data: catalogData } = useCatalogExercises(1, "");
+  const data = catalog ? catalogData : ownData;
   const [selected, setSelected] = useState("");
 
   const sensors = useSensors(

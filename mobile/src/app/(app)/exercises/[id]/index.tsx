@@ -81,6 +81,20 @@ export default function ExerciseDetailScreen() {
         </View>
       )}
 
+      {exercise.skills.length > 0 && (
+        <View className="mt-2 flex-row flex-wrap items-center gap-x-1">
+          <Text className="text-sm text-gray-500 dark:text-gray-400">{t("skills.partOf")}</Text>
+          {exercise.skills.map((skill, i) => (
+            <Pressable key={skill.id} onPress={() => router.push(`/skills/${skill.id}`)} testID={`exercise-skill-${skill.id}`}>
+              <Text className="text-sm text-blue-600 dark:text-blue-400">
+                {skill.title}
+                {i < exercise.skills.length - 1 ? "," : ""}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       {exercise.progressions.length > 0 && (
         <View className="mt-6">
           <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</Text>

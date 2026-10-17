@@ -188,6 +188,19 @@ def api_headers_unconfirmed(app, unconfirmed_user):
 
 
 @pytest.fixture
+def api_headers_admin(app, admin_user):
+    """Return headers with a valid Supabase JWT for the admin test user."""
+    with app.app_context():
+        token = _make_supabase_jwt(
+            admin_user.supabase_uid, admin_user.email, confirmed=True
+        )
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+
+@pytest.fixture
 def api_headers_second(app, second_user):
     """Return headers with a valid Supabase JWT for the second test user."""
     with app.app_context():
@@ -477,16 +490,21 @@ def workout_template_with_two_exercises(app, user):
 
 
 @pytest.fixture
-def exercise_categories(app):
-    """Create standard test categories: Cardio, Core, Upper Body."""
+def exercise_categories(app, user):
+    """Create standard test categories (owned by `user`): Cardio, Core, Upper Body."""
     with app.app_context():
-        cats = [ExerciseCategory(name=n) for n in ["Cardio", "Core", "Upper Body"]]
+        cats = [
+            ExerciseCategory(name=n, user_id=user.id)
+            for n in ["Cardio", "Core", "Upper Body"]
+        ]
         for c in cats:
             db.session.add(c)
         db.session.commit()
         cats = (
             db.session.execute(
-                db.select(ExerciseCategory).order_by(ExerciseCategory.name)
+                db.select(ExerciseCategory)
+                .where(ExerciseCategory.user_id == user.id)
+                .order_by(ExerciseCategory.name)
             )
             .scalars()
             .all()

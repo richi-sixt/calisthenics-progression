@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ActivityIndicator, Image } from "reac
 import { useForm, useWatch, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import { useCategories } from "@/hooks/use-categories";
+import GroupedCategoryChips from "@/components/exercise/GroupedCategoryChips";
 import { useUploadImage } from "@/hooks/use-uploads";
 import { insertImageMarkdown, MAX_IMAGE_UPLOAD_BYTES, ownImageUrl } from "@/lib/uploaded-images";
 import { ProgressionEditor, type ProgressionItem } from "@/components/exercise/ProgressionEditor";
@@ -110,13 +111,6 @@ export function ExerciseForm({
   };
 
   const selectedCats: number[] = useWatch({ control, name: "category_ids" }) ?? [];
-
-  const toggleCategory = (catId: number) => {
-    const next = selectedCats.includes(catId)
-      ? selectedCats.filter((id) => id !== catId)
-      : [...selectedCats, catId];
-    setValue("category_ids", next, { shouldDirty: true });
-  };
 
   return (
     <View className="gap-6">
@@ -284,18 +278,11 @@ export function ExerciseForm({
       {categories.length > 0 && (
         <View>
           <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exerciseForm.categories")}</Text>
-          <View className="mt-2 flex-row flex-wrap gap-2">
-            {categories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() => toggleCategory(cat.id)}
-                className={`rounded-full px-3 py-1 ${selectedCats.includes(cat.id) ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
-              >
-                <Text className={`text-sm font-medium ${selectedCats.includes(cat.id) ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>
-                  {cat.name}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="mt-2">
+            <GroupedCategoryChips
+              selectedIds={selectedCats}
+              onChange={(ids) => setValue("category_ids", ids, { shouldDirty: true })}
+            />
           </View>
         </View>
       )}

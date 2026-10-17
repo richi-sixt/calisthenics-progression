@@ -135,6 +135,11 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
               {t("exercises.partOf")} {exercise.parents.map((p) => p.title).join(", ")}
             </Text>
           )}
+          {exercise.skills.length > 0 && (
+            <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500" testID="exercise-card-skills">
+              {t("skills.partOf")} {exercise.skills.map((s) => s.title).join(", ")}
+            </Text>
+          )}
         </Pressable>
       </View>
 

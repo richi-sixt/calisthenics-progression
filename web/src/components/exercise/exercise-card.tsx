@@ -142,6 +142,11 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
               {t("exercises.partOf")} {exercise.parents.map((p) => p.title).join(", ")}
             </p>
           )}
+          {exercise.skills.length > 0 && (
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {t("skills.partOf")} {exercise.skills.map((s) => s.title).join(", ")}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {isOwner ? (
               <>

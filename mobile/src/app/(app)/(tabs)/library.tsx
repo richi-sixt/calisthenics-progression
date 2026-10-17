@@ -13,11 +13,18 @@ export default function LibraryScreen() {
         <Text className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t("nav.library")}</Text>
       </View>
       <View className="px-4 gap-2">
+        <Text className="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500">{t("nav.libraryMine")}</Text>
         <Pressable
           onPress={() => router.push("/categories")}
           className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
         >
           <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.categories")}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/skills")}
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
+        >
+          <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.skills")}</Text>
         </Pressable>
         <Pressable
           onPress={() => router.push("/exercises")}
@@ -36,6 +43,15 @@ export default function LibraryScreen() {
           className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
         >
           <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.statistics")}</Text>
+        </Pressable>
+
+        <Text className="mt-4 text-xs font-semibold uppercase text-gray-400 dark:text-gray-500">{t("nav.libraryApp")}</Text>
+        <Pressable
+          testID="library-catalog"
+          onPress={() => router.push("/catalog")}
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
+        >
+          <Text className="font-semibold text-gray-900 dark:text-gray-100">{t("nav.catalog")}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

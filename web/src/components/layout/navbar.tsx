@@ -117,13 +117,25 @@ function useNavItems() {
   ];
 }
 
-function useLibraryItems() {
+function useLibraryGroups() {
   const { t } = useTranslation();
   return [
-    { href: "/templates", label: t("nav.templates") },
-    { href: "/exercises", label: t("nav.exercises") },
-    { href: "/categories", label: t("nav.categories") },
-    { href: "/statistics", label: t("nav.statistics") },
+    {
+      key: "mine",
+      heading: t("nav.libraryMine"),
+      items: [
+        { href: "/templates", label: t("nav.templates") },
+        { href: "/exercises", label: t("nav.exercises") },
+        { href: "/categories", label: t("nav.categories") },
+        { href: "/skills", label: t("nav.skills") },
+        { href: "/statistics", label: t("nav.statistics") },
+      ],
+    },
+    {
+      key: "app",
+      heading: t("nav.libraryApp"),
+      items: [{ href: "/catalog", label: t("nav.catalog") }],
+    },
   ];
 }
 
@@ -168,7 +180,7 @@ function MobileNavItem({
 
 function MobileLibraryDisclosure() {
   const { t } = useTranslation();
-  const libraryItems = useLibraryItems();
+  const libraryGroups = useLibraryGroups();
 
   return (
     <Disclosure as="li">
@@ -177,10 +189,19 @@ function MobileLibraryDisclosure() {
         <ChevronDownIcon className="h-auto w-2 stroke-gray-500 dark:stroke-gray-400" />
       </DisclosureButton>
       <DisclosurePanel as="ul" className="ml-4 border-l border-gray-100 dark:border-gray-700 pl-3">
-        {libraryItems.map((item) => (
-          <MobileNavItem key={item.href} href={item.href}>
-            {item.label}
-          </MobileNavItem>
+        {libraryGroups.map((group) => (
+          <li key={group.key}>
+            <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {group.heading}
+            </p>
+            <ul>
+              {group.items.map((item) => (
+                <MobileNavItem key={item.href} href={item.href}>
+                  {item.label}
+                </MobileNavItem>
+              ))}
+            </ul>
+          </li>
         ))}
       </DisclosurePanel>
     </Disclosure>
@@ -266,8 +287,8 @@ function MobileNavigation() {
 function DesktopLibraryMenu() {
   const { t } = useTranslation();
   const pathname = usePathname();
-  const libraryItems = useLibraryItems();
-  const active = libraryItems.some(
+  const libraryGroups = useLibraryGroups();
+  const active = libraryGroups.flatMap((g) => g.items).some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
@@ -287,17 +308,27 @@ function DesktopLibraryMenu() {
       <MenuItems
         transition
         anchor="bottom start"
-        className="z-50 mt-2 w-40 origin-top-left rounded-md bg-white dark:bg-gray-800 py-1 text-sm shadow-lg ring-1 ring-gray-900/5 dark:ring-white/10 transition duration-100 data-closed:scale-95 data-closed:opacity-0"
+        className="z-50 mt-2 w-48 origin-top-left rounded-md bg-white dark:bg-gray-800 py-1 text-sm shadow-lg ring-1 ring-gray-900/5 dark:ring-white/10 transition duration-100 data-closed:scale-95 data-closed:opacity-0"
       >
-        {libraryItems.map((item) => (
-          <MenuItem key={item.href}>
-            <Link
-              href={item.href}
-              className="block px-3 py-2 text-gray-700 dark:text-gray-300 data-focus:bg-gray-100 dark:data-focus:bg-gray-700"
-            >
-              {item.label}
-            </Link>
-          </MenuItem>
+        {libraryGroups.map((group, index) => (
+          <div
+            key={group.key}
+            className={index > 0 ? "mt-1 border-t border-gray-100 pt-1 dark:border-gray-700" : ""}
+          >
+            <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {group.heading}
+            </p>
+            {group.items.map((item) => (
+              <MenuItem key={item.href}>
+                <Link
+                  href={item.href}
+                  className="block px-3 py-2 text-gray-700 dark:text-gray-300 data-focus:bg-gray-100 dark:data-focus:bg-gray-700"
+                >
+                  {item.label}
+                </Link>
+              </MenuItem>
+            ))}
+          </div>
         ))}
       </MenuItems>
     </Menu>

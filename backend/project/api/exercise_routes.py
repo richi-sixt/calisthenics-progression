@@ -7,6 +7,7 @@ from sqlalchemy import func, or_
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
+from project.api.exercise_copy import copy_exercise_for_user
 from project.models import (
     EXERCISE_IMAGE_FILENAME,
     VISIBILITY_VALUES,
@@ -14,6 +15,8 @@ from project.models import (
     ExerciseCategory,
     ExerciseDefinition,
     ExerciseProgression,
+    Skill,
+    SkillExercise,
     UploadedImage,
     User,
     Workout,
@@ -158,7 +161,7 @@ def api_list_exercises() -> ResponseReturnValue:
 
     query = (
         db.select(ExerciseDefinition)
-        .filter_by(archived=False)
+        .filter_by(archived=False, is_catalog=False)
         .order_by(ExerciseDefinition.title.asc())
     )
     username = request.args.get("username")
@@ -199,6 +202,17 @@ def api_list_exercises() -> ResponseReturnValue:
             ExerciseDefinition.categories.any(ExerciseCategory.id == cat_id)
         )
 
+    skill_id = request.args.get("skill", type=int)
+    if skill_id is not None:
+        # Skills are private: only the user's own skills can filter.
+        query = query.filter(
+            ExerciseDefinition.id.in_(
+                db.select(SkillExercise.exercise_id)
+                .join(Skill, Skill.id == SkillExercise.skill_id)
+                .where(Skill.id == skill_id, Skill.user_id == g.current_api_user.id)
+            )
+        )
+
     pagination = db.paginate(
         query,
         page=page,
@@ -234,9 +248,16 @@ def api_create_exercise() -> ResponseReturnValue:
     description = data.get("description")
     counting_type = data.get("counting_type", "reps")
     visibility = data.get("visibility", "followers")
+    is_catalog = data.get("is_catalog", False)
 
     if not title:
         return jsonify({"error": "Title is required."}), 400
+    if not isinstance(is_catalog, bool):
+        return jsonify({"error": "Invalid is_catalog."}), 400
+    if is_catalog and not g.current_api_user.admin:
+        return jsonify({"error": "Forbidden."}), 403
+    if is_catalog:
+        visibility = "public"
     if counting_type not in COUNTING_TYPES:
         return jsonify({"error": COUNTING_TYPE_ERROR}), 400
     if visibility not in VISIBILITY_VALUES:
@@ -265,6 +286,7 @@ def api_create_exercise() -> ResponseReturnValue:
         counting_type=counting_type,
         visibility=visibility,
     )
+    exercise.is_catalog = is_catalog
     exercise.thumbnail = thumbnail
     db.session.add(exercise)
     db.session.flush()
@@ -281,7 +303,10 @@ def api_create_exercise() -> ResponseReturnValue:
     if category_ids:
         cats = list(
             db.session.execute(
-                db.select(ExerciseCategory).where(ExerciseCategory.id.in_(category_ids))
+                db.select(ExerciseCategory).where(
+                    ExerciseCategory.id.in_(category_ids),
+                    ExerciseCategory.user_id == g.current_api_user.id,
+                )
             )
             .scalars()
             .all()
@@ -398,6 +423,15 @@ def api_update_exercise(exercise_id: int) -> ResponseReturnValue:
             return jsonify({"error": "Invalid visibility."}), 400
         exercise.visibility = data["visibility"]
 
+    if "is_catalog" in data:
+        if not isinstance(data["is_catalog"], bool):
+            return jsonify({"error": "Invalid is_catalog."}), 400
+        if not g.current_api_user.admin:
+            return jsonify({"error": "Forbidden."}), 403
+        exercise.is_catalog = data["is_catalog"]
+        if exercise.is_catalog:
+            exercise.visibility = "public"
+
     if "thumbnail" in data:
         thumbnail, err = _parse_thumbnail(data["thumbnail"], exercise.thumbnail)
         if err:
@@ -423,7 +457,10 @@ def api_update_exercise(exercise_id: int) -> ResponseReturnValue:
         exercise.categories = (
             list(  # type: ignore[assignment]
                 db.session.execute(
-                    db.select(ExerciseCategory).where(ExerciseCategory.id.in_(cat_ids))
+                    db.select(ExerciseCategory).where(
+                        ExerciseCategory.id.in_(cat_ids),
+                        ExerciseCategory.user_id == g.current_api_user.id,
+                    )
                 )
                 .scalars()
                 .all()
@@ -470,59 +507,6 @@ def api_delete_exercise(exercise_id: int) -> ResponseReturnValue:
     return jsonify({"data": {"message": "Exercise archived."}}), 200
 
 
-def _unique_title(base_title: str, copy_suffix: bool) -> str:
-    """A title the current user doesn't have yet (optionally "<base> (Kopie)")."""
-    new_title = f"{base_title} (Kopie)" if copy_suffix else base_title
-    counter = 2
-    while (
-        db.session.execute(
-            db.select(ExerciseDefinition.id).filter_by(
-                title=new_title, user_id=g.current_api_user.id
-            )
-        ).first()
-        is not None
-    ):
-        new_title = f"{base_title} (Kopie {counter})"
-        counter += 1
-    return new_title
-
-
-def _copy_with_progressions(
-    original: ExerciseDefinition,
-    copies: dict[int, ExerciseDefinition],
-    root: bool = False,
-) -> ExerciseDefinition:
-    """Copy an exercise and, recursively, the progression steps visible to us.
-
-    `copies` maps original ids to their copies so shared steps are copied once
-    (and a malformed cycle can't recurse forever).
-    """
-    if original.id in copies:
-        return copies[original.id]
-    copied = ExerciseDefinition(
-        title=_unique_title(original.title, copy_suffix=root),
-        description=original.description,
-        user_id=g.current_api_user.id,
-        counting_type=original.counting_type,
-    )
-    copied.thumbnail = original.thumbnail
-    db.session.add(copied)
-    db.session.flush()
-    copies[original.id] = copied
-
-    for link in original.progression_links.all():
-        child = link.child
-        if (
-            child.archived
-            or not child.is_visible_to(g.current_api_user)
-            or len(copies) >= MAX_PROGRESSIONS
-        ):
-            continue
-        copied_child = _copy_with_progressions(child, copies)
-        db.session.add(ExerciseProgression(copied.id, copied_child.id, link.step_order))
-    return copied
-
-
 @bp.route("/exercises/<int:exercise_id>/copy", methods=["POST"])
 @api_login_required
 @api_check_confirmed
@@ -534,7 +518,12 @@ def api_copy_exercise(exercise_id: int) -> ResponseReturnValue:
     if original.user_id == g.current_api_user.id:
         return jsonify({"error": "Cannot copy your own exercise."}), 400
 
-    copies: dict[int, ExerciseDefinition] = {}
-    copied = _copy_with_progressions(original, copies, root=True)
+    # App-library entries keep their plain title (like the catalog import).
+    copied, created = copy_exercise_for_user(
+        original, g.current_api_user, owner_suffix=not original.is_catalog
+    )
     db.session.commit()
-    return jsonify({"data": copied.to_dict(viewer=g.current_api_user)}), 201
+    return (
+        jsonify({"data": copied.to_dict(viewer=g.current_api_user)}),
+        201 if created else 200,
+    )

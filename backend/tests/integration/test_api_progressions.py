@@ -202,8 +202,11 @@ class TestCopyWithProgressions:
         )
         assert resp.status_code == 201
         copy = resp.get_json()["data"]
-        assert copy["title"] == "Pike Stand (Kopie)"
-        assert [s["title"] for s in copy["progressions"]] == ["Low Pike", "High Pike"]
+        assert copy["title"] == "Pike Stand (testuser)"
+        assert [s["title"] for s in copy["progressions"]] == [
+            "Low Pike (testuser)",
+            "High Pike (testuser)",
+        ]
         # copies belong to the copier, not the original ids
         assert {s["id"] for s in copy["progressions"]}.isdisjoint({low, high})
         mine = client.get("/api/v1/exercises", headers=api_headers_second).get_json()

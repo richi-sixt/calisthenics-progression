@@ -4,12 +4,17 @@ import { renderWithProviders } from "@/test-utils";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import { useProfile } from "@/hooks/use-profile";
 import type { ExerciseDefinition, Workout } from "@/types";
 
 const TODAY_ISO = format(new Date(), "yyyy-MM-dd");
 
 jest.mock("@/hooks/use-exercises", () => ({ useExercises: jest.fn() }));
-jest.mock("@/hooks/use-categories", () => ({ useCategories: jest.fn() }));
+jest.mock("@/hooks/use-profile", () => ({ useProfile: jest.fn() }));
+jest.mock("@/hooks/use-categories", () => ({
+  useCategories: jest.fn(),
+  useCategoryGroups: jest.fn(() => ({ data: { data: [] } })),
+}));
 
 const pushUp: ExerciseDefinition = {
   id: 1,
@@ -24,6 +29,7 @@ const pushUp: ExerciseDefinition = {
   visibility: "private",
   progressions: [],
   parents: [],
+  skills: [],
   progression_levels: [],
   category_ids: [],
 };
@@ -41,6 +47,7 @@ const run: ExerciseDefinition = {
   visibility: "private",
   progressions: [],
   parents: [],
+  skills: [],
   progression_levels: [],
   category_ids: [],
 };
@@ -58,6 +65,7 @@ const plank: ExerciseDefinition = {
   visibility: "private",
   progressions: [{ id: 10, title: "Standard", step_order: 1, counting_type: "duration", thumbnail_url: null }],
   parents: [],
+  skills: [],
   progression_levels: [{ id: 10, name: "Standard", level_order: 1 }],
   category_ids: [],
 };
@@ -65,6 +73,7 @@ const plank: ExerciseDefinition = {
 beforeEach(() => {
   (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, plank, run] } });
   (useCategories as jest.Mock).mockReturnValue({ data: { data: [] } });
+  (useProfile as jest.Mock).mockReturnValue({ data: { data: { id: 1 } } });
 });
 
 function renderForm(defaultValues?: Partial<Workout>) {
@@ -374,5 +383,33 @@ describe("WorkoutForm", () => {
         })
       )
     );
+  });
+
+  it("tells the user that other users' exercises are copied on save", async () => {
+    const foreign: ExerciseDefinition = { ...pushUp, id: 9, title: "Tuck Planche", user_id: 2, username: "max" };
+    (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, foreign] } });
+
+    const { getByTestId, queryByText, findByText } = await renderForm();
+    expect(queryByText(/copied to your own exercises/)).toBeNull();
+
+    await selectExercise(getByTestId, 0, foreign);
+    expect(await findByText(/copied to your own exercises when you save: Tuck Planche/)).toBeTruthy();
+  });
+
+  it("shows no copy notice for own exercises", async () => {
+    const { getByTestId, queryByText } = await renderForm();
+    await selectExercise(getByTestId, 0, pushUp);
+    expect(queryByText(/copied to your own exercises/)).toBeNull();
+  });
+
+  it("shows the owner's username on other users' exercises in the picker", async () => {
+    const foreign: ExerciseDefinition = { ...pushUp, id: 9, title: "Tuck Planche", user_id: 2, username: "max" };
+    (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, foreign] } });
+
+    const { getByTestId, getByText, queryByText } = await renderForm();
+    await fireEvent.press(getByTestId("exercise-picker-0"));
+    expect(getByText("Tuck Planche (max)")).toBeTruthy();
+    expect(getByText("Push-Up")).toBeTruthy();
+    expect(queryByText("Push-Up (tester)")).toBeNull();
   });
 });

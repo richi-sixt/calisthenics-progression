@@ -17,16 +17,21 @@ from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
 from project.api.upload_routes import delete_image_files
 from project.models import (
+    CategoryGroup,
     Exercise,
+    ExerciseCategory,
     ExerciseDefinition,
     Follow,
     Message,
     Notification,
     Report,
     Set,
+    Skill,
+    SkillExercise,
     UploadedImage,
     User,
     UserBlock,
+    exercise_categories,
 )
 
 
@@ -186,10 +191,35 @@ def api_delete_account() -> ResponseReturnValue:
                 db.delete(Exercise).where(Exercise.id.in_(cross_exercise_ids))
             )
 
+    # 6b. Delete the user's skills (and their exercise links); other users'
+    # skills never contain this user's exercises.
+    db.session.execute(
+        db.delete(SkillExercise).where(
+            SkillExercise.skill_id.in_(
+                db.select(Skill.id).where(Skill.user_id == user.id)
+            )
+        )
+    )
+    db.session.execute(db.delete(Skill).where(Skill.user_id == user.id))
+
     # 7. Delete exercise definitions
     db.session.execute(
         db.delete(ExerciseDefinition).where(ExerciseDefinition.user_id == user.id)
     )
+
+    # 7b. Delete the user's categories (and join rows) and category groups
+    category_ids = db.select(ExerciseCategory.id).where(
+        ExerciseCategory.user_id == user.id
+    )
+    db.session.execute(
+        db.delete(exercise_categories).where(
+            exercise_categories.c.category_id.in_(category_ids)
+        )
+    )
+    db.session.execute(
+        db.delete(ExerciseCategory).where(ExerciseCategory.user_id == user.id)
+    )
+    db.session.execute(db.delete(CategoryGroup).where(CategoryGroup.user_id == user.id))
 
     # 8. Delete uploaded images (rows now, files once the commit succeeded)
     image_filenames = list(

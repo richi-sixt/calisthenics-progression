@@ -466,9 +466,24 @@ class TestApiCopyExercise:
         )
         assert resp.status_code == 201
         data = resp.get_json()["data"]
-        assert "Kopie" in data["title"]
+        assert data["title"] == "Push-ups (testuser)"
         assert data["user_id"] == second_user.id
         assert data["visibility"] == "followers"
+
+    def test_copy_twice_reuses_existing_copy(
+        self, client, api_headers_second, exercise_definition
+    ):
+        from project import db
+
+        exercise_definition.visibility = "public"
+        db.session.commit()
+
+        url = f"/api/v1/exercises/{exercise_definition.id}/copy"
+        first = client.post(url, headers=api_headers_second)
+        second = client.post(url, headers=api_headers_second)
+        assert first.status_code == 201
+        assert second.status_code == 200
+        assert first.get_json()["data"]["id"] == second.get_json()["data"]["id"]
 
     def test_copy_own_exercise(self, client, api_headers, exercise_definition):
         resp = client.post(

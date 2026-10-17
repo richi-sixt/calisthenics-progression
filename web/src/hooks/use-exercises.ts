@@ -14,7 +14,8 @@ export function useExercises(
   page: number = 1,
   userFilter: string = "mine",
   categoryIds?: number[],
-  username?: string
+  username?: string,
+  skillId?: number
 ) {
   const params: Record<string, string> = {
     page: String(page),
@@ -26,8 +27,11 @@ export function useExercises(
   if (categoryIds && categoryIds.length > 0) {
     params.category = categoryIds.join(",");
   }
+  if (skillId !== undefined) {
+    params.skill = String(skillId);
+  }
   return useQuery({
-    queryKey: ["exercises", page, userFilter, categoryIds, username],
+    queryKey: ["exercises", page, userFilter, categoryIds, username, skillId],
     queryFn: () => api.get<PaginatedResponse<ExerciseDefinition>>("/exercises", params),
   });
 }
@@ -62,8 +66,12 @@ export function useCreateExercise() {
       progressions?: number[];
       category_ids?: number[];
       thumbnail?: string | null;
+      is_catalog?: boolean;
     }) => api.post<ApiResponse<ExerciseDefinition>>("/exercises", data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
   });
 }
 
@@ -72,7 +80,10 @@ export function useUpdateExercise() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: number; [key: string]: unknown }) =>
       api.put<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
   });
 }
 
@@ -81,7 +92,10 @@ export function useDeleteExercise() {
   return useMutation({
     mutationFn: (id: number) =>
       api.delete<ApiResponse<{ message: string }>>(`/exercises/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
   });
 }
 
@@ -90,6 +104,9 @@ export function useCopyExercise() {
   return useMutation({
     mutationFn: (id: number) =>
       api.post<ApiResponse<ExerciseDefinition>>(`/exercises/${id}/copy`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+    },
   });
 }

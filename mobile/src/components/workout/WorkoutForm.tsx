@@ -4,6 +4,9 @@ import { useForm, useFieldArray, useWatch, Controller, type Control } from "reac
 import { format, parseISO } from "date-fns";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import { useProfile } from "@/hooks/use-profile";
+import { exerciseLabel } from "@/lib/exercise-label";
+import GroupedCategoryChips from "@/components/exercise/GroupedCategoryChips";
 import { useTranslation } from "@/i18n";
 import { ExercisePreviewModal } from "@/components/exercise/ExercisePreviewModal";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
@@ -113,11 +116,19 @@ export function WorkoutForm({
     return map;
   }, [exerciseDefs]);
 
-  const toggleCategory = (catId: number) => {
-    setSelectedCatIds((prev) =>
-      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
-    );
-  };
+  // Exercises owned by someone else are copied into "my exercises" on save.
+  const { data: profile } = useProfile();
+  const watchedExercises = useWatch({ control, name: "exercises" });
+  const foreignTitles = useMemo(() => {
+    const myId = profile?.data.id;
+    if (myId === undefined) return [];
+    const titles: string[] = [];
+    for (const ex of watchedExercises ?? []) {
+      const def = exerciseDefMap.get(Number(ex.exercise_definition_id));
+      if (def && def.user_id !== myId && !titles.includes(def.title)) titles.push(def.title);
+    }
+    return titles;
+  }, [profile, watchedExercises, exerciseDefMap]);
 
   const submit = (data: WorkoutFormData) => {
     onSubmit({
@@ -210,18 +221,8 @@ export function WorkoutForm({
         </View>
 
         {categories.length > 0 && (
-          <View className="flex-row flex-wrap gap-1.5">
-            {categories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() => toggleCategory(cat.id)}
-                className={`rounded-full px-2.5 py-1 ${selectedCatIds.includes(cat.id) ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
-              >
-                <Text className={`text-xs font-medium ${selectedCatIds.includes(cat.id) ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>
-                  {cat.name}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="gap-1">
+            <GroupedCategoryChips size="sm" selectedIds={selectedCatIds} onChange={setSelectedCatIds} />
             {selectedCatIds.length > 0 && (
               <Pressable onPress={() => setSelectedCatIds([])} className="px-2.5 py-1">
                 <Text className="text-xs font-medium text-gray-400 dark:text-gray-500">{t("common.clear")}</Text>
@@ -240,6 +241,7 @@ export function WorkoutForm({
             control={control}
             exerciseDefs={exerciseDefs}
             exerciseDefMap={exerciseDefMap}
+            labelOf={(def) => exerciseLabel(def, profile?.data.id)}
             onRemove={() => removeExercise(exIndex)}
           />
         ))}
@@ -273,6 +275,14 @@ export function WorkoutForm({
         />
       </View>
 
+      {foreignTitles.length > 0 && (
+        <View className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+          <Text className="text-sm text-amber-800 dark:text-amber-300">
+            {t("workoutForm.copyNotice", { titles: foreignTitles.join(", ") })}
+          </Text>
+        </View>
+      )}
+
       <Pressable
         onPress={handleSubmit(submit)}
         disabled={isPending}
@@ -289,12 +299,14 @@ function ExerciseBlock({
   control,
   exerciseDefs,
   exerciseDefMap,
+  labelOf,
   onRemove,
 }: {
   exIndex: number;
   control: Control<WorkoutFormData>;
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
+  labelOf: (def: ExerciseDefinition) => string;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -322,6 +334,7 @@ function ExerciseBlock({
               onChange={onChange}
               exerciseDefs={exerciseDefs}
               exerciseDefMap={exerciseDefMap}
+              labelOf={labelOf}
               testID={`exercise-picker-${exIndex}`}
             />
           )}
@@ -508,12 +521,14 @@ function ExercisePickerField({
   onChange,
   exerciseDefs,
   exerciseDefMap,
+  labelOf,
   testID,
 }: {
   value: string;
   onChange: (id: string) => void;
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
+  labelOf: (def: ExerciseDefinition) => string;
   testID: string;
 }) {
   const { t } = useTranslation();
@@ -524,8 +539,8 @@ function ExercisePickerField({
 
   const filteredDefs = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return query ? exerciseDefs.filter((def) => def.title.toLowerCase().includes(query)) : exerciseDefs;
-  }, [exerciseDefs, search]);
+    return query ? exerciseDefs.filter((def) => labelOf(def).toLowerCase().includes(query)) : exerciseDefs;
+  }, [exerciseDefs, search, labelOf]);
 
   const close = () => {
     setOpen(false);
@@ -543,7 +558,7 @@ function ExercisePickerField({
           numberOfLines={1}
           className={`flex-1 text-sm ${selectedDef ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}
         >
-          {selectedDef ? selectedDef.title : t("workoutForm.selectExercise")}
+          {selectedDef ? labelOf(selectedDef) : t("workoutForm.selectExercise")}
         </Text>
         <Text className="ml-2 text-gray-400 dark:text-gray-500">▾</Text>
       </Pressable>
@@ -579,7 +594,7 @@ function ExercisePickerField({
                 testID={`${testID}-option-${item.id}`}
                 className="border-b border-gray-100 dark:border-gray-800 px-4 py-3"
               >
-                <Text className="text-sm text-gray-900 dark:text-gray-100">{item.title}</Text>
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{labelOf(item)}</Text>
               </Pressable>
             )}
             ListEmptyComponent={

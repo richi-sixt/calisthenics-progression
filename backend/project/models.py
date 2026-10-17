@@ -320,6 +320,7 @@ class User(Base):
         }
         if include_email:
             data["email"] = self.email
+            data["admin"] = self.admin
         return data
 
 
@@ -458,6 +459,19 @@ class ExerciseDefinition(Base):
         db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
     )
     archived = db.Column(db.Boolean, nullable=False, default=False)
+    # Set on copies made from another user's exercise (copy-on-save / import);
+    # lets a repeated save reuse the existing copy instead of duplicating it.
+    copied_from_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exercises.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Part of the admin-curated app library: visible to every signed-in user,
+    # editable only by its (admin) owner, usable by others only via import.
+    is_catalog = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
     visibility = db.Column(
         db.String(10),
         nullable=False,
@@ -499,7 +513,7 @@ class ExerciseDefinition(Base):
         lazy="dynamic",
     )
 
-    # Categories this exercise belongs to (many-to-many, global)
+    # Categories this exercise belongs to (many-to-many, owned by the same user)
     categories = db.relationship(
         "ExerciseCategory",
         secondary=exercise_categories,
@@ -550,6 +564,8 @@ class ExerciseDefinition(Base):
 
     def is_visible_to(self, viewer: "User | None") -> bool:
         """Whether this exercise definition is visible to the given viewer."""
+        if self.is_catalog and viewer is not None:
+            return True
         return is_visible_to(self.user_id, self.visibility, viewer)  # type: ignore[arg-type]
 
     @property
@@ -565,6 +581,7 @@ class ExerciseDefinition(Base):
         viewer: "User | None" = None,
         progression_links: "list[ExerciseProgression] | None" = None,
         parent_links: "list[ExerciseProgression] | None" = None,
+        skills: "list[dict[str, Any]] | None" = None,
     ) -> dict[str, Any]:
         """Serialize exercise definition to dictionary for API responses.
 
@@ -576,6 +593,12 @@ class ExerciseDefinition(Base):
             progression_links = self.progression_links.all()  # type: ignore[attr-defined]
         if parent_links is None:
             parent_links = self.parent_links.all()  # type: ignore[attr-defined]
+        if skills is None:
+            skills = (
+                _skills_for_exercises([self.id], viewer).get(self.id, [])
+                if viewer is not None
+                else []
+            )
 
         def shown(other: "ExerciseDefinition") -> bool:
             return not other.archived and (
@@ -611,10 +634,14 @@ class ExerciseDefinition(Base):
             "user_image_file": self.athlete.image_file if self.athlete else None,
             "archived": self.archived,
             "visibility": self.visibility,
+            "is_catalog": self.is_catalog,
             "thumbnail": self.thumbnail,
             "thumbnail_url": self.thumbnail_url,
             "progressions": progressions,
             "parents": parents,
+            # The viewer's own skills this exercise is part of (skills are
+            # private, so this is empty for everyone but the owner).
+            "skills": skills,
             # Legacy shape for app versions that predate child-exercise
             # progressions (read-only, derived from `progressions`).
             "progression_levels": [
@@ -823,21 +850,155 @@ class ProgressionLevel(Base):
         }
 
 
-class ExerciseCategory(Base):
-    """Global category for exercise definitions (e.g. 'Upper Body', 'Push').
+class Skill(Base):
+    """A user's skill (e.g. Planche): an ordered list of exercises with targets."""
 
-    Categories are shared across all users to provide a consistent vocabulary
-    for filtering exercises in the library and workout forms.
+    __tablename__ = "skill"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "title", name="uq_skill_user_title"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title = db.Column(db.String(80), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    date_created = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    # App-library skill template curated by an admin (contains catalog exercises).
+    is_catalog = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    # Set on skills imported from the app library (avoids duplicate imports).
+    copied_from_id = db.Column(
+        db.Integer,
+        db.ForeignKey("skill.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    exercise_links = db.relationship(
+        "SkillExercise",
+        backref="skill",
+        cascade="all, delete-orphan",
+        order_by="SkillExercise.step_order",
+        lazy="select",
+    )
+
+    def __init__(
+        self, title: str, user_id: int, description: str | None = None
+    ) -> None:
+        """Initialize a skill."""
+        self.title = title
+        self.user_id = user_id
+        self.description = description
+
+    def __repr__(self) -> str:
+        """String representation of Skill."""
+        return f"<Skill {self.title}>"
+
+
+class SkillExercise(Base):
+    """An exercise within a skill, with the target needed to move on."""
+
+    __tablename__ = "skill_exercise"
+    __table_args__ = (
+        db.UniqueConstraint("skill_id", "exercise_id", name="uq_skill_exercise"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    skill_id = db.Column(
+        db.Integer,
+        db.ForeignKey("skill.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    exercise_id = db.Column(
+        db.Integer,
+        db.ForeignKey("exercises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    step_order = db.Column(db.Integer, nullable=False)
+    # Seconds for duration exercises, repetitions for reps exercises.
+    target_value = db.Column(db.Integer, nullable=False)
+
+    exercise = db.relationship("ExerciseDefinition", lazy="joined")
+
+    def __init__(
+        self, skill_id: int, exercise_id: int, step_order: int, target_value: int
+    ) -> None:
+        """Initialize a skill exercise link."""
+        self.skill_id = skill_id
+        self.exercise_id = exercise_id
+        self.step_order = step_order
+        self.target_value = target_value
+
+
+class CategoryGroup(Base):
+    """User-defined group for categories (e.g. 'Workout type', 'Body part')."""
+
+    __tablename__ = "category_group"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "name", name="uq_category_group_user_name"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
+    name = db.Column(db.String(80), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    def __init__(self, name: str, user_id: int, sort_order: int = 0) -> None:
+        """Initialize a category group."""
+        self.name = name
+        self.user_id = user_id
+        self.sort_order = sort_order
+
+    def __repr__(self) -> str:
+        """String representation of CategoryGroup."""
+        return f"<CategoryGroup {self.name}>"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize group to dictionary for API responses."""
+        return {"id": self.id, "name": self.name, "sort_order": self.sort_order}
+
+
+class ExerciseCategory(Base):
+    """Per-user category for exercise definitions (e.g. 'Upper Body', 'Push').
+
+    Categories belong to one user and can optionally be assigned to one of the
+    user's category groups.
     """
 
     __tablename__ = "exercise_category"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "name", name="uq_exercise_category_user_name"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
+    name = db.Column(db.String(80), nullable=False)
+    group_id = db.Column(
+        db.Integer,
+        db.ForeignKey("category_group.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, user_id: int, group_id: int | None = None) -> None:
         """Initialize an exercise category."""
         self.name = name
+        self.user_id = user_id
+        self.group_id = group_id
 
     def __repr__(self) -> str:
         """String representation of ExerciseCategory."""
@@ -845,10 +1006,22 @@ class ExerciseCategory(Base):
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize category to dictionary for API responses."""
-        return {
-            "id": self.id,
-            "name": self.name,
-        }
+        return {"id": self.id, "name": self.name, "group_id": self.group_id}
+
+
+DEFAULT_CATEGORY_GROUPS = ("Workout-Art", "Körperteile")
+
+
+def ensure_default_groups(user_id: int) -> None:
+    """Create the default category groups for a user that has none yet."""
+    has_group = db.session.scalar(
+        db.select(CategoryGroup.id).where(CategoryGroup.user_id == user_id).limit(1)
+    )
+    if has_group is not None:
+        return
+    for order, name in enumerate(DEFAULT_CATEGORY_GROUPS):
+        db.session.add(CategoryGroup(name=name, user_id=user_id, sort_order=order))
+    db.session.commit()
 
 
 class Message(Base):
@@ -1084,6 +1257,28 @@ def serialize_workouts(workouts: Sequence[Workout]) -> list[dict[str, Any]]:
     return [w.to_dict(exercises=by_workout.get(w.id, [])) for w in workouts]
 
 
+def _skills_for_exercises(
+    exercise_ids: Sequence[int], viewer: "User | None"
+) -> dict[int, list[dict[str, Any]]]:
+    """Map exercise id -> the viewer's skills containing it ({id, title})."""
+    result: dict[int, list[dict[str, Any]]] = {}
+    if viewer is None or not exercise_ids:
+        return result
+    rows = db.session.execute(
+        db.select(SkillExercise.exercise_id, Skill.id, Skill.title)
+        .join(Skill, Skill.id == SkillExercise.skill_id)
+        .where(
+            Skill.user_id == viewer.id,
+            Skill.is_catalog.is_(False),
+            SkillExercise.exercise_id.in_(exercise_ids),
+        )
+        .order_by(Skill.title.asc())
+    ).all()
+    for exercise_id, skill_id, title in rows:
+        result.setdefault(exercise_id, []).append({"id": skill_id, "title": title})
+    return result
+
+
 def serialize_exercise_definitions(
     definitions: Sequence[ExerciseDefinition], viewer: "User | None" = None
 ) -> list[dict[str, Any]]:
@@ -1129,11 +1324,14 @@ def serialize_exercise_definitions(
     ):
         parents.setdefault(link.child_id, []).append(link)
 
+    skills = _skills_for_exercises(ids, viewer)
+
     return [
         d.to_dict(
             viewer=viewer,
             progression_links=children.get(d.id, []),
             parent_links=parents.get(d.id, []),
+            skills=skills.get(d.id, []),
         )
         for d in definitions
     ]
