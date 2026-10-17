@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useExercises } from "@/hooks/use-exercises";
 import { useSkills } from "@/hooks/use-skills";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import SearchInput from "@/components/ui/search-input";
 import { useFollowing } from "@/hooks/use-social";
 import { useProfile } from "@/hooks/use-profile";
 import ExerciseCard from "@/components/exercise/exercise-card";
@@ -22,6 +24,8 @@ export default function ExercisesPage() {
   const [username, setUsername] = useState("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [skillId, setSkillId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const { data: skillsData } = useSkills();
   const skills = skillsData?.data ?? [];
   const { data: profile } = useProfile();
@@ -32,7 +36,8 @@ export default function ExercisesPage() {
     userFilter,
     categoryIds,
     username || undefined,
-    skillId ?? undefined
+    skillId ?? undefined,
+    debouncedSearch
   );
 
   const exercises = data?.data ?? [];
@@ -88,6 +93,18 @@ export default function ExercisesPage() {
             ))}
           </select>
         )}
+      </div>
+
+      <div className="mt-3">
+        <SearchInput
+          value={search}
+          onChange={(v) => {
+            setSearch(v);
+            setPage(1);
+          }}
+          placeholder={t("exercises.searchPlaceholder")}
+          className="w-full"
+        />
       </div>
 
       <div className="mt-3">

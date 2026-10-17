@@ -202,6 +202,13 @@ def api_list_exercises() -> ResponseReturnValue:
             ExerciseDefinition.categories.any(ExerciseCategory.id == cat_id)
         )
 
+    search = request.args.get("q", "").strip()
+    if search:
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.filter(
+            ExerciseDefinition.title.ilike(f"%{escaped}%", escape="\\")
+        )
+
     skill_id = request.args.get("skill", type=int)
     if skill_id is not None:
         # Skills are private: only the user's own skills can filter.

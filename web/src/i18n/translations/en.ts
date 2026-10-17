@@ -276,6 +276,7 @@ const en = {
   "catalog.emptyDescription": "The app library has no matching exercises yet.",
   "catalog.new": "New library exercise",
   "catalog.edit": "Edit",
+  "exercises.searchPlaceholder": "Search exercises...",
   "catalog.tabExercises": "Exercises",
   "catalog.tabSkills": "Skills",
   "catalog.newSkill": "New library skill",

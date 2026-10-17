@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, ScrollView } from "react-native";
-import { useExercises } from "@/hooks/use-exercises";
+import { useExercises, useExerciseDefs } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCategories } from "@/hooks/use-categories";
 import { useExerciseStats, useWorkoutStats } from "@/hooks/use-workout-stats";
 import { ListPickerField } from "@/components/statistics/ListPickerField";
@@ -52,8 +53,14 @@ export default function StatisticsScreen() {
     setExerciseId(id ? Number(id) : null);
   };
 
-  const { data: exercisesData } = useExercises(1, "mine");
-  const exercises = exercisesData?.data ?? [];
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const debouncedExerciseSearch = useDebouncedValue(exerciseSearch);
+  const { data: exercisesData } = useExercises(1, "mine", undefined, undefined, undefined, debouncedExerciseSearch);
+  const found = exercisesData?.data ?? [];
+  // Keep the selected exercise listed (and labelled) even if the search hides it.
+  const selectedMissing = exerciseId !== null && !found.some((ex) => ex.id === exerciseId);
+  const { defs: selectedDefs } = useExerciseDefs(selectedMissing ? [exerciseId] : []);
+  const exercises = [...selectedDefs, ...found];
 
   const { data: categoriesData } = useCategories();
   const categories = categoriesData?.data ?? [];
@@ -79,6 +86,7 @@ export default function StatisticsScreen() {
         onChange={handleExerciseChange}
         searchable
         searchPlaceholder={t("workoutForm.searchExercisePlaceholder")}
+        onSearchChange={setExerciseSearch}
         emptyText={t("workoutForm.noExercisesFound")}
         testID="statistics-exercise-picker"
       />

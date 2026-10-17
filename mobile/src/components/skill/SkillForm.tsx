@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useExercises } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { ListPickerField } from "@/components/statistics/ListPickerField";
+import { MarkdownField } from "@/components/ui/MarkdownField";
 import type { SkillInput } from "@/hooks/use-skills";
 import { useTranslation } from "@/i18n";
 import type { Skill } from "@/types";
@@ -27,7 +30,9 @@ export function SkillForm({
   error?: string | null;
 }) {
   const { t } = useTranslation();
-  const { data } = useExercises(1, "mine");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const { data } = useExercises(1, "mine", undefined, undefined, undefined, debouncedSearch);
   const [title, setTitle] = useState(defaultValues?.title ?? "");
   const [description, setDescription] = useState(defaultValues?.description ?? "");
   const [rows, setRows] = useState<Row[]>(
@@ -91,17 +96,13 @@ export function SkillForm({
         />
       </View>
 
-      <View>
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("skills.description")}</Text>
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-          className={`mt-1 ${inputClass}`}
-        />
-      </View>
+      <MarkdownField
+        testID="skill-description"
+        value={description}
+        onChange={setDescription}
+        label={t("skills.description")}
+        placeholder={t("exerciseForm.descriptionPlaceholder")}
+      />
 
       <View>
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("skills.exercises")}</Text>
@@ -151,23 +152,20 @@ export function SkillForm({
           ))}
         </View>
 
-        <Text className="mt-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("skills.addExercise")}</Text>
-        {candidates.length === 0 ? (
-          <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("skills.noCandidates")}</Text>
-        ) : (
-          <View className="mt-1 flex-row flex-wrap gap-2">
-            {candidates.map((e) => (
-              <Pressable
-                key={e.id}
-                testID={`skill-add-${e.id}`}
-                onPress={() => add(e.id)}
-                className="rounded-full bg-gray-100 px-3 py-1 dark:bg-gray-700"
-              >
-                <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">+ {e.title}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        <View className="mt-3">
+          <ListPickerField
+            label={t("skills.addExercise")}
+            placeholder={candidates.length === 0 ? t("skills.noCandidates") : t("skills.selectExercise")}
+            value={null}
+            items={candidates.map((e) => ({ id: String(e.id), label: e.title }))}
+            onChange={(id) => id && add(Number(id))}
+            searchable
+            searchPlaceholder={t("workoutForm.searchExercisePlaceholder")}
+            onSearchChange={setSearch}
+            emptyText={t("skills.noCandidates")}
+            testID="skill-add"
+          />
+        </View>
       </View>
 
       {error ? <Text className="text-sm text-red-600 dark:text-red-400">{error}</Text> : null}

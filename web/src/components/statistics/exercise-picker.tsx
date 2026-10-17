@@ -1,6 +1,9 @@
 "use client";
 
-import { useExercises } from "@/hooks/use-exercises";
+import { useState } from "react";
+import { useExercises, useExerciseDefs } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import SearchInput from "@/components/ui/search-input";
 import { useTranslation } from "@/i18n";
 
 export default function ExercisePicker({
@@ -11,14 +14,27 @@ export default function ExercisePicker({
   onChange: (id: number | null) => void;
 }) {
   const { t } = useTranslation();
-  const { data } = useExercises(1, "mine");
-  const exercises = data?.data ?? [];
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const { data } = useExercises(1, "mine", undefined, undefined, undefined, debouncedSearch);
+  const found = data?.data ?? [];
+
+  // Keep the selected exercise as an option even if the search hides it.
+  const selectedMissing = value !== null && !found.some((ex) => ex.id === value);
+  const { defs: selectedDefs } = useExerciseDefs(selectedMissing ? [value] : []);
+  const exercises = [...selectedDefs, ...found];
 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {t("statistics.exercisePicker.label")}
       </label>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder={t("exercises.searchPlaceholder")}
+        className="mt-1 w-full max-w-xs"
+      />
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}

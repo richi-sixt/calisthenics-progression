@@ -1,15 +1,18 @@
-import { fireEvent, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, waitFor } from "@testing-library/react-native";
 import { format } from "date-fns";
 import { renderWithProviders } from "@/test-utils";
 import { WorkoutForm } from "@/components/workout/WorkoutForm";
-import { useExercises } from "@/hooks/use-exercises";
+import { useExercises, useExerciseDefs } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useProfile } from "@/hooks/use-profile";
 import type { ExerciseDefinition, Workout } from "@/types";
 
 const TODAY_ISO = format(new Date(), "yyyy-MM-dd");
 
-jest.mock("@/hooks/use-exercises", () => ({ useExercises: jest.fn() }));
+jest.mock("@/hooks/use-exercises", () => ({
+  useExercises: jest.fn(),
+  useExerciseDefs: jest.fn(() => ({ defs: [], isLoading: false })),
+}));
 jest.mock("@/hooks/use-profile", () => ({ useProfile: jest.fn() }));
 jest.mock("@/hooks/use-categories", () => ({
   useCategories: jest.fn(),
@@ -411,5 +414,46 @@ describe("WorkoutForm", () => {
     expect(getByText("Tuck Planche (max)")).toBeTruthy();
     expect(getByText("Push-Up")).toBeTruthy();
     expect(queryByText("Push-Up (tester)")).toBeNull();
+  });
+
+  it("searches exercises on the server instead of filtering the loaded page", async () => {
+    jest.useFakeTimers();
+    try {
+      const { getByTestId } = await renderForm();
+      await fireEvent.press(getByTestId("exercise-picker-0"));
+      await fireEvent.changeText(getByTestId("exercise-picker-0-search"), "planche");
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(useExercises).toHaveBeenLastCalledWith(1, "mine", undefined, undefined, undefined, "planche");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("keeps an already selected exercise known when the list no longer contains it", async () => {
+    const hidden: ExerciseDefinition = { ...pushUp, id: 77, title: "Far Away Exercise" };
+    (useExerciseDefs as jest.Mock).mockImplementation((ids: number[]) => ({
+      defs: ids.includes(77) ? [hidden] : [],
+      isLoading: false,
+    }));
+    const defaultValues: Partial<Workout> = {
+      title: "W",
+      exercises: [
+        {
+          id: 1,
+          exercise_order: 1,
+          workout_id: 1,
+          exercise_definition_id: 77,
+          exercise_definition_title: "Far Away Exercise",
+          counting_type: "reps",
+          notes: null,
+          sets: [{ id: 1, set_order: 1, progression: null, reps: 5, duration: null, distance_km: null, duration_formatted: "0:00" }],
+        },
+      ],
+    };
+    const { getByText } = await renderForm(defaultValues);
+    expect(getByText("Far Away Exercise")).toBeTruthy();
+    expect(useExerciseDefs).toHaveBeenCalledWith([77]);
   });
 });

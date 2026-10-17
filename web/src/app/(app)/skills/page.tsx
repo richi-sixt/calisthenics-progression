@@ -6,6 +6,7 @@ import PageHeader from "@/components/ui/page-header";
 import ErrorMessage from "@/components/ui/error-message";
 import EmptyState from "@/components/ui/empty-state";
 import { useTranslation } from "@/i18n";
+import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { CardListSkeleton, CategorySkeleton } from "@/components/ui/skeleton";
 
 export default function SkillsPage() {
@@ -55,7 +56,7 @@ export default function SkillsPage() {
               </div>
               {skill.description && (
                 <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
-                  {skill.description}
+                  {markdownToPlainText(skill.description)}
                 </p>
               )}
             </Link>

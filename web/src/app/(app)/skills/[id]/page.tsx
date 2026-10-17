@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSkill, useDeleteSkill } from "@/hooks/use-skills";
 import SkillExerciseRow from "@/components/skill/skill-exercise-row";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { Markdown } from "@/components/ui/markdown";
 import Loading from "@/components/ui/loading";
 import ErrorMessage from "@/components/ui/error-message";
 import { useTranslation } from "@/i18n";
@@ -70,9 +71,7 @@ export default function SkillDetailPage({ params }: { params: Promise<{ id: stri
       />
 
       {skill.description && (
-        <p className="mt-4 whitespace-pre-line text-gray-600 dark:text-gray-400">
-          {skill.description}
-        </p>
+        <Markdown className="mt-4 text-gray-600 dark:text-gray-400">{skill.description}</Markdown>
       )}
 
       {skill.exercises.length === 0 ? (

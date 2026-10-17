@@ -11,7 +11,7 @@ from flask.cli import AppGroup
 
 from project import db
 from project.api.upload_routes import delete_image_files, exercise_image_dir
-from project.models import ExerciseDefinition, Report, UploadedImage, User
+from project.models import ExerciseDefinition, Report, Skill, UploadedImage, User
 
 IMAGE_FILENAME = re.compile(r"[0-9a-f]{32}\.webp")
 IMAGE_REFERENCE = re.compile(r"/static/exercise_images/([0-9a-f]{32}\.webp)")
@@ -34,7 +34,7 @@ class OrphanReport:
 
 
 def referenced_image_filenames() -> set[str]:
-    """Filenames used by any exercise, as thumbnail or in its description.
+    """Filenames used by any exercise (thumbnail or description) or skill description.
 
     Covers all users, incl. archived exercises.
 
@@ -48,9 +48,17 @@ def referenced_image_filenames() -> set[str]:
             )
         )
     )
-    descriptions = db.session.scalars(
-        db.select(ExerciseDefinition.description).where(
-            ExerciseDefinition.description.contains("/static/exercise_images/")
+    descriptions = list(
+        db.session.scalars(
+            db.select(ExerciseDefinition.description).where(
+                ExerciseDefinition.description.contains("/static/exercise_images/")
+            )
+        )
+    ) + list(
+        db.session.scalars(
+            db.select(Skill.description).where(
+                Skill.description.contains("/static/exercise_images/")
+            )
         )
     )
     linked = {m for text in descriptions if text for m in IMAGE_REFERENCE.findall(text)}

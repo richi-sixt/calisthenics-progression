@@ -19,6 +19,7 @@ export function ListPickerField({
   searchable = false,
   searchPlaceholder,
   emptyText,
+  onSearchChange,
   testID,
 }: {
   label: string;
@@ -29,6 +30,8 @@ export function ListPickerField({
   searchable?: boolean;
   searchPlaceholder?: string;
   emptyText?: string;
+  /** Search server-side: called with the typed text (and "" on close); `items` are then used as given. */
+  onSearchChange?: (query: string) => void;
   testID?: string;
 }) {
   const { t } = useTranslation();
@@ -38,13 +41,14 @@ export function ListPickerField({
   const selected = items.find((item) => item.id === value);
   const query = search.trim().toLowerCase();
   const filtered =
-    searchable && query
+    searchable && query && !onSearchChange
       ? items.filter((item) => item.label.toLowerCase().includes(query))
       : items;
 
   const close = () => {
     setOpen(false);
     setSearch("");
+    onSearchChange?.("");
   };
 
   return (
@@ -88,7 +92,10 @@ export function ListPickerField({
               className="mx-4 mb-3 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
               placeholder={searchPlaceholder}
               value={search}
-              onChangeText={setSearch}
+              onChangeText={(text) => {
+                setSearch(text);
+                onSearchChange?.(text);
+              }}
               autoFocus
             />
           )}

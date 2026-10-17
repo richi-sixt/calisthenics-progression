@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   ExerciseDefinition,
@@ -15,7 +15,8 @@ export function useExercises(
   userFilter: string = "mine",
   categoryIds?: number[],
   username?: string,
-  skillId?: number
+  skillId?: number,
+  search?: string
 ) {
   const params: Record<string, string> = {
     page: String(page),
@@ -30,9 +31,33 @@ export function useExercises(
   if (skillId !== undefined) {
     params.skill = String(skillId);
   }
+  if (search && search.trim()) {
+    params.q = search.trim();
+  }
   return useQuery({
-    queryKey: ["exercises", page, userFilter, categoryIds, username, skillId],
+    queryKey: ["exercises", page, userFilter, categoryIds, username, skillId, search?.trim() ?? ""],
     queryFn: () => api.get<PaginatedResponse<ExerciseDefinition>>("/exercises", params),
+    // Keep showing the previous list while a new search/filter loads, so
+    // forms that wait for the list don't unmount (and lose focus) mid-typing.
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Load specific exercises by id (shares the cache with `useExercise`).
+ * Used to keep already selected exercises available while a picker's list is
+ * narrowed by a search.
+ */
+export function useExerciseDefs(ids: number[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["exercises", id],
+      queryFn: () => api.get<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`),
+    })),
+    combine: (results) => ({
+      defs: results.flatMap((r) => (r.data ? [r.data.data] : [])),
+      isLoading: results.some((r) => r.isLoading),
+    }),
   });
 }
 

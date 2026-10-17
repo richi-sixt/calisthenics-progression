@@ -10,6 +10,7 @@ import {
 import { formatSkillValue } from "@/components/skill/format";
 import { CardListSkeleton, ExerciseCardSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
+import { markdownToPlainText } from "@/lib/markdown";
 import type { CatalogExercise, CatalogSkill } from "@/types";
 
 export default function CatalogScreen() {
@@ -93,7 +94,7 @@ export default function CatalogScreen() {
               <Text className="font-medium text-gray-900 dark:text-gray-100">{item.title}</Text>
               {item.description ? (
                 <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400" numberOfLines={2}>
-                  {item.description}
+                  {markdownToPlainText(item.description)}
                 </Text>
               ) : null}
               <View className="mt-2 gap-0.5">

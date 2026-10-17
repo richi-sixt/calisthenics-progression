@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator, Switch, Modal, FlatList } from "react-native";
 import { useForm, useFieldArray, useWatch, Controller, type Control } from "react-hook-form";
 import { format, parseISO } from "date-fns";
-import { useExercises } from "@/hooks/use-exercises";
+import { useExercises, useExerciseDefs } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useCategories } from "@/hooks/use-categories";
 import { useProfile } from "@/hooks/use-profile";
 import { exerciseLabel } from "@/lib/exercise-label";
@@ -74,8 +75,18 @@ export function WorkoutForm({
   const [showOnlyMine, setShowOnlyMine] = useState(true);
   const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
 
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+
   const userFilter = showOnlyMine ? "mine" : "all";
-  const { data: exData } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
+  const { data: exData } = useExercises(
+    1,
+    userFilter,
+    selectedCatIds.length > 0 ? selectedCatIds : undefined,
+    undefined,
+    undefined,
+    debouncedSearch
+  );
   const exerciseDefs = useMemo(() => exData?.data ?? [], [exData]);
 
   const { data: catData } = useCategories();
@@ -110,15 +121,30 @@ export function WorkoutForm({
     remove: removeExercise,
   } = useFieldArray({ control, name: "exercises" });
 
+  // Selected exercises must stay known (label, counting type) even when the
+  // search, category filter or "only mine" hides them from the list.
+  const watchedExercises = useWatch({ control, name: "exercises" });
+  const listedIds = useMemo(() => new Set(exerciseDefs.map((d) => d.id)), [exerciseDefs]);
+  const missingIds = useMemo(
+    () => [
+      ...new Set(
+        (watchedExercises ?? [])
+          .map((ex) => Number(ex.exercise_definition_id))
+          .filter((id) => id > 0 && !listedIds.has(id))
+      ),
+    ],
+    [watchedExercises, listedIds]
+  );
+  const { defs: selectedDefs } = useExerciseDefs(missingIds);
+
   const exerciseDefMap = useMemo(() => {
     const map = new Map<number, ExerciseDefinition>();
-    for (const def of exerciseDefs) map.set(def.id, def);
+    for (const def of [...exerciseDefs, ...selectedDefs]) map.set(def.id, def);
     return map;
-  }, [exerciseDefs]);
+  }, [exerciseDefs, selectedDefs]);
 
   // Exercises owned by someone else are copied into "my exercises" on save.
   const { data: profile } = useProfile();
-  const watchedExercises = useWatch({ control, name: "exercises" });
   const foreignTitles = useMemo(() => {
     const myId = profile?.data.id;
     if (myId === undefined) return [];
@@ -242,6 +268,7 @@ export function WorkoutForm({
             exerciseDefs={exerciseDefs}
             exerciseDefMap={exerciseDefMap}
             labelOf={(def) => exerciseLabel(def, profile?.data.id)}
+            onSearchChange={setSearch}
             onRemove={() => removeExercise(exIndex)}
           />
         ))}
@@ -300,6 +327,7 @@ function ExerciseBlock({
   exerciseDefs,
   exerciseDefMap,
   labelOf,
+  onSearchChange,
   onRemove,
 }: {
   exIndex: number;
@@ -307,6 +335,7 @@ function ExerciseBlock({
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
   labelOf: (def: ExerciseDefinition) => string;
+  onSearchChange: (query: string) => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -335,6 +364,7 @@ function ExerciseBlock({
               exerciseDefs={exerciseDefs}
               exerciseDefMap={exerciseDefMap}
               labelOf={labelOf}
+              onSearchChange={onSearchChange}
               testID={`exercise-picker-${exIndex}`}
             />
           )}
@@ -522,6 +552,7 @@ function ExercisePickerField({
   exerciseDefs,
   exerciseDefMap,
   labelOf,
+  onSearchChange,
   testID,
 }: {
   value: string;
@@ -529,6 +560,8 @@ function ExercisePickerField({
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
   labelOf: (def: ExerciseDefinition) => string;
+  /** Called with the typed text (and "" on close); the parent searches server-side. */
+  onSearchChange: (query: string) => void;
   testID: string;
 }) {
   const { t } = useTranslation();
@@ -537,14 +570,10 @@ function ExercisePickerField({
 
   const selectedDef = value ? exerciseDefMap.get(Number(value)) : undefined;
 
-  const filteredDefs = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return query ? exerciseDefs.filter((def) => labelOf(def).toLowerCase().includes(query)) : exerciseDefs;
-  }, [exerciseDefs, search, labelOf]);
-
   const close = () => {
     setOpen(false);
     setSearch("");
+    onSearchChange("");
   };
 
   return (
@@ -577,12 +606,15 @@ function ExercisePickerField({
             className="mx-4 mb-3 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
             placeholder={t("workoutForm.searchExercisePlaceholder")}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(text) => {
+              setSearch(text);
+              onSearchChange(text);
+            }}
             autoFocus
             testID={`${testID}-search`}
           />
           <FlatList
-            data={filteredDefs}
+            data={exerciseDefs}
             keyExtractor={(item) => String(item.id)}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (

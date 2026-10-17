@@ -1,17 +1,44 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ExerciseDefinition, ExerciseWorkoutRef, PaginatedResponse, ApiResponse, Visibility } from "@/types";
 
-export function useExercises(page: number = 1, userFilter: string = "mine", categoryIds?: number[], username?: string, skillId?: number) {
+export function useExercises(
+  page: number = 1,
+  userFilter: string = "mine",
+  categoryIds?: number[],
+  username?: string,
+  skillId?: number,
+  search?: string
+) {
   const params: Record<string, string> = { page: String(page), user: userFilter };
   if (username) params.username = username;
   if (categoryIds && categoryIds.length > 0) {
     params.category = categoryIds.join(",");
   }
   if (skillId !== undefined) params.skill = String(skillId);
+  if (search && search.trim()) params.q = search.trim();
   return useQuery({
-    queryKey: ["exercises", page, userFilter, categoryIds, username, skillId],
+    queryKey: ["exercises", page, userFilter, categoryIds, username, skillId, search?.trim() ?? ""],
     queryFn: () => api.get<PaginatedResponse<ExerciseDefinition>>("/exercises", params),
+    // Keep showing the previous list while a new search/filter loads.
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Load specific exercises by id (shares the cache with `useExercise`), so
+ * already selected exercises stay known while a picker's list is searched.
+ */
+export function useExerciseDefs(ids: number[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["exercises", id],
+      queryFn: () => api.get<ApiResponse<ExerciseDefinition>>(`/exercises/${id}`),
+    })),
+    combine: (results) => ({
+      defs: results.flatMap((r) => (r.data ? [r.data.data] : [])),
+      isLoading: results.some((r) => r.isLoading),
+    }),
   });
 }
 

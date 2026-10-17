@@ -5,6 +5,11 @@ import { useExercises } from "@/hooks/use-exercises";
 import type { ExerciseDefinition } from "@/types";
 
 jest.mock("@/hooks/use-exercises", () => ({ useExercises: jest.fn() }));
+jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  api: { upload: jest.fn() },
+  ApiError: class ApiError extends Error {},
+}));
 
 const base = {
   description: null,
@@ -32,8 +37,9 @@ describe("SkillForm", () => {
     const { queryByTestId, getByTestId } = await renderWithProviders(
       <SkillForm onSubmit={jest.fn()} isPending={false} />
     );
-    expect(getByTestId("skill-add-1")).toBeTruthy();
-    expect(queryByTestId("skill-add-2")).toBeNull();
+    await fireEvent.press(getByTestId("skill-add"));
+    expect(getByTestId("skill-add-option-1")).toBeTruthy();
+    expect(queryByTestId("skill-add-option-2")).toBeNull();
   });
 
   it("submits title and ordered exercises with targets", async () => {
@@ -41,7 +47,8 @@ describe("SkillForm", () => {
     const { getByTestId } = await renderWithProviders(<SkillForm onSubmit={onSubmit} isPending={false} />);
 
     await fireEvent.changeText(getByTestId("skill-title"), "  Planche ");
-    await fireEvent.press(getByTestId("skill-add-1"));
+    await fireEvent.press(getByTestId("skill-add"));
+    await fireEvent.press(getByTestId("skill-add-option-1"));
     await fireEvent.changeText(getByTestId("skill-target-1"), "15");
     await fireEvent.press(getByTestId("skill-save"));
 
@@ -57,5 +64,28 @@ describe("SkillForm", () => {
     const { getByTestId } = await renderWithProviders(<SkillForm onSubmit={onSubmit} isPending={false} />);
     await fireEvent.press(getByTestId("skill-save"));
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits the description as entered (Markdown, incl. images)", async () => {
+    const onSubmit = jest.fn();
+    const { getByTestId } = await renderWithProviders(<SkillForm onSubmit={onSubmit} isPending={false} />);
+
+    await fireEvent.changeText(getByTestId("skill-title"), "Planche");
+    await fireEvent.changeText(
+      getByTestId("skill-description"),
+      "**Goal**\n\n![x](/static/exercise_images/0123456789abcdef0123456789abcdef.webp)"
+    );
+    await fireEvent.press(getByTestId("skill-save"));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: "Planche",
+      description: "**Goal**\n\n![x](/static/exercise_images/0123456789abcdef0123456789abcdef.webp)",
+      exercises: [],
+    });
+  });
+
+  it("offers an add-image button for the description", async () => {
+    const { getByTestId } = await renderWithProviders(<SkillForm onSubmit={jest.fn()} isPending={false} />);
+    expect(getByTestId("skill-description-add-image")).toBeTruthy();
   });
 });

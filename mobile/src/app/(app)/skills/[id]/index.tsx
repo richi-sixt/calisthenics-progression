@@ -2,6 +2,7 @@ import { ScrollView, View, ActivityIndicator, Text, Pressable, Alert } from "rea
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSkill, useDeleteSkill } from "@/hooks/use-skills";
 import { SkillExerciseRow } from "@/components/skill/SkillExerciseRow";
+import { Markdown } from "@/components/ui/Markdown";
 import { useTranslation } from "@/i18n";
 
 export default function SkillDetailScreen() {
@@ -52,7 +53,11 @@ export default function SkillDetailScreen() {
         </Pressable>
       </View>
 
-      {skill.description ? <Text className="mt-4 text-gray-600 dark:text-gray-400">{skill.description}</Text> : null}
+      {skill.description ? (
+        <Markdown className="mt-4" textClassName="text-gray-600 dark:text-gray-400" testID="skill-description-view">
+          {skill.description}
+        </Markdown>
+      ) : null}
 
       {skill.exercises.length === 0 ? (
         <Text className="mt-6 text-sm text-gray-500 dark:text-gray-400">{t("skills.noExercises")}</Text>

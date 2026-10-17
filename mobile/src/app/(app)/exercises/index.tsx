@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl, Modal } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, RefreshControl, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { useExercises } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSkills } from "@/hooks/use-skills";
 import { useFollowing } from "@/hooks/use-social";
 import { useProfile } from "@/hooks/use-profile";
@@ -24,6 +25,8 @@ export default function ExercisesScreen() {
   const followingUsers = followingData?.data ?? [];
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [skillId, setSkillId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const { data: skillsData } = useSkills();
   const skills = skillsData?.data ?? [];
   const { data, isLoading, error, refetch, isRefetching } = useExercises(
@@ -31,7 +34,8 @@ export default function ExercisesScreen() {
     userFilter,
     categoryIds,
     username || undefined,
-    skillId ?? undefined
+    skillId ?? undefined,
+    debouncedSearch
   );
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
@@ -80,6 +84,19 @@ export default function ExercisesScreen() {
           </Pressable>
         )}
       </View>
+
+      <TextInput
+        testID="exercises-search"
+        value={search}
+        onChangeText={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
+        placeholder={t("workoutForm.searchExercisePlaceholder")}
+        autoCapitalize="none"
+        clearButtonMode="while-editing"
+        className="mt-3 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm"
+      />
 
       {categories.length > 0 && (
         <View className="mt-3">

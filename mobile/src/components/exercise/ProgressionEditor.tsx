@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useExercises } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ListPickerField } from "@/components/statistics/ListPickerField";
 import { useTranslation } from "@/i18n";
 
@@ -23,7 +25,9 @@ export function ProgressionEditor({
   excludeIds?: number[];
 }) {
   const { t } = useTranslation();
-  const { data } = useExercises(1, "mine");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const { data } = useExercises(1, "mine", undefined, undefined, undefined, debouncedSearch);
 
   const taken = new Set([...value.map((v) => v.id), ...excludeIds]);
   const candidates = (data?.data ?? []).filter((e) => !taken.has(e.id));
@@ -92,6 +96,8 @@ export function ProgressionEditor({
             if (exercise) onChange([...value, { id: exercise.id, title: exercise.title }]);
           }}
           searchable
+          searchPlaceholder={t("workoutForm.searchExercisePlaceholder")}
+          onSearchChange={setSearch}
           emptyText={t("exerciseForm.noProgressionCandidates")}
           testID="progression-add"
         />

@@ -19,6 +19,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useExercises } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import SearchInput from "@/components/ui/search-input";
 import { useCatalogExercises } from "@/hooks/use-catalog";
 import { useTranslation } from "@/i18n";
 
@@ -117,8 +119,10 @@ export default function ProgressionEditor({
   catalog?: boolean;
 }) {
   const { t } = useTranslation();
-  const { data: ownData } = useExercises(1, "mine");
-  const { data: catalogData } = useCatalogExercises(1, "");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const { data: ownData } = useExercises(1, "mine", undefined, undefined, undefined, debouncedSearch);
+  const { data: catalogData } = useCatalogExercises(1, debouncedSearch);
   const data = catalog ? catalogData : ownData;
   const [selected, setSelected] = useState("");
 
@@ -171,6 +175,12 @@ export default function ProgressionEditor({
           </ul>
         </SortableContext>
       </DndContext>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder={t("exercises.searchPlaceholder")}
+        className="mt-2 w-full"
+      />
       <div className="mt-2 flex items-center gap-2">
         <select
           value={selected}

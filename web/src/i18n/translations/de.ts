@@ -278,6 +278,7 @@ const de: Record<keyof typeof en, string> = {
   "catalog.emptyDescription": "Die App-Bibliothek hat dazu noch keine Übungen.",
   "catalog.new": "Neue Bibliotheks-Übung",
   "catalog.edit": "Bearbeiten",
+  "exercises.searchPlaceholder": "Übungen suchen...",
   "catalog.tabExercises": "Übungen",
   "catalog.tabSkills": "Skills",
   "catalog.newSkill": "Neuer Bibliotheks-Skill",

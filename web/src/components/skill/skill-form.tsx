@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCatalogExercises } from "@/hooks/use-catalog";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import SearchInput from "@/components/ui/search-input";
+import MarkdownField from "@/components/ui/markdown-field";
 import type { SkillInput } from "@/hooks/use-skills";
 import { useTranslation } from "@/i18n";
 import type { Skill } from "@/types";
@@ -35,8 +38,10 @@ export default function SkillForm({
 }) {
   const { t } = useTranslation();
   const isCatalog = catalog ?? defaultValues?.is_catalog ?? false;
-  const { data: ownData } = useExercises(1, "mine");
-  const { data: catalogData } = useCatalogExercises(1, "");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const { data: ownData } = useExercises(1, "mine", undefined, undefined, undefined, debouncedSearch);
+  const { data: catalogData } = useCatalogExercises(1, debouncedSearch);
   const data = isCatalog ? catalogData : ownData;
   const [title, setTitle] = useState(defaultValues?.title ?? "");
   const [description, setDescription] = useState(defaultValues?.description ?? "");
@@ -110,17 +115,12 @@ export default function SkillForm({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {t("skills.description")}
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className={`mt-1 w-full ${inputClass}`}
-        />
-      </div>
+      <MarkdownField
+        value={description}
+        onChange={setDescription}
+        label={t("skills.description")}
+        placeholder={t("exerciseForm.descriptionPlaceholder")}
+      />
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -190,6 +190,12 @@ export default function SkillForm({
           ))}
         </ul>
 
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t("exercises.searchPlaceholder")}
+          className="mt-2 w-full"
+        />
         <div className="mt-2 flex items-center gap-2">
           <select
             value={selected}

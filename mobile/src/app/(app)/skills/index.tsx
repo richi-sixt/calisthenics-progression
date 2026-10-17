@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useSkills } from "@/hooks/use-skills";
 import { CardListSkeleton, CategorySkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
+import { markdownToPlainText } from "@/lib/markdown";
 import type { Skill } from "@/types";
 
 export default function SkillsScreen() {
@@ -56,7 +57,7 @@ export default function SkillsScreen() {
               </View>
               {item.description ? (
                 <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400" numberOfLines={2}>
-                  {item.description}
+                  {markdownToPlainText(item.description)}
                 </Text>
               ) : null}
             </Pressable>

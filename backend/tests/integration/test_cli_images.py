@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from project import db
-from project.models import ExerciseDefinition, UploadedImage
+from project.models import ExerciseDefinition, Skill, UploadedImage
 
 
 def _name(n: int) -> str:
@@ -93,6 +93,23 @@ class TestCleanupOrphans:
 
         assert (image_dir / shared).exists()
         assert _filenames(app) == {shared}
+
+    def test_skill_description_reference_counts(self, app, user, image_dir):
+        used = _add_image(app, image_dir, user.id, 1)
+        with app.app_context():
+            db.session.add(
+                Skill(
+                    title="Planche",
+                    user_id=user.id,
+                    description=f"![x](/static/exercise_images/{used})",
+                )
+            )
+            db.session.commit()
+
+        _run(app, "--delete")
+
+        assert (image_dir / used).exists()
+        assert _filenames(app) == {used}
 
     def test_recent_uploads_are_protected(self, app, user, image_dir):
         # Uploaded into a form that hasn't been saved yet.

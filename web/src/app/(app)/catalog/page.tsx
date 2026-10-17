@@ -98,7 +98,7 @@ export default function CatalogPage() {
               <p className="font-medium text-gray-900 dark:text-gray-100">{skill.title}</p>
               {skill.description && (
                 <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
-                  {skill.description}
+                  {markdownToPlainText(skill.description)}
                 </p>
               )}
               <ol className="mt-2 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">

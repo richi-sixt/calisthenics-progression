@@ -3,7 +3,9 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
-import { useExercises } from "@/hooks/use-exercises";
+import { useExercises, useExerciseDefs } from "@/hooks/use-exercises";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import SearchInput from "@/components/ui/search-input";
 import { useCategories } from "@/hooks/use-categories";
 import { useProfile } from "@/hooks/use-profile";
 import { exerciseLabel } from "@/lib/exercise-label";
@@ -72,10 +74,19 @@ export default function WorkoutExerciseForm({
   // Exercise filtering state
   const [showOnlyMine, setShowOnlyMine] = useState(true);
   const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   const userFilter = showOnlyMine ? "mine" : "all";
-  const { data: exData, isLoading: exercisesLoading } = useExercises(1, userFilter, selectedCatIds.length > 0 ? selectedCatIds : undefined);
-  const exerciseDefs = useMemo(() => exData?.data ?? [], [exData]);
+  const { data: exData, isLoading: exercisesLoading } = useExercises(
+    1,
+    userFilter,
+    selectedCatIds.length > 0 ? selectedCatIds : undefined,
+    undefined,
+    undefined,
+    debouncedSearch
+  );
+  const foundDefs = useMemo(() => exData?.data ?? [], [exData]);
 
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
@@ -113,6 +124,23 @@ export default function WorkoutExerciseForm({
     remove: removeExercise,
   } = useFieldArray({ control, name: "exercises" });
 
+  // Already selected exercises must stay available (and known) even when the
+  // search, category filter or "only mine" hides them from the list.
+  const watchedExercises = useWatch({ control, name: "exercises" });
+  const foundIds = useMemo(() => new Set(foundDefs.map((d) => d.id)), [foundDefs]);
+  const missingIds = useMemo(
+    () => [
+      ...new Set(
+        (watchedExercises ?? [])
+          .map((ex) => Number(ex.exercise_definition_id))
+          .filter((id) => id > 0 && !foundIds.has(id))
+      ),
+    ],
+    [watchedExercises, foundIds]
+  );
+  const { defs: selectedDefs, isLoading: selectedLoading } = useExerciseDefs(missingIds);
+  const exerciseDefs = useMemo(() => [...foundDefs, ...selectedDefs], [foundDefs, selectedDefs]);
+
   // Build a lookup map from exercise definition id -> definition
   const exerciseDefMap = useMemo(() => {
     const map = new Map<number, ExerciseDefinition>();
@@ -124,7 +152,6 @@ export default function WorkoutExerciseForm({
 
   // Exercises owned by someone else are copied into "my exercises" on save.
   const { data: profile } = useProfile();
-  const watchedExercises = useWatch({ control, name: "exercises" });
   const foreignTitles = useMemo(() => {
     const myId = profile?.data.id;
     if (myId === undefined) return [];
@@ -168,7 +195,7 @@ export default function WorkoutExerciseForm({
   // The exercise <select>s are uncontrolled: react-hook-form applies the default value
   // when they mount, so the matching <option> must already exist. Wait for the
   // definitions on first load, otherwise saved exercises render as "Select exercise".
-  if (exercisesLoading && defaultValues?.exercises?.length) {
+  if ((exercisesLoading || selectedLoading) && defaultValues?.exercises?.length) {
     return <p className="text-gray-500 dark:text-gray-400">{t("common.loading")}</p>;
   }
 
@@ -218,6 +245,13 @@ export default function WorkoutExerciseForm({
           />
           {t("workoutForm.showOnlyMine")}
         </label>
+
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t("exercises.searchPlaceholder")}
+          className="w-full"
+        />
 
         {categories.length > 0 && (
           <div className="space-y-1">

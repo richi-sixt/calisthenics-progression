@@ -682,3 +682,40 @@ class TestApiExerciseThumbnail:
             data=json.dumps({"thumbnail": THUMB, "title": "Mine"}),
         )
         assert resp.status_code == 200
+
+
+class TestApiExerciseSearch:
+    def _make(self, client, headers, *titles):
+        for title in titles:
+            resp = client.post(
+                "/api/v1/exercises",
+                headers=headers,
+                data=json.dumps({"title": title}),
+            )
+            assert resp.status_code == 201
+
+    def test_search_matches_title_case_insensitive(self, client, api_headers):
+        self._make(client, api_headers, "Tuck Planche", "Pike Push-up", "Planche Lean")
+        resp = client.get("/api/v1/exercises?q=planche", headers=api_headers)
+        titles = [e["title"] for e in resp.get_json()["data"]]
+        assert titles == ["Planche Lean", "Tuck Planche"]
+
+    def test_search_beyond_first_page_finds_exercise(self, client, api_headers, app):
+        app.config["WORKOUTS_PER_PAGE"] = 2
+        self._make(client, api_headers, "Aa 1", "Aa 2", "Aa 3", "Zz Target")
+        plain = client.get("/api/v1/exercises?page=1", headers=api_headers)
+        assert "Zz Target" not in [e["title"] for e in plain.get_json()["data"]]
+        found = client.get("/api/v1/exercises?q=target", headers=api_headers)
+        assert [e["title"] for e in found.get_json()["data"]] == ["Zz Target"]
+
+    def test_search_treats_wildcards_literally(self, client, api_headers):
+        self._make(client, api_headers, "100% Effort", "Plain")
+        resp = client.get("/api/v1/exercises?q=%25", headers=api_headers)
+        assert [e["title"] for e in resp.get_json()["data"]] == ["100% Effort"]
+        resp = client.get("/api/v1/exercises?q=_", headers=api_headers)
+        assert resp.get_json()["data"] == []
+
+    def test_search_combines_with_scope(self, client, api_headers, api_headers_second):
+        self._make(client, api_headers, "Shared Planche")
+        resp = client.get("/api/v1/exercises?q=planche", headers=api_headers_second)
+        assert resp.get_json()["data"] == []
