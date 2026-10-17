@@ -14,7 +14,10 @@ export function useCreateTemplate() {
   return useMutation({
     mutationFn: (data: { title: string; exercises: unknown[]; notes?: string | null }) =>
       api.post<ApiResponse<Workout>>("/templates", data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["templates"] });
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+    },
   });
 }
 
@@ -23,7 +26,10 @@ export function useUpdateTemplate() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: number; title?: string; exercises?: unknown[]; notes?: string | null }) =>
       api.put<ApiResponse<Workout>>(`/templates/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["templates"] });
+      qc.invalidateQueries({ queryKey: ["exercises"] });
+    },
   });
 }
 

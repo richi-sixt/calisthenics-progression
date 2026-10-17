@@ -92,7 +92,10 @@ export function useCreateWorkout() {
       planned_date?: string | null;
       notes?: string | null;
     }) => api.post<ApiResponse<Workout>>("/workouts", data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workouts"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
+    },
   });
 }
 
@@ -112,6 +115,7 @@ export function useUpdateWorkout() {
     }) => api.put<ApiResponse<Workout>>(`/workouts/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
       queryClient.invalidateQueries({ queryKey: ["explore"] });
     },
   });

@@ -11,6 +11,11 @@ export default function AppLayout() {
       <Stack.Screen name="workouts/[id]/index" options={{ title: "Workout" }} />
       <Stack.Screen name="workouts/[id]/edit" options={{ title: t("workouts.editTitle") }} />
       <Stack.Screen name="categories" options={{ title: t("categories.title") }} />
+      <Stack.Screen name="catalog" options={{ title: t("catalog.title") }} />
+      <Stack.Screen name="skills/index" options={{ title: t("skills.title") }} />
+      <Stack.Screen name="skills/new" options={{ title: t("skills.new") }} />
+      <Stack.Screen name="skills/[id]/index" options={{ title: t("skills.title") }} />
+      <Stack.Screen name="skills/[id]/edit" options={{ title: t("skills.editTitle") }} />
       <Stack.Screen name="statistics/index" options={{ title: t("statistics.title") }} />
       <Stack.Screen name="exercises/index" options={{ title: t("exercises.title") }} />
       <Stack.Screen name="exercises/new" options={{ title: t("exercises.new") }} />

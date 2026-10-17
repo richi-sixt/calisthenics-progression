@@ -11,6 +11,8 @@ export interface User {
   about_me: string | null;
   image_file: string;
   confirmed: boolean;
+  /** Only present on the signed-in user's own profile. */
+  admin?: boolean;
   last_seen: string | null;
   registered_on: string | null;
   follower_count: number;
@@ -76,10 +78,14 @@ export interface ExerciseDefinition {
   user_image_file: string | null;
   archived: boolean;
   visibility: Visibility;
+  /** Part of the admin-curated app library. */
+  is_catalog?: boolean;
   /** Ordered child exercises (progression steps). */
   progressions: ExerciseProgressionRef[];
   /** Exercises this one is a progression step of. */
   parents: { id: number; title: string }[];
+  /** The viewer's own skills this exercise belongs to. */
+  skills: { id: number; title: string }[];
   /** @deprecated legacy shape, derived from `progressions`. */
   progression_levels: ProgressionLevel[];
   category_ids: number[];
@@ -112,6 +118,13 @@ export interface ProgressionLevel {
 export interface ExerciseCategory {
   id: number;
   name: string;
+  group_id: number | null;
+}
+
+export interface CategoryGroup {
+  id: number;
+  name: string;
+  sort_order: number;
 }
 
 export interface Message {
@@ -191,4 +204,33 @@ export interface ApiError {
 export interface UserProfileResponse {
   user: UserWithFollowing;
   workouts: Workout[];
+}
+export interface SkillExercise {
+  exercise_id: number;
+  title: string;
+  counting_type: "reps" | "duration" | "km";
+  thumbnail_url: string | null;
+  archived: boolean;
+  step_order: number;
+  /** Seconds (duration) or repetitions (reps) needed to move on. */
+  target_value: number;
+  /** Best result in done workouts, same unit as target_value. */
+  best: number;
+  reached: boolean;
+  last_done_date: string | null;
+}
+
+export interface Skill {
+  id: number;
+  title: string;
+  description: string | null;
+  exercises: SkillExercise[];
+  exercise_count: number;
+  reached_count: number;
+  next_exercise_id: number | null;
+}
+
+export interface CatalogExercise extends ExerciseDefinition {
+  /** The signed-in user's own copy of this entry, if already imported. */
+  imported_exercise_id: number | null;
 }

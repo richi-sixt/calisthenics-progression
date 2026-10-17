@@ -2,9 +2,11 @@ import { useState } from "react";
 import { View, Text, Pressable, FlatList, RefreshControl, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { useExercises } from "@/hooks/use-exercises";
+import { useSkills } from "@/hooks/use-skills";
 import { useFollowing } from "@/hooks/use-social";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
+import GroupedCategoryChips from "@/components/exercise/GroupedCategoryChips";
 import { ExerciseCard } from "@/components/exercise/ExerciseCard";
 import { CardListSkeleton, ExerciseCardSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
@@ -21,17 +23,21 @@ export default function ExercisesScreen() {
   const { data: followingData } = useFollowing(profile?.data?.username ?? "");
   const followingUsers = followingData?.data ?? [];
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const { data, isLoading, error, refetch, isRefetching } = useExercises(page, userFilter, categoryIds, username || undefined);
+  const [skillId, setSkillId] = useState<number | null>(null);
+  const { data: skillsData } = useSkills();
+  const skills = skillsData?.data ?? [];
+  const { data, isLoading, error, refetch, isRefetching } = useExercises(
+    page,
+    userFilter,
+    categoryIds,
+    username || undefined,
+    skillId ?? undefined
+  );
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
   const exercises = data?.data ?? [];
   const meta = data?.meta;
-
-  const toggleCategory = (id: number) => {
-    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
-    setPage(1);
-  };
 
   return (
     <View className="flex-1 bg-white dark:bg-gray-900 p-4">
@@ -76,12 +82,40 @@ export default function ExercisesScreen() {
       </View>
 
       {categories.length > 0 && (
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          {categories.map((cat) => (
-            <Pressable key={cat.id} onPress={() => toggleCategory(cat.id)} className={`rounded-full px-3 py-1 ${categoryIds.includes(cat.id) ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}>
-              <Text className={`text-sm font-medium ${categoryIds.includes(cat.id) ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>{cat.name}</Text>
-            </Pressable>
-          ))}
+        <View className="mt-3">
+          <GroupedCategoryChips
+            selectedIds={categoryIds}
+            onChange={(ids) => {
+              setCategoryIds(ids);
+              setPage(1);
+            }}
+          />
+        </View>
+      )}
+
+      {skills.length > 0 && (
+        <View className="mt-3">
+          <Text className="mb-1 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("skills.filter")}</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {skills.map((skill) => {
+              const selected = skillId === skill.id;
+              return (
+                <Pressable
+                  key={skill.id}
+                  testID={`skill-filter-${skill.id}`}
+                  onPress={() => {
+                    setSkillId(selected ? null : skill.id);
+                    setPage(1);
+                  }}
+                  className={`rounded-full px-3 py-1 ${selected ? "bg-blue-100 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-700"}`}
+                >
+                  <Text className={`text-sm font-medium ${selected ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}>
+                    {skill.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       )}
 

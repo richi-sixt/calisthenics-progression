@@ -7,7 +7,10 @@ import { useExercises } from "@/hooks/use-exercises";
 import type { ExerciseDefinition } from "@/types";
 import { api } from "@/lib/api";
 
-jest.mock("@/hooks/use-categories", () => ({ useCategories: jest.fn() }));
+jest.mock("@/hooks/use-categories", () => ({
+  useCategories: jest.fn(),
+  useCategoryGroups: jest.fn(() => ({ data: { data: [] } })),
+}));
 jest.mock("@/hooks/use-exercises", () => ({ useExercises: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock("@/lib/api", () => ({
