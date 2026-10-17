@@ -401,4 +401,15 @@ describe("WorkoutForm", () => {
     await selectExercise(getByTestId, 0, pushUp);
     expect(queryByText(/copied to your own exercises/)).toBeNull();
   });
+
+  it("shows the owner's username on other users' exercises in the picker", async () => {
+    const foreign: ExerciseDefinition = { ...pushUp, id: 9, title: "Tuck Planche", user_id: 2, username: "max" };
+    (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, foreign] } });
+
+    const { getByTestId, getByText, queryByText } = await renderForm();
+    await fireEvent.press(getByTestId("exercise-picker-0"));
+    expect(getByText("Tuck Planche (max)")).toBeTruthy();
+    expect(getByText("Push-Up")).toBeTruthy();
+    expect(queryByText("Push-Up (tester)")).toBeNull();
+  });
 });

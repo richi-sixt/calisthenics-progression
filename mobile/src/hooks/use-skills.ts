@@ -5,6 +5,8 @@ import type { Skill, ApiResponse } from "@/types";
 export interface SkillInput {
   title: string;
   description?: string | null;
+  /** Admin only: create an app-library skill. */
+  is_catalog?: boolean;
   exercises: { exercise_id: number; target_value: number }[];
 }
 
@@ -28,6 +30,7 @@ function useInvalidateSkills() {
   return () => {
     qc.invalidateQueries({ queryKey: ["skills"] });
     qc.invalidateQueries({ queryKey: ["exercises"] });
+    qc.invalidateQueries({ queryKey: ["catalog"] });
   };
 }
 

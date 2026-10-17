@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useExercises } from "@/hooks/use-exercises";
+import { useCatalogExercises } from "@/hooks/use-catalog";
 import type { SkillInput } from "@/hooks/use-skills";
 import { useTranslation } from "@/i18n";
 import type { Skill } from "@/types";
@@ -23,14 +24,20 @@ export default function SkillForm({
   onSubmit,
   isPending,
   error,
+  catalog,
 }: {
   defaultValues?: Skill;
   onSubmit: (data: SkillInput) => void;
   isPending: boolean;
   error?: string | null;
+  /** Editing an app-library skill (admin): offer library exercises. */
+  catalog?: boolean;
 }) {
   const { t } = useTranslation();
-  const { data } = useExercises(1, "mine");
+  const isCatalog = catalog ?? defaultValues?.is_catalog ?? false;
+  const { data: ownData } = useExercises(1, "mine");
+  const { data: catalogData } = useCatalogExercises(1, "");
+  const data = isCatalog ? catalogData : ownData;
   const [title, setTitle] = useState(defaultValues?.title ?? "");
   const [description, setDescription] = useState(defaultValues?.description ?? "");
   const [rows, setRows] = useState<Row[]>(

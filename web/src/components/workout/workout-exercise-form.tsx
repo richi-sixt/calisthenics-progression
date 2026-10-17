@@ -6,6 +6,7 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useProfile } from "@/hooks/use-profile";
+import { exerciseLabel } from "@/lib/exercise-label";
 import GroupedCategoryChips from "@/components/exercise/grouped-category-chips";
 import ExercisePreviewDialog from "@/components/exercise/exercise-preview-dialog";
 import { useTranslation } from "@/i18n";
@@ -248,6 +249,7 @@ export default function WorkoutExerciseForm({
             control={control}
             exerciseDefs={exerciseDefs}
             exerciseDefMap={exerciseDefMap}
+            labelOf={(def) => exerciseLabel(def, profile?.data.id)}
             onRemove={() => removeExercise(exIndex)}
           />
         ))}
@@ -303,6 +305,7 @@ function ExerciseBlock({
   control,
   exerciseDefs,
   exerciseDefMap,
+  labelOf,
   onRemove,
 }: {
   exIndex: number;
@@ -310,6 +313,7 @@ function ExerciseBlock({
   control: ReturnType<typeof useForm<WorkoutFormData>>["control"];
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
+  labelOf: (def: ExerciseDefinition) => string;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -339,7 +343,7 @@ function ExerciseBlock({
           <option value="">{t("workoutForm.selectExercise")}</option>
           {exerciseDefs.map((def) => (
             <option key={def.id} value={def.id}>
-              {def.title}
+              {labelOf(def)}
             </option>
           ))}
         </select>

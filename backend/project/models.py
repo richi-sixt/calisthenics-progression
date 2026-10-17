@@ -870,6 +870,17 @@ class Skill(Base):
     date_created = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+    # App-library skill template curated by an admin (contains catalog exercises).
+    is_catalog = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+    # Set on skills imported from the app library (avoids duplicate imports).
+    copied_from_id = db.Column(
+        db.Integer,
+        db.ForeignKey("skill.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     exercise_links = db.relationship(
         "SkillExercise",
@@ -1256,7 +1267,11 @@ def _skills_for_exercises(
     rows = db.session.execute(
         db.select(SkillExercise.exercise_id, Skill.id, Skill.title)
         .join(Skill, Skill.id == SkillExercise.skill_id)
-        .where(Skill.user_id == viewer.id, SkillExercise.exercise_id.in_(exercise_ids))
+        .where(
+            Skill.user_id == viewer.id,
+            Skill.is_catalog.is_(False),
+            SkillExercise.exercise_id.in_(exercise_ids),
+        )
         .order_by(Skill.title.asc())
     ).all()
     for exercise_id, skill_id, title in rows:

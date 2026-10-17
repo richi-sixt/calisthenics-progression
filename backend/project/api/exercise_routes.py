@@ -518,7 +518,10 @@ def api_copy_exercise(exercise_id: int) -> ResponseReturnValue:
     if original.user_id == g.current_api_user.id:
         return jsonify({"error": "Cannot copy your own exercise."}), 400
 
-    copied, created = copy_exercise_for_user(original, g.current_api_user)
+    # App-library entries keep their plain title (like the catalog import).
+    copied, created = copy_exercise_for_user(
+        original, g.current_api_user, owner_suffix=not original.is_catalog
+    )
     db.session.commit()
     return (
         jsonify({"data": copied.to_dict(viewer=g.current_api_user)}),

@@ -222,6 +222,8 @@ export interface SkillExercise {
 
 export interface Skill {
   id: number;
+  /** App-library skill template (admin-curated). */
+  is_catalog?: boolean;
   title: string;
   description: string | null;
   exercises: SkillExercise[];
@@ -233,4 +235,21 @@ export interface Skill {
 export interface CatalogExercise extends ExerciseDefinition {
   /** The signed-in user's own copy of this entry, if already imported. */
   imported_exercise_id: number | null;
+}
+
+export interface CatalogSkill {
+  id: number;
+  title: string;
+  description: string | null;
+  user_id: number;
+  /** The signed-in user's own copy of this skill, if already imported. */
+  imported_skill_id: number | null;
+  exercises: {
+    exercise_id: number;
+    title: string;
+    counting_type: "reps" | "duration" | "km";
+    thumbnail_url: string | null;
+    step_order: number;
+    target_value: number;
+  }[];
 }

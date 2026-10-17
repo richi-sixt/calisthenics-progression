@@ -13,7 +13,13 @@ from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
 from project.api.exercise_copy import copy_exercise_for_user, existing_copy
-from project.models import ExerciseDefinition, serialize_exercise_definitions
+from project.models import (
+    ExerciseDefinition,
+    Skill,
+    SkillExercise,
+    User,
+    serialize_exercise_definitions,
+)
 
 
 def _catalog_exercise(exercise_id: int) -> ExerciseDefinition | None:
@@ -101,3 +107,115 @@ def api_import_catalog_exercise(exercise_id: int) -> ResponseReturnValue:
         jsonify({"data": copied.to_dict(viewer=g.current_api_user)}),
         201 if created and already is None else 200,
     )
+
+
+def _catalog_skill(skill_id: int) -> Skill | None:
+    skill = db.session.get(Skill, skill_id)
+    if skill is None or not skill.is_catalog:
+        return None
+    return skill
+
+
+@bp.route("/catalog/skills", methods=["GET"])
+@api_login_required
+@api_check_confirmed
+def api_list_catalog_skills() -> ResponseReturnValue:
+    """App-library skills. Progress is personal, so only the plan is returned."""
+    search = request.args.get("q", "").strip()
+    query = (
+        db.select(Skill).where(Skill.is_catalog.is_(True)).order_by(Skill.title.asc())
+    )
+    if search:
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.filter(Skill.title.ilike(f"%{escaped}%", escape="\\"))
+    skills = db.session.scalars(query).all()
+
+    imported: dict[int, int] = {}
+    if skills:
+        for source_id, own_id in db.session.execute(
+            db.select(Skill.copied_from_id, Skill.id).where(
+                Skill.user_id == g.current_api_user.id,
+                Skill.copied_from_id.in_([s.id for s in skills]),
+            )
+        ):
+            imported.setdefault(source_id, own_id)
+
+    return jsonify(
+        {
+            "data": [
+                {
+                    "id": skill.id,
+                    "title": skill.title,
+                    "description": skill.description,
+                    "user_id": skill.user_id,
+                    "imported_skill_id": imported.get(skill.id),
+                    "exercises": [
+                        {
+                            "exercise_id": link.exercise_id,
+                            "title": link.exercise.title,
+                            "counting_type": link.exercise.counting_type,
+                            "thumbnail_url": link.exercise.thumbnail_url,
+                            "step_order": link.step_order,
+                            "target_value": link.target_value,
+                        }
+                        for link in skill.exercise_links  # type: ignore[attr-defined]
+                        if not link.exercise.archived
+                    ],
+                }
+                for skill in skills
+            ]
+        }
+    )
+
+
+@bp.route("/catalog/skills/<int:skill_id>/import", methods=["POST"])
+@api_login_required
+@api_check_confirmed
+def api_import_catalog_skill(skill_id: int) -> ResponseReturnValue:
+    """Copy a library skill and its exercises into the user's own skills."""
+    source = _catalog_skill(skill_id)
+    if source is None:
+        return jsonify({"error": "Skill not found."}), 404
+    me = g.current_api_user
+    if source.user_id == me.id:
+        return jsonify({"error": "Cannot import your own skill."}), 400
+
+    existing = db.session.scalar(
+        db.select(Skill).where(
+            Skill.user_id == me.id, Skill.copied_from_id == source.id
+        )
+    )
+    if existing is not None:
+        return jsonify({"data": {"id": existing.id, "title": existing.title}}), 200
+
+    taken = set(
+        db.session.scalars(db.select(Skill.title).where(Skill.user_id == me.id))
+    )
+    title = source.title
+    if title in taken:
+        owner = db.session.get(User, source.user_id)
+        base = f"{source.title} ({owner.username if owner else 'copy'})"
+        title, counter = base, 2
+        while title in taken:
+            title = f"{base[:-1]} {counter})"
+            counter += 1
+
+    skill = Skill(title=title, user_id=me.id, description=source.description)
+    skill.copied_from_id = source.id
+    db.session.add(skill)
+    db.session.flush()
+
+    copies: dict[int, ExerciseDefinition] = {}
+    order = 0
+    for link in source.exercise_links:  # type: ignore[attr-defined]
+        if link.exercise.archived:
+            continue
+        copied, _ = copy_exercise_for_user(
+            link.exercise, me, owner_suffix=False, _copies=copies
+        )
+        order += 1
+        skill.exercise_links.append(  # type: ignore[attr-defined]
+            SkillExercise(skill.id, copied.id, order, link.target_value)
+        )
+    db.session.commit()
+    return jsonify({"data": {"id": skill.id, "title": skill.title}}), 201

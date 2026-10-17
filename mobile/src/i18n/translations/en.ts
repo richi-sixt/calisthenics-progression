@@ -270,6 +270,13 @@ const en = {
   "catalog.emptyDescription": "The app library has no matching exercises yet.",
   "catalog.new": "New library exercise",
   "catalog.edit": "Edit",
+  "catalog.tabExercises": "Exercises",
+  "catalog.tabSkills": "Skills",
+  "catalog.newSkill": "New library skill",
+  "catalog.skillsEmpty": "No skills in the library yet",
+  "catalog.importSkill": "Import skill",
+  "catalog.skillImported": "In my skills",
+  "catalog.skillImportHint": "Importing also adds the skill's exercises to your own exercises.",
 
   // Messages
   "messages.title": "Messages",

@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
 import { useProfile } from "@/hooks/use-profile";
+import { exerciseLabel } from "@/lib/exercise-label";
 import GroupedCategoryChips from "@/components/exercise/GroupedCategoryChips";
 import { useTranslation } from "@/i18n";
 import { ExercisePreviewModal } from "@/components/exercise/ExercisePreviewModal";
@@ -240,6 +241,7 @@ export function WorkoutForm({
             control={control}
             exerciseDefs={exerciseDefs}
             exerciseDefMap={exerciseDefMap}
+            labelOf={(def) => exerciseLabel(def, profile?.data.id)}
             onRemove={() => removeExercise(exIndex)}
           />
         ))}
@@ -297,12 +299,14 @@ function ExerciseBlock({
   control,
   exerciseDefs,
   exerciseDefMap,
+  labelOf,
   onRemove,
 }: {
   exIndex: number;
   control: Control<WorkoutFormData>;
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
+  labelOf: (def: ExerciseDefinition) => string;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
@@ -330,6 +334,7 @@ function ExerciseBlock({
               onChange={onChange}
               exerciseDefs={exerciseDefs}
               exerciseDefMap={exerciseDefMap}
+              labelOf={labelOf}
               testID={`exercise-picker-${exIndex}`}
             />
           )}
@@ -516,12 +521,14 @@ function ExercisePickerField({
   onChange,
   exerciseDefs,
   exerciseDefMap,
+  labelOf,
   testID,
 }: {
   value: string;
   onChange: (id: string) => void;
   exerciseDefs: ExerciseDefinition[];
   exerciseDefMap: Map<number, ExerciseDefinition>;
+  labelOf: (def: ExerciseDefinition) => string;
   testID: string;
 }) {
   const { t } = useTranslation();
@@ -532,8 +539,8 @@ function ExercisePickerField({
 
   const filteredDefs = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return query ? exerciseDefs.filter((def) => def.title.toLowerCase().includes(query)) : exerciseDefs;
-  }, [exerciseDefs, search]);
+    return query ? exerciseDefs.filter((def) => labelOf(def).toLowerCase().includes(query)) : exerciseDefs;
+  }, [exerciseDefs, search, labelOf]);
 
   const close = () => {
     setOpen(false);
@@ -551,7 +558,7 @@ function ExercisePickerField({
           numberOfLines={1}
           className={`flex-1 text-sm ${selectedDef ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}
         >
-          {selectedDef ? selectedDef.title : t("workoutForm.selectExercise")}
+          {selectedDef ? labelOf(selectedDef) : t("workoutForm.selectExercise")}
         </Text>
         <Text className="ml-2 text-gray-400 dark:text-gray-500">▾</Text>
       </Pressable>
@@ -587,7 +594,7 @@ function ExercisePickerField({
                 testID={`${testID}-option-${item.id}`}
                 className="border-b border-gray-100 dark:border-gray-800 px-4 py-3"
               >
-                <Text className="text-sm text-gray-900 dark:text-gray-100">{item.title}</Text>
+                <Text className="text-sm text-gray-900 dark:text-gray-100">{labelOf(item)}</Text>
               </Pressable>
             )}
             ListEmptyComponent={

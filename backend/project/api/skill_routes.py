@@ -97,6 +97,7 @@ def _skill_dict(skill: Skill, progress: dict[int, dict[str, Any]]) -> dict[str, 
         "id": skill.id,
         "title": skill.title,
         "description": skill.description,
+        "is_catalog": skill.is_catalog,
         "exercises": entries,
         "exercise_count": len(entries),
         "reached_count": sum(1 for e in entries if e["reached"]),
@@ -105,7 +106,7 @@ def _skill_dict(skill: Skill, progress: dict[int, dict[str, Any]]) -> dict[str, 
 
 
 def _parse_exercises(
-    raw: object, current_skill_id: int | None
+    raw: object, current_skill_id: int | None, catalog: bool = False
 ) -> tuple[list[tuple[int, int]] | None, str | None]:
     """Validate [{exercise_id, target_value}]; returns ([(id, target)], error)."""
     if not isinstance(raw, list) or len(raw) > MAX_SKILL_EXERCISES:
@@ -131,6 +132,8 @@ def _parse_exercises(
             exercise is None
             or exercise.user_id != g.current_api_user.id
             or exercise.counting_type not in SKILL_COUNTING_TYPES
+            # App-library skills hold library exercises, personal skills never do.
+            or exercise.is_catalog != catalog
         ):
             return None, f"Exercise {exercise_id} cannot be used in a skill."
         # Archived exercises stay in existing skills but can't be newly added.
@@ -185,7 +188,7 @@ def _replace_exercises(skill: Skill, parsed: list[tuple[int, int]]) -> None:
 def api_list_skills() -> ResponseReturnValue:
     skills = db.session.scalars(
         db.select(Skill)
-        .where(Skill.user_id == g.current_api_user.id)
+        .where(Skill.user_id == g.current_api_user.id, Skill.is_catalog.is_(False))
         .order_by(Skill.title.asc())
     ).all()
     exercise_ids = [link.exercise_id for s in skills for link in s.exercise_links]  # type: ignore[attr-defined]
@@ -203,12 +206,18 @@ def api_create_skill() -> ResponseReturnValue:
         return jsonify({"error": err}), 400
     if _title_taken(title):
         return jsonify({"error": f'"{title}" already exists.'}), 409
-    parsed, err = _parse_exercises(data.get("exercises", []), None)
+    is_catalog = data.get("is_catalog", False)
+    if not isinstance(is_catalog, bool):
+        return jsonify({"error": "Invalid is_catalog."}), 400
+    if is_catalog and not g.current_api_user.admin:
+        return jsonify({"error": "Forbidden."}), 403
+    parsed, err = _parse_exercises(data.get("exercises", []), None, is_catalog)
     if err or parsed is None:
         return jsonify({"error": err}), 400
 
     description = str(data.get("description") or "").strip() or None
     skill = Skill(title=title, user_id=g.current_api_user.id, description=description)
+    skill.is_catalog = is_catalog
     db.session.add(skill)
     db.session.flush()
     _replace_exercises(skill, parsed)
@@ -249,7 +258,7 @@ def api_update_skill(skill_id: int) -> ResponseReturnValue:
     if "description" in data:
         skill.description = str(data["description"] or "").strip() or None
     if "exercises" in data:
-        parsed, err = _parse_exercises(data["exercises"], skill.id)
+        parsed, err = _parse_exercises(data["exercises"], skill.id, skill.is_catalog)
         if err or parsed is None:
             db.session.rollback()
             return jsonify({"error": err}), 400
