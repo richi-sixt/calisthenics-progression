@@ -2,12 +2,13 @@
 
 from datetime import date, datetime, timezone
 
-from flask import current_app, g, jsonify, request
+from flask import Response, current_app, g, jsonify, request
 from flask.typing import ResponseReturnValue
 
 from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
+from project.api.exercise_copy import copy_exercise_for_user
 from project.models import (
     VISIBILITY_VALUES,
     Exercise,
@@ -49,8 +50,16 @@ def _parse_distance_km(value: object) -> tuple[float | None, str | None]:
     return round(float(value), 3), None
 
 
-def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | None:
+def _save_exercises_from_json(
+    workout: Workout,
+    exercises_data: list,
+    copied: list[dict[str, object]] | None = None,
+) -> str | None:
     """Parse JSON exercise list and create Exercise+Set records.
+
+    Exercises owned by someone else are copied into the current user's
+    exercises first (an existing copy is reused); each copy is reported in
+    `copied` as {"source_id", "id", "title"}.
 
     Returns an error message string on failure, or None on success.
     """
@@ -60,8 +69,21 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
             return "Missing exercise_definition_id."
 
         ex_def = db.session.get(ExerciseDefinition, ex_def_id)
-        if ex_def is None or not ex_def.is_visible_to(g.current_api_user):
+        if (
+            ex_def is None
+            or ex_def.is_catalog  # app-library items must be imported first
+            or not ex_def.is_visible_to(g.current_api_user)
+        ):
             return f"Exercise definition {ex_def_id} not found."
+
+        if ex_def.user_id != g.current_api_user.id:
+            source = ex_def
+            ex_def, _ = copy_exercise_for_user(source, g.current_api_user)
+            ex_def_id = ex_def.id
+            if copied is not None and not any(c["id"] == ex_def.id for c in copied):
+                copied.append(
+                    {"source_id": source.id, "id": ex_def.id, "title": ex_def.title}
+                )
 
         notes, err = _parse_notes(ex_data.get("notes"))
         if err:
@@ -92,6 +114,13 @@ def _save_exercises_from_json(workout: Workout, exercises_data: list) -> str | N
             db.session.add(work_set)
 
     return None
+
+
+def _with_copied(workout: Workout, copied: list[dict[str, object]]) -> Response:
+    """JSON response for a saved workout, listing exercises copied on save."""
+    payload = workout.to_dict(include_exercises=True)
+    payload["copied_exercises"] = copied
+    return jsonify({"data": payload})
 
 
 def _parse_planned_date(value: str) -> tuple[date | None, str | None]:
@@ -217,13 +246,14 @@ def api_create_workout() -> ResponseReturnValue:
     db.session.add(workout)
     db.session.flush()
 
-    err = _save_exercises_from_json(workout, exercises_data)
+    copied: list[dict[str, object]] = []
+    err = _save_exercises_from_json(workout, exercises_data, copied)
     if err:
         db.session.rollback()
         return jsonify({"error": err}), 400
 
     db.session.commit()
-    return jsonify({"data": workout.to_dict(include_exercises=True)}), 201
+    return _with_copied(workout, copied), 201
 
 
 @bp.route("/workouts/<int:workout_id>", methods=["GET"])
@@ -273,6 +303,7 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
             return jsonify({"error": err}), 400
         workout.notes = notes
 
+    copied: list[dict[str, object]] = []
     if "exercises" in data:
         exercises_data = data["exercises"]
         if not exercises_data:
@@ -283,13 +314,13 @@ def api_update_workout(workout_id: int) -> ResponseReturnValue:
             db.session.delete(ex)
         db.session.flush()
 
-        err = _save_exercises_from_json(workout, exercises_data)
+        err = _save_exercises_from_json(workout, exercises_data, copied)
         if err:
             db.session.rollback()
             return jsonify({"error": err}), 400
 
     db.session.commit()
-    return jsonify({"data": workout.to_dict(include_exercises=True)})
+    return _with_copied(workout, copied)
 
 
 @bp.route("/workouts/<int:workout_id>", methods=["DELETE"])
@@ -365,13 +396,14 @@ def api_create_template() -> ResponseReturnValue:
     db.session.add(template)
     db.session.flush()
 
-    err = _save_exercises_from_json(template, exercises_data)
+    copied: list[dict[str, object]] = []
+    err = _save_exercises_from_json(template, exercises_data, copied)
     if err:
         db.session.rollback()
         return jsonify({"error": err}), 400
 
     db.session.commit()
-    return jsonify({"data": template.to_dict(include_exercises=True)}), 201
+    return _with_copied(template, copied), 201
 
 
 @bp.route("/templates/<int:template_id>", methods=["PUT"])
@@ -395,6 +427,7 @@ def api_update_template(template_id: int) -> ResponseReturnValue:
             return jsonify({"error": err}), 400
         template.notes = notes
 
+    copied: list[dict[str, object]] = []
     if "exercises" in data:
         exercises_data = data["exercises"]
         if not exercises_data:
@@ -404,13 +437,13 @@ def api_update_template(template_id: int) -> ResponseReturnValue:
             db.session.delete(ex)
         db.session.flush()
 
-        err = _save_exercises_from_json(template, exercises_data)
+        err = _save_exercises_from_json(template, exercises_data, copied)
         if err:
             db.session.rollback()
             return jsonify({"error": err}), 400
 
     db.session.commit()
-    return jsonify({"data": template.to_dict(include_exercises=True)})
+    return _with_copied(template, copied)
 
 
 @bp.route("/templates/<int:template_id>", methods=["DELETE"])

@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useExercises } from "@/hooks/use-exercises";
 import { useCategories } from "@/hooks/use-categories";
+import { useProfile } from "@/hooks/use-profile";
+import GroupedCategoryChips from "@/components/exercise/grouped-category-chips";
 import ExercisePreviewDialog from "@/components/exercise/exercise-preview-dialog";
 import { useTranslation } from "@/i18n";
 import type { Workout, ExerciseDefinition, Visibility } from "@/types";
@@ -119,11 +121,21 @@ export default function WorkoutExerciseForm({
     return map;
   }, [exerciseDefs]);
 
-  const toggleCategory = (catId: number) => {
-    setSelectedCatIds((prev) =>
-      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
-    );
-  };
+  // Exercises owned by someone else are copied into "my exercises" on save.
+  const { data: profile } = useProfile();
+  const watchedExercises = useWatch({ control, name: "exercises" });
+  const foreignTitles = useMemo(() => {
+    const myId = profile?.data.id;
+    if (myId === undefined) return [];
+    const titles: string[] = [];
+    for (const ex of watchedExercises ?? []) {
+      const def = exerciseDefMap.get(Number(ex.exercise_definition_id));
+      if (def && def.user_id !== myId && !titles.includes(def.title)) {
+        titles.push(def.title);
+      }
+    }
+    return titles;
+  }, [profile, watchedExercises, exerciseDefMap]);
 
   const visibility = useWatch({ control, name: "visibility" });
   const visibilityHint =
@@ -207,21 +219,12 @@ export default function WorkoutExerciseForm({
         </label>
 
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => toggleCategory(cat.id)}
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                  selectedCatIds.includes(cat.id)
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+          <div className="space-y-1">
+            <GroupedCategoryChips
+              size="sm"
+              selectedIds={selectedCatIds}
+              onChange={setSelectedCatIds}
+            />
             {selectedCatIds.length > 0 && (
               <button
                 type="button"
@@ -273,6 +276,15 @@ export default function WorkoutExerciseForm({
           placeholder={t("workoutForm.notesPlaceholder")}
         />
       </div>
+
+      {foreignTitles.length > 0 && (
+        <p
+          role="status"
+          className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
+        >
+          {t("workoutForm.copyNotice", { titles: foreignTitles.join(", ") })}
+        </p>
+      )}
 
       <button
         type="submit"

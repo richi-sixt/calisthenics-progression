@@ -91,7 +91,7 @@ def _instances(workout_id):
 
 
 def test_levels_become_ordered_children(app, user, migrate):
-    cat = ExerciseCategory(name="Pull")
+    cat = ExerciseCategory(name="Pull", user_id=user.id)
     db.session.add(cat)
     parent = _exercise(user, "Pull-ups", visibility="public")
     parent.categories = [cat]

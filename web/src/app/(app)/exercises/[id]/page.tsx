@@ -127,6 +127,20 @@ export default function ExerciseDetailPage({
         </p>
       )}
 
+      {exercise.skills.length > 0 && (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          {t("skills.partOf")}{" "}
+          {exercise.skills.map((skill, i) => (
+            <span key={skill.id}>
+              {i > 0 && ", "}
+              <Link href={`/skills/${skill.id}`} className="text-blue-600 hover:text-blue-800">
+                {skill.title}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
+
       {exercise.progressions.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("exercises.progressionLevels")}</h2>

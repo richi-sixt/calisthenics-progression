@@ -815,3 +815,111 @@ class TestApiWorkoutNotes:
         data = resp.get_json()["data"]
         assert data["notes"] is None
         assert data["exercises"][0]["notes"] == "Cue"
+
+
+class TestCopyOnSave:
+    """Foreign exercises are copied into the saver's own exercises."""
+
+    def _public_foreign(self, exercise_definition):
+        from project import db
+
+        exercise_definition.visibility = "public"
+        db.session.commit()
+        return exercise_definition.id
+
+    def _payload(self, ex_id):
+        return json.dumps(
+            {
+                "title": "Mine",
+                "exercises": [
+                    {
+                        "exercise_definition_id": ex_id,
+                        "sets": [{"reps": 5}],
+                    }
+                ],
+            }
+        )
+
+    def test_create_copies_foreign_exercise(
+        self, client, api_headers_second, exercise_definition, second_user
+    ):
+        foreign_id = self._public_foreign(exercise_definition)
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers_second,
+            data=self._payload(foreign_id),
+        )
+        assert resp.status_code == 201
+        data = resp.get_json()["data"]
+        copied = data["copied_exercises"]
+        assert len(copied) == 1
+        assert copied[0]["source_id"] == foreign_id
+        assert copied[0]["title"] == "Push-ups (testuser)"
+        used = data["exercises"][0]["exercise_definition_id"]
+        assert used == copied[0]["id"] != foreign_id
+
+        mine = client.get(
+            "/api/v1/exercises?user=mine", headers=api_headers_second
+        ).get_json()["data"]
+        assert [e["id"] for e in mine] == [used]
+        assert mine[0]["user_id"] == second_user.id
+
+    def test_update_reuses_existing_copy(
+        self, client, api_headers_second, exercise_definition
+    ):
+        foreign_id = self._public_foreign(exercise_definition)
+        created = client.post(
+            "/api/v1/workouts",
+            headers=api_headers_second,
+            data=self._payload(foreign_id),
+        ).get_json()["data"]
+
+        resp = client.put(
+            f"/api/v1/workouts/{created['id']}",
+            headers=api_headers_second,
+            data=self._payload(foreign_id),
+        )
+        assert resp.status_code == 200
+        mine = client.get(
+            "/api/v1/exercises?user=mine", headers=api_headers_second
+        ).get_json()["data"]
+        assert len(mine) == 1
+
+    def test_own_exercise_is_not_copied(self, client, api_headers, exercise_definition):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=self._payload(exercise_definition.id),
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()["data"]["copied_exercises"] == []
+        mine = client.get("/api/v1/exercises?user=mine", headers=api_headers)
+        assert len(mine.get_json()["data"]) == 1
+
+    def test_template_copies_foreign_exercise(
+        self, client, api_headers_second, exercise_definition
+    ):
+        foreign_id = self._public_foreign(exercise_definition)
+        resp = client.post(
+            "/api/v1/templates",
+            headers=api_headers_second,
+            data=self._payload(foreign_id),
+        )
+        assert resp.status_code == 201
+        assert len(resp.get_json()["data"]["copied_exercises"]) == 1
+
+    def test_blocked_owner_exercise_is_not_found(
+        self, client, api_headers_second, exercise_definition, app, user, second_user
+    ):
+        from project import db
+        from project.models import UserBlock
+
+        foreign_id = self._public_foreign(exercise_definition)
+        db.session.add(UserBlock(blocker_id=user.id, blocked_id=second_user.id))
+        db.session.commit()
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers_second,
+            data=self._payload(foreign_id),
+        )
+        assert resp.status_code == 400

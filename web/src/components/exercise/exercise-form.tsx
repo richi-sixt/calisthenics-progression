@@ -3,6 +3,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCategories } from "@/hooks/use-categories";
+import GroupedCategoryChips from "@/components/exercise/grouped-category-chips";
 import { useUploadImage } from "@/hooks/use-uploads";
 import { insertImageMarkdown, MAX_IMAGE_UPLOAD_BYTES, ownImageUrl } from "@/lib/uploaded-images";
 import ProgressionEditor, { type ProgressionItem } from "@/components/exercise/progression-editor";
@@ -23,10 +24,13 @@ export default function ExerciseForm({
   defaultValues,
   onSubmit,
   isPending,
+  catalog,
 }: {
   defaultValues?: Partial<ExerciseDefinition>;
   onSubmit: (data: ExerciseFormData) => void;
   isPending: boolean;
+  /** Editing an app-library entry (admin). Defaults to the exercise's own flag. */
+  catalog?: boolean;
 }) {
   const { t } = useTranslation();
   const { data: catData } = useCategories();
@@ -113,13 +117,6 @@ export default function ExerciseForm({
       onError: (err) =>
         setThumbError(`${t("exerciseForm.imageUploadFailed")}: ${err instanceof Error ? err.message : String(err)}`),
     });
-  };
-
-  const toggleCategory = (catId: number) => {
-    const next = selectedCats.includes(catId)
-      ? selectedCats.filter((id) => id !== catId)
-      : [...selectedCats, catId];
-    setValue("category_ids", next, { shouldDirty: true });
   };
 
   return (
@@ -257,6 +254,7 @@ export default function ExerciseForm({
             value={progressions}
             onChange={(next) => setValue("progressions", next, { shouldDirty: true })}
             excludeIds={progressionExcludes}
+            catalog={catalog ?? defaultValues?.is_catalog ?? false}
           />
         </div>
       </div>
@@ -266,21 +264,11 @@ export default function ExerciseForm({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             {t("exerciseForm.categories")}
           </label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => toggleCategory(cat.id)}
-                className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                  selectedCats.includes(cat.id)
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+          <div className="mt-2">
+            <GroupedCategoryChips
+              selectedIds={selectedCats}
+              onChange={(ids) => setValue("category_ids", ids, { shouldDirty: true })}
+            />
           </div>
         </div>
       )}

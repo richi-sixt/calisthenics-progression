@@ -6,10 +6,12 @@ bp = Blueprint("api", __name__)
 
 from project.api import (  # isort:skip # noqa: E402, F401
     auth_routes,
+    catalog_routes,
     category_routes,
     errors,
     exercise_routes,
     moderation_routes,
+    skill_routes,
     social_routes,
     stats_routes,
     upload_routes,

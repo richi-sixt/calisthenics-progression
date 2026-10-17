@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ExerciseForm from "@/components/exercise/exercise-form";
 import { useCreateExercise } from "@/hooks/use-exercises";
@@ -10,6 +10,7 @@ export default function NewExercisePage() {
   const router = useRouter();
   const { t } = useTranslation();
   const createExercise = useCreateExercise();
+  const isCatalog = useSearchParams().get("catalog") === "1";
 
   return (
     <div>
@@ -19,14 +20,16 @@ export default function NewExercisePage() {
       <h1 className="mt-4 text-2xl font-bold">{t("exercises.new")}</h1>
       <div className="mt-6">
         <ExerciseForm
+          catalog={isCatalog}
           isPending={createExercise.isPending}
           onSubmit={(data) => {
             createExercise.mutate(
               {
                 ...data,
                 progressions: data.progressions.map((p) => p.id),
+                ...(isCatalog ? { is_catalog: true } : {}),
               },
-              { onSuccess: () => router.push("/exercises") }
+              { onSuccess: () => router.push(isCatalog ? "/catalog" : "/exercises") }
             );
           }}
         />

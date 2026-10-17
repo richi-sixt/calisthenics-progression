@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useExercises } from "@/hooks/use-exercises";
+import { useSkills } from "@/hooks/use-skills";
 import { useFollowing } from "@/hooks/use-social";
 import { useProfile } from "@/hooks/use-profile";
 import ExerciseCard from "@/components/exercise/exercise-card";
@@ -20,6 +21,9 @@ export default function ExercisesPage() {
   const [userFilter, setUserFilter] = useState<"mine" | "following" | "all">("mine");
   const [username, setUsername] = useState("");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
+  const [skillId, setSkillId] = useState<number | null>(null);
+  const { data: skillsData } = useSkills();
+  const skills = skillsData?.data ?? [];
   const { data: profile } = useProfile();
   const { data: followingData } = useFollowing(profile?.data?.username ?? "");
   const followingUsers = followingData?.data ?? [];
@@ -27,7 +31,8 @@ export default function ExercisesPage() {
     page,
     userFilter,
     categoryIds,
-    username || undefined
+    username || undefined,
+    skillId ?? undefined
   );
 
   const exercises = data?.data ?? [];
@@ -91,6 +96,33 @@ export default function ExercisesPage() {
           onChange={(ids) => { setCategoryIds(ids); setPage(1); }}
         />
       </div>
+
+      {skills.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {t("skills.filter")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => {
+                  setSkillId(skillId === skill.id ? null : skill.id);
+                  setPage(1);
+                }}
+                className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                  skillId === skill.id
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {skill.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isLoading && <CardListSkeleton count={3} Card={ExerciseCardSkeleton} />}
       {error && <ErrorMessage error={error} />}

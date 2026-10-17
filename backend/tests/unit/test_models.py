@@ -961,10 +961,10 @@ class TestUserAccountDeletion:
 class TestExerciseCategoryModel:
     """Tests for the ExerciseCategory model and many-to-many relationship."""
 
-    def test_category_created(self, app):
+    def test_category_created(self, app, user):
         """Test that a category name persists correctly."""
         with app.app_context():
-            cat = ExerciseCategory(name="Pull")
+            cat = ExerciseCategory(name="Pull", user_id=user.id)
             db.session.add(cat)
             db.session.commit()
             fetched = (
@@ -975,12 +975,13 @@ class TestExerciseCategoryModel:
             assert fetched is not None
             assert fetched.name == "Pull"
 
-    def test_category_name_unique(self, app):
-        """Test that duplicate category names raise an IntegrityError."""
+    def test_category_name_unique_per_user(self, app, user, second_user):
+        """Duplicate names are rejected per user but allowed across users."""
         with app.app_context():
-            db.session.add(ExerciseCategory(name="Push"))
+            db.session.add(ExerciseCategory(name="Push", user_id=user.id))
+            db.session.add(ExerciseCategory(name="Push", user_id=second_user.id))
             db.session.commit()
-            db.session.add(ExerciseCategory(name="Push"))
+            db.session.add(ExerciseCategory(name="Push", user_id=user.id))
             with pytest.raises(sqlalchemy.exc.IntegrityError):
                 db.session.commit()
             db.session.rollback()
