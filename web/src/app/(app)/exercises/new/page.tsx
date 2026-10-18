@@ -14,8 +14,8 @@ export default function NewExercisePage() {
 
   return (
     <div>
-      <Link href="/exercises" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-        &larr; {t("common.backTo", { page: t("nav.exercises").toLowerCase() })}
+      <Link href={isCatalog ? "/catalog" : "/exercises"} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: (isCatalog ? t("nav.catalog") : t("nav.exercises")).toLowerCase() })}
       </Link>
       <h1 className="mt-4 text-2xl font-bold">{t("exercises.new")}</h1>
       <div className="mt-6">

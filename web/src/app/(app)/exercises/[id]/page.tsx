@@ -45,11 +45,14 @@ export default function ExerciseDetailPage({
 
   const exercise = data.data;
   const isOwner = profile?.data?.id === exercise.user_id;
+  // App-library entries belong to the library, not to "my exercises".
+  const backHref = exercise.is_catalog ? "/catalog" : "/exercises";
+  const backLabel = exercise.is_catalog ? t("nav.catalog") : t("nav.exercises");
 
   return (
     <div>
-      <Link href="/exercises" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-        &larr; {t("common.backTo", { page: t("nav.exercises").toLowerCase() })}
+      <Link href={backHref} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: backLabel.toLowerCase() })}
       </Link>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -100,7 +103,7 @@ export default function ExerciseDetailPage({
         onClose={() => setShowArchiveConfirm(false)}
         onConfirm={() => {
           deleteExercise.mutate(exerciseId, {
-            onSuccess: () => router.push("/exercises"),
+            onSuccess: () => router.push(backHref),
           });
         }}
         title={t("exercises.archiveConfirmTitle")}

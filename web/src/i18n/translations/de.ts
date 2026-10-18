@@ -268,6 +268,8 @@ const de: Record<keyof typeof en, string> = {
   "nav.libraryMine": "Meine Bibliothek",
   "nav.libraryApp": "App-Bibliothek",
   "nav.catalog": "App-Bibliothek",
+  "nav.catalogExercises": "App-Übungen",
+  "nav.catalogSkills": "App-Skills",
   "catalog.title": "App-Bibliothek",
   "catalog.intro": "Fertige Übungen für alle. Übernimm die, die du brauchst, in deine eigenen Übungen.",
   "catalog.searchPlaceholder": "Übungen suchen",

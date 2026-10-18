@@ -9,7 +9,12 @@ import {
 } from "@/hooks/use-catalog";
 
 const mockPush = jest.fn();
-jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
+const mockSetParams = jest.fn();
+let mockParams: { tab?: string } = {};
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: mockPush, setParams: mockSetParams }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock("@/hooks/use-catalog", () => ({
   useCatalogExercises: jest.fn(),
   useImportCatalogExercise: jest.fn(),
@@ -32,6 +37,8 @@ describe("CatalogScreen", () => {
   beforeEach(() => {
     mutate.mockClear();
     skillMutate.mockClear();
+    mockSetParams.mockClear();
+    mockParams = {};
     (useImportCatalogSkill as jest.Mock).mockReturnValue({ mutate: skillMutate, isPending: false, variables: undefined });
     (useCatalogSkills as jest.Mock).mockReturnValue({
       data: {
@@ -84,9 +91,15 @@ describe("CatalogScreen", () => {
     expect(useCatalogExercises).toHaveBeenLastCalledWith(1, "planche");
   });
 
-  it("lists library skills with targets and imports one", async () => {
-    const { getByTestId, getByText } = await renderWithProviders(<CatalogScreen />);
+  it("switches the tab through the route params", async () => {
+    const { getByTestId } = await renderWithProviders(<CatalogScreen />);
     await fireEvent.press(getByTestId("catalog-tab-skills"));
+    expect(mockSetParams).toHaveBeenCalledWith({ tab: "skills" });
+  });
+
+  it("lists library skills with targets and imports one", async () => {
+    mockParams = { tab: "skills" };
+    const { getByTestId, getByText } = await renderWithProviders(<CatalogScreen />);
     expect(getByText("Planche")).toBeTruthy();
     expect(getByText("1. Tuck Hold (10s)")).toBeTruthy();
     await fireEvent.press(getByTestId("catalog-skill-import-9"));

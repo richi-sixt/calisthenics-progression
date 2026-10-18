@@ -134,7 +134,10 @@ function useLibraryGroups() {
     {
       key: "app",
       heading: t("nav.libraryApp"),
-      items: [{ href: "/catalog", label: t("nav.catalog") }],
+      items: [
+        { href: "/catalog", label: t("nav.catalogExercises") },
+        { href: "/catalog?tab=skills", label: t("nav.catalogSkills") },
+      ],
     },
   ];
 }
@@ -289,7 +292,10 @@ function DesktopLibraryMenu() {
   const pathname = usePathname();
   const libraryGroups = useLibraryGroups();
   const active = libraryGroups.flatMap((g) => g.items).some(
-    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+    (item) => {
+      const path = item.href.split("?")[0];
+      return pathname === path || pathname.startsWith(path + "/");
+    }
   );
 
   return (

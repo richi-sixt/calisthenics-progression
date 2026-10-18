@@ -266,6 +266,8 @@ const en = {
   "nav.libraryMine": "My Library",
   "nav.libraryApp": "App Library",
   "nav.catalog": "App Library",
+  "nav.catalogExercises": "App exercises",
+  "nav.catalogSkills": "App skills",
   "catalog.title": "App Library",
   "catalog.intro": "Ready-made exercises curated for everyone. Import the ones you need into your own exercises.",
   "catalog.searchPlaceholder": "Search exercises",

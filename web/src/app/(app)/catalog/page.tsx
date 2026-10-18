@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useCatalogExercises,
   useImportCatalogExercise,
@@ -20,7 +21,10 @@ import { markdownToPlainText } from "@/lib/markdown-plain-text";
 
 export default function CatalogPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"exercises" | "skills">("exercises");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // The tab lives in the URL so menu links, back and sharing all work.
+  const tab: "exercises" | "skills" = searchParams.get("tab") === "skills" ? "skills" : "exercises";
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data: profile } = useProfile();
@@ -54,7 +58,7 @@ export default function CatalogPage() {
             key={key}
             type="button"
             onClick={() => {
-              setTab(key);
+              router.replace(key === "skills" ? "/catalog?tab=skills" : "/catalog");
               setPage(1);
             }}
             className={`rounded px-3 py-1 font-medium transition-colors ${

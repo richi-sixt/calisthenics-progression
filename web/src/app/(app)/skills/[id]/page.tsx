@@ -24,11 +24,14 @@ export default function SkillDetailPage({ params }: { params: Promise<{ id: stri
   if (error || !data) return <ErrorMessage error={error} />;
 
   const skill = data.data;
+  // App-library skills are managed in the app library, not under "my skills".
+  const backHref = skill.is_catalog ? "/catalog?tab=skills" : "/skills";
+  const backLabel = skill.is_catalog ? t("nav.catalog") : t("nav.skills");
 
   return (
     <div>
-      <Link href="/skills" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-        &larr; {t("common.backTo", { page: t("nav.skills").toLowerCase() })}
+      <Link href={backHref} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: backLabel.toLowerCase() })}
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-2">
@@ -62,7 +65,7 @@ export default function SkillDetailPage({ params }: { params: Promise<{ id: stri
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         onConfirm={() =>
-          deleteSkill.mutate(skillId, { onSuccess: () => router.push("/skills") })
+          deleteSkill.mutate(skillId, { onSuccess: () => router.push(backHref) })
         }
         title={t("skills.deleteConfirmTitle")}
         message={t("skills.deleteConfirmMessage")}

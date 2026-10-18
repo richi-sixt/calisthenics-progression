@@ -14,8 +14,8 @@ export default function NewSkillPage() {
 
   return (
     <div>
-      <Link href="/skills" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-        &larr; {t("common.backTo", { page: t("nav.skills").toLowerCase() })}
+      <Link href={isCatalog ? "/catalog?tab=skills" : "/skills"} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        &larr; {t("common.backTo", { page: (isCatalog ? t("nav.catalog") : t("nav.skills")).toLowerCase() })}
       </Link>
       <h1 className="mt-4 text-2xl font-bold">{t("skills.new")}</h1>
       <div className="mt-6">
@@ -25,7 +25,7 @@ export default function NewSkillPage() {
           error={createSkill.error?.message}
           onSubmit={(data) =>
             createSkill.mutate(isCatalog ? { ...data, is_catalog: true } : data, {
-              onSuccess: (res) => router.push(isCatalog ? "/catalog" : `/skills/${res.data.id}`),
+              onSuccess: (res) => router.push(isCatalog ? "/catalog?tab=skills" : `/skills/${res.data.id}`),
             })
           }
         />

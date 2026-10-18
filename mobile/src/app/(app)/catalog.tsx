@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, RefreshControl } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useCatalogExercises,
   useImportCatalogExercise,
@@ -16,7 +16,9 @@ import type { CatalogExercise, CatalogSkill } from "@/types";
 export default function CatalogScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"exercises" | "skills">("exercises");
+  // The tab lives in the route params so the library rows can open either one.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const tab: "exercises" | "skills" = tabParam === "skills" ? "skills" : "exercises";
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data, isLoading, error, refetch, isRefetching } = useCatalogExercises(page, search);
@@ -37,7 +39,7 @@ export default function CatalogScreen() {
             key={key}
             testID={`catalog-tab-${key}`}
             onPress={() => {
-              setTab(key);
+              router.setParams({ tab: key });
               setPage(1);
             }}
             className={`rounded px-3 py-1 ${tab === key ? "bg-white dark:bg-gray-800" : ""}`}
