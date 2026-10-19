@@ -32,7 +32,13 @@ export default function RegisterScreen() {
     }
     const { error } = await supabase.auth.signUp({
       ...data,
-      options: { data: { terms_accepted_at: new Date().toISOString() } },
+      options: {
+        data: {
+          terms_accepted_at: new Date().toISOString(),
+          // Lets the confirmation email link open the app (see auth/app-confirm).
+          signup_platform: "mobile",
+        },
+      },
     });
     if (error) {
       setError(error.message);

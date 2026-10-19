@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "services.sixt.calisthenicsprogression",
+      "associatedDomains": ["applinks:calisthenics-progression.sixt.services"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

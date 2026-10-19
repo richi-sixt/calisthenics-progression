@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
-const PUBLIC_ROUTES = ["/", "/privacy", "/support", "/terms", ...AUTH_ROUTES];
+const PUBLIC_ROUTES = ["/", "/privacy", "/support", "/terms", "/email-confirmed", ...AUTH_ROUTES];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -36,7 +36,13 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Redirect unauthenticated users to login (unless on a public route)
-  if (!user && !PUBLIC_ROUTES.includes(pathname) && !pathname.startsWith("/auth/")) {
+  // /.well-known/ (apple-app-site-association) must be reachable without a session.
+  if (
+    !user &&
+    !PUBLIC_ROUTES.includes(pathname) &&
+    !pathname.startsWith("/auth/") &&
+    !pathname.startsWith("/.well-known/")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

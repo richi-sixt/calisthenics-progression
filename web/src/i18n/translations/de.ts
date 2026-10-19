@@ -395,6 +395,12 @@ const de: Record<keyof typeof en, string> = {
   "auth.confirmationSent": "Wir haben einen Bestätigungslink an {{email}} gesendet. Klicke auf den Link, um dein Konto zu aktivieren.",
   "auth.resetSent": "Falls ein Konto für {{email}} existiert, haben wir einen Link zum Zurücksetzen gesendet.",
   "auth.backToLogin": "Zurück zur Anmeldung",
+  "auth.emailConfirmedTitle": "E-Mail bestätigt",
+  "auth.emailConfirmedMessage": "Dein Konto ist aktiv. Öffne die App, um weiterzumachen, oder melde dich hier im Web an.",
+  "auth.openApp": "App öffnen",
+  "auth.loginOnWeb": "Im Web anmelden",
+  "auth.confirmFailedTitle": "Link abgelaufen oder bereits verwendet",
+  "auth.confirmFailedMessage": "Dieser Bestätigungslink ist nicht mehr gültig. Wenn du deine E-Mail schon bestätigt hast, melde dich einfach an.",
 
   // Landing
   "landing.title": "Calisthenics Progression",

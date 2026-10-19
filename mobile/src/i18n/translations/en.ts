@@ -384,6 +384,9 @@ const en = {
   "auth.confirmationSent": "We sent a confirmation link to {{email}}. Click the link to activate your account.",
   "auth.resetSent": "If an account exists for {{email}}, we sent a password reset link.",
   "auth.backToLogin": "Back to Login",
+  "auth.confirming": "Confirming your email...",
+  "auth.confirmFailedTitle": "Link expired or already used",
+  "auth.confirmFailedMessage": "This confirmation link is no longer valid. If you already confirmed your email, simply log in.",
 
   // Landing
   "landing.title": "Calisthenics Progression",
