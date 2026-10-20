@@ -923,3 +923,28 @@ class TestCopyOnSave:
             data=self._payload(foreign_id),
         )
         assert resp.status_code == 400
+
+
+class TestTimestampsAreMarkedUtc:
+    def test_workout_and_profile_timestamps_carry_a_zone(
+        self, client, api_headers, exercise_definition
+    ):
+        resp = client.post(
+            "/api/v1/workouts",
+            headers=api_headers,
+            data=json.dumps(
+                {
+                    "title": "W",
+                    "exercises": [
+                        {
+                            "exercise_definition_id": exercise_definition.id,
+                            "sets": [{"reps": 5}],
+                        }
+                    ],
+                }
+            ),
+        )
+        assert resp.get_json()["data"]["timestamp"].endswith("+00:00")
+
+        profile = client.get("/api/v1/auth/profile", headers=api_headers)
+        assert profile.get_json()["data"]["registered_on"].endswith("+00:00")

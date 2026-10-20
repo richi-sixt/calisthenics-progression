@@ -89,6 +89,20 @@ def is_blocked_between(user_id: int, other_id: int) -> bool:
     )
 
 
+def utc_iso(value: datetime | None) -> str | None:
+    """ISO 8601 string marked as UTC (`+00:00`), or None.
+
+    Timestamps are stored as naive UTC in the database. Serialized without a
+    zone marker, browsers and apps read them as local time and show them
+    shifted by the UTC offset.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat()
+
+
 # Exercise categories many-to-many association table
 exercise_categories = db.Table(
     "exercise_categories",
@@ -311,10 +325,8 @@ class User(Base):
             "about_me": self.about_me,
             "image_file": self.image_file,
             "confirmed": self.confirmed,
-            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
-            "registered_on": (
-                self.registered_on.isoformat() if self.registered_on else None
-            ),
+            "last_seen": utc_iso(self.last_seen),
+            "registered_on": (utc_iso(self.registered_on)),
             "follower_count": self.followers.count(),
             "following_count": self.followed.count(),
         }
@@ -397,7 +409,7 @@ class Workout(Base):
         data: dict[str, Any] = {
             "id": self.id,
             "title": self.title,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "timestamp": utc_iso(self.timestamp),
             "user_id": self.user_id,
             "username": self.athlete.username if self.athlete else None,
             "user_image_file": self.athlete.image_file if self.athlete else None,
@@ -626,9 +638,7 @@ class ExerciseDefinition(Base):
             "title": self.title,
             "description": self.description,
             "counting_type": self.counting_type,
-            "date_created": (
-                self.date_created.isoformat() if self.date_created else None
-            ),
+            "date_created": (utc_iso(self.date_created)),
             "user_id": self.user_id,
             "username": self.athlete.username if self.athlete else None,
             "user_image_file": self.athlete.image_file if self.athlete else None,
@@ -1063,7 +1073,7 @@ class Message(Base):
             "sender_username": self.athlete.username if self.athlete else None,
             "recipient_id": self.recipient_id,
             "body": self.body,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "timestamp": utc_iso(self.timestamp),
         }
 
 

@@ -1143,3 +1143,28 @@ class TestExerciseCategoryModel:
                 )
             ).fetchall()
             assert len(rows) == 0
+
+
+class TestUtcIso:
+    def test_naive_value_is_marked_as_utc(self):
+        from datetime import datetime
+
+        from project.models import utc_iso
+
+        assert utc_iso(datetime(2026, 10, 20, 3, 5, 20)) == "2026-10-20T03:05:20+00:00"
+
+    def test_aware_value_is_converted_to_utc(self):
+        from datetime import datetime, timedelta, timezone
+
+        from project.models import utc_iso
+
+        cest = timezone(timedelta(hours=2))
+        assert (
+            utc_iso(datetime(2026, 10, 20, 5, 5, 20, tzinfo=cest))
+            == "2026-10-20T03:05:20+00:00"
+        )
+
+    def test_none(self):
+        from project.models import utc_iso
+
+        assert utc_iso(None) is None
