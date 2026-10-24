@@ -9,6 +9,7 @@ from project import db
 from project.api import bp
 from project.api.auth_utils import api_check_confirmed, api_login_required
 from project.api.exercise_copy import copy_exercise_for_user
+from project.api.exercise_routes import COUNTING_TYPE_ERROR, COUNTING_TYPES
 from project.models import (
     VISIBILITY_VALUES,
     Exercise,
@@ -89,11 +90,18 @@ def _save_exercises_from_json(
         if err:
             return err
 
+        override = ex_data.get("counting_type")
+        if override is not None and override not in COUNTING_TYPES:
+            return COUNTING_TYPE_ERROR
+        if override == ex_def.counting_type:
+            override = None
+
         exercise = Exercise(
             exercise_order=order,
             exercise_definition_id=ex_def_id,
             workout_id=workout.id,
             notes=notes,
+            counting_type=override,
         )
         db.session.add(exercise)
         db.session.flush()
@@ -470,6 +478,7 @@ def _clone_exercises(
             exercise_definition_id=ex.exercise_definition_id,
             workout_id=target.id,
             notes=ex.notes if copy_exercise_notes else None,
+            counting_type=ex.counting_type,
         )
         db.session.add(new_ex)
         db.session.flush()

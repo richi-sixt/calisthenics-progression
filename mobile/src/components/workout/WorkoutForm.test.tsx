@@ -388,6 +388,35 @@ describe("WorkoutForm", () => {
     );
   });
 
+  it("lets the user override the counting type for one workout exercise", async () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByTestId, queryByTestId, getByText } = await renderWithProviders(
+      <WorkoutForm onSubmit={onSubmit} isPending={false} />
+    );
+
+    await fireEvent.changeText(getByPlaceholderText("Workout title"), "Hold Day");
+    await selectExercise(getByTestId, 0, pushUp);
+    await waitFor(() => expect(getByTestId("reps-0-0")).toBeTruthy());
+    await fireEvent.press(getByTestId("counting-type-0-duration"));
+    await waitFor(() => expect(getByTestId("duration-0-0")).toBeTruthy());
+    expect(queryByTestId("reps-0-0")).toBeNull();
+    await fireEvent.changeText(getByTestId("duration-0-0"), "0:45");
+    await fireEvent.press(getByText("Save"));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exercises: [
+            expect.objectContaining({
+              counting_type: "duration",
+              sets: [expect.objectContaining({ duration: 45, reps: null })],
+            }),
+          ],
+        })
+      )
+    );
+  });
+
   it("tells the user that other users' exercises are copied on save", async () => {
     const foreign: ExerciseDefinition = { ...pushUp, id: 9, title: "Tuck Planche", user_id: 2, username: "max" };
     (useExercises as jest.Mock).mockReturnValue({ data: { data: [pushUp, foreign] } });

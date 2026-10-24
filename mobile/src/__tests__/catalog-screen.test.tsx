@@ -73,6 +73,23 @@ describe("CatalogScreen", () => {
     expect(getByTestId("catalog-imported-2")).toBeTruthy();
   });
 
+  it("shows a thumbnail for entries that have one", async () => {
+    const thumb = `/static/exercise_images/${"a".repeat(32)}.webp`;
+    (useCatalogExercises as jest.Mock).mockReturnValue({
+      data: {
+        data: [{ ...entry(1, "Tuck Planche", null), thumbnail_url: thumb }, entry(2, "Pike Push-up", 55)],
+        meta: { has_next: false, has_prev: false },
+      },
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+      isRefetching: false,
+    });
+    const { getByTestId, queryByTestId } = await renderWithProviders(<CatalogScreen />);
+    expect(getByTestId("catalog-thumbnail-1")).toBeTruthy();
+    expect(queryByTestId("catalog-thumbnail-2")).toBeNull();
+  });
+
   it("imports an entry on press", async () => {
     const { getByTestId } = await renderWithProviders(<CatalogScreen />);
     await fireEvent.press(getByTestId("catalog-import-1"));
@@ -95,6 +112,29 @@ describe("CatalogScreen", () => {
     const { getByTestId } = await renderWithProviders(<CatalogScreen />);
     await fireEvent.press(getByTestId("catalog-tab-skills"));
     expect(mockSetParams).toHaveBeenCalledWith({ tab: "skills" });
+  });
+
+  it("shows exercise thumbnails in library skills", async () => {
+    mockParams = { tab: "skills" };
+    const thumb = `/static/exercise_images/${"b".repeat(32)}.webp`;
+    (useCatalogSkills as jest.Mock).mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 9,
+            title: "Planche",
+            description: null,
+            user_id: 1,
+            imported_skill_id: null,
+            exercises: [{ exercise_id: 1, title: "Tuck Hold", counting_type: "duration", thumbnail_url: thumb, step_order: 1, target_value: 10 }],
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    const { getByTestId } = await renderWithProviders(<CatalogScreen />);
+    expect(getByTestId("catalog-skill-thumbnail-9-1")).toBeTruthy();
   });
 
   it("lists library skills with targets and imports one", async () => {

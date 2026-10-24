@@ -676,6 +676,8 @@ class Exercise(Base):
         db.Integer, db.ForeignKey("exercises.id"), index=True
     )
     notes = db.Column(db.Text, nullable=True)
+    # Per-workout override of the definition's counting type; NULL = use default.
+    counting_type = db.Column(db.String(10), nullable=True)
 
     # Relationship to sets in this exercise
     sets = db.relationship(
@@ -688,12 +690,14 @@ class Exercise(Base):
         workout_id: int,
         exercise_definition_id: int | None = None,
         notes: str | None = None,
+        counting_type: str | None = None,
     ) -> None:
         """Initialize an exercise instance within a workout."""
         self.exercise_order = exercise_order
         self.workout_id = workout_id
         self.exercise_definition_id = exercise_definition_id
         self.notes = notes
+        self.counting_type = counting_type
 
     def __repr__(self) -> str:
         """String representation of Exercise instance."""
@@ -701,6 +705,11 @@ class Exercise(Base):
 
     def to_dict(self, include_sets: bool = False) -> dict[str, Any]:
         """Serialize exercise instance to dictionary for API responses."""
+        default_counting_type = (
+            self.exercise_definition.counting_type
+            if self.exercise_definition
+            else "reps"
+        )
         data: dict[str, Any] = {
             "id": self.id,
             "exercise_order": self.exercise_order,
@@ -709,11 +718,8 @@ class Exercise(Base):
             "exercise_definition_title": (
                 self.exercise_definition.title if self.exercise_definition else None
             ),
-            "counting_type": (
-                self.exercise_definition.counting_type
-                if self.exercise_definition
-                else "reps"
-            ),
+            "counting_type": self.counting_type or default_counting_type,
+            "default_counting_type": default_counting_type,
             "notes": self.notes,
         }
         if include_sets:

@@ -99,6 +99,8 @@ const de: Record<keyof typeof en, string> = {
   "workouts.timeOptional": "Zeit (optional)",
   "workouts.duration": "Dauer",
   "workouts.durationSeconds": "Dauer (s)",
+  "workouts.countingType": "Zählweise",
+  "workouts.countingTypeDefault": "Standard",
   "workouts.progression": "Progression",
   "workouts.noExercises": "Keine Übungen in diesem Workout.",
   "workouts.noSetsRecorded": "Keine Sätze aufgezeichnet",

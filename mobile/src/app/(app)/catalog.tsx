@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, RefreshControl } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, RefreshControl, Image } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useCatalogExercises,
@@ -10,6 +10,7 @@ import {
 import { formatSkillValue } from "@/components/skill/format";
 import { CardListSkeleton, ExerciseCardSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
+import { ownImageUrl } from "@/lib/uploaded-images";
 import { markdownToPlainText } from "@/lib/markdown";
 import type { CatalogExercise, CatalogSkill } from "@/types";
 
@@ -100,11 +101,26 @@ export default function CatalogScreen() {
                 </Text>
               ) : null}
               <View className="mt-2 gap-0.5">
-                {item.exercises.map((e, i) => (
-                  <Text key={e.exercise_id} className="text-sm text-gray-600 dark:text-gray-400">
-                    {i + 1}. {e.title} ({formatSkillValue(e.counting_type, e.target_value)})
-                  </Text>
-                ))}
+                {item.exercises.map((e, i) => {
+                  const thumb = ownImageUrl(e.thumbnail_url);
+                  return (
+                    <View key={e.exercise_id} className="flex-row items-center gap-2">
+                      {thumb ? (
+                        <Image
+                          source={{ uri: thumb }}
+                          testID={`catalog-skill-thumbnail-${item.id}-${e.exercise_id}`}
+                          className="h-10 w-10 rounded-md bg-gray-100 dark:bg-gray-700"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View className="h-10 w-10 rounded-md bg-gray-100 dark:bg-gray-700" />
+                      )}
+                      <Text className="flex-1 text-sm text-gray-600 dark:text-gray-400">
+                        {i + 1}. {e.title} ({formatSkillValue(e.counting_type, e.target_value)})
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
               <View className="mt-3 flex-row">
                 {item.imported_skill_id !== null ? (
@@ -159,14 +175,28 @@ export default function CatalogScreen() {
             testID={`catalog-item-${item.id}`}
             className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
           >
-            <Pressable onPress={() => router.push(`/exercises/${item.id}`)}>
-              <Text className="font-medium text-gray-900 dark:text-gray-100">{item.title}</Text>
-            </Pressable>
-            {item.progressions.length > 0 && (
-              <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                {t("exercises.progressions")} {item.progressions.map((p) => p.title).join(" → ")}
-              </Text>
-            )}
+            <View className="flex-row gap-3">
+              {ownImageUrl(item.thumbnail_url) ? (
+                <Pressable onPress={() => router.push(`/exercises/${item.id}`)}>
+                  <Image
+                    source={{ uri: ownImageUrl(item.thumbnail_url)! }}
+                    testID={`catalog-thumbnail-${item.id}`}
+                    className="h-16 w-16 rounded-md bg-gray-100 dark:bg-gray-700"
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              ) : null}
+              <View className="min-w-0 flex-1">
+                <Pressable onPress={() => router.push(`/exercises/${item.id}`)}>
+                  <Text className="font-medium text-gray-900 dark:text-gray-100">{item.title}</Text>
+                </Pressable>
+                {item.progressions.length > 0 && (
+                  <Text className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    {t("exercises.progressions")} {item.progressions.map((p) => p.title).join(" → ")}
+                  </Text>
+                )}
+              </View>
+            </View>
             <View className="mt-3 flex-row">
               {item.imported_exercise_id !== null ? (
                 <Pressable

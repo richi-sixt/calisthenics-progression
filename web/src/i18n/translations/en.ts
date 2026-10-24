@@ -97,6 +97,8 @@ const en = {
   "workouts.distanceKm": "Distance (km)",
   "workouts.timeOptional": "Time (optional)",
   "workouts.durationSeconds": "Duration (s)",
+  "workouts.countingType": "Counting",
+  "workouts.countingTypeDefault": "Default",
   "workouts.progression": "Progression",
   "workouts.noExercises": "No exercises in this workout.",
   "workouts.noSetsRecorded": "No sets recorded",

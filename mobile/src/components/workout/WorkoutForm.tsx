@@ -40,8 +40,12 @@ interface SetData {
   distance_km: string;
 }
 
+type CountingType = "reps" | "duration" | "km";
+
 interface ExerciseData {
   exercise_definition_id: string;
+  /** "" = use the exercise definition's counting type. */
+  counting_type: "" | CountingType;
   notes: string;
   sets: SetData[];
 }
@@ -101,6 +105,10 @@ export function WorkoutForm({
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
+          counting_type:
+            ex.default_counting_type && ex.counting_type !== ex.default_counting_type
+              ? ex.counting_type
+              : "",
           notes: ex.notes ?? "",
           sets:
             ex.sets?.map((s) => ({
@@ -110,7 +118,7 @@ export function WorkoutForm({
               distance_km: s.distance_km != null ? String(s.distance_km) : "",
             })) ?? [{ progression: "", reps: "", duration: "", distance_km: "" }],
         })) ?? [
-          { exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] },
+          { exercise_definition_id: "", counting_type: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] },
         ],
     },
   });
@@ -162,16 +170,25 @@ export function WorkoutForm({
       visibility: data.visibility,
       planned_date: data.planned_date,
       notes: data.notes.trim() || null,
-      exercises: data.exercises.map((ex) => ({
-        exercise_definition_id: Number(ex.exercise_definition_id),
-        notes: ex.notes.trim() || null,
-        sets: ex.sets.map((s) => ({
-          progression: s.progression || null,
-          reps: s.reps ? Number(s.reps) : null,
-          duration: s.duration ? mmssToSeconds(s.duration) : null,
-          distance_km: parseKm(s.distance_km),
-        })),
-      })),
+      exercises: data.exercises.map((ex) => {
+        const type: CountingType =
+          ex.counting_type ||
+          exerciseDefMap.get(Number(ex.exercise_definition_id))?.counting_type ||
+          "reps";
+        // Only send the fields that belong to the effective counting type, so values
+        // typed before switching the type don't linger in the saved sets.
+        return {
+          exercise_definition_id: Number(ex.exercise_definition_id),
+          counting_type: ex.counting_type || undefined,
+          notes: ex.notes.trim() || null,
+          sets: ex.sets.map((s) => ({
+            progression: s.progression || null,
+            reps: type === "reps" && s.reps ? Number(s.reps) : null,
+            duration: type !== "reps" && s.duration ? mmssToSeconds(s.duration) : null,
+            distance_km: type === "km" ? parseKm(s.distance_km) : null,
+          })),
+        };
+      }),
     });
   };
 
@@ -274,7 +291,7 @@ export function WorkoutForm({
         ))}
         <Pressable
           onPress={() =>
-            appendExercise({ exercise_definition_id: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] })
+            appendExercise({ exercise_definition_id: "", counting_type: "", notes: "", sets: [{ progression: "", reps: "", duration: "", distance_km: "" }] })
           }
         >
           <Text className="text-sm text-blue-600 dark:text-blue-400">{t("workoutForm.addExercise")}</Text>
@@ -347,7 +364,14 @@ function ExerciseBlock({
 
   const selectedDefId = useWatch({ control, name: `exercises.${exIndex}.exercise_definition_id` });
   const selectedDef = selectedDefId ? exerciseDefMap.get(Number(selectedDefId)) : undefined;
-  const countingType = selectedDef?.counting_type ?? "reps";
+  const countingOverride = useWatch({ control, name: `exercises.${exIndex}.counting_type` });
+  const defaultCountingType: CountingType = selectedDef?.counting_type ?? "reps";
+  const countingType: CountingType = countingOverride || defaultCountingType;
+  const countingLabels: Record<CountingType, string> = {
+    reps: t("exerciseForm.reps"),
+    duration: t("exerciseForm.duration"),
+    km: t("exerciseForm.km"),
+  };
   const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
@@ -386,6 +410,36 @@ function ExerciseBlock({
         exerciseId={previewOpen && selectedDef ? selectedDef.id : null}
         onClose={() => setPreviewOpen(false)}
       />
+
+      <View className="mt-2 flex-row flex-wrap items-center gap-2">
+        <Text className="text-xs text-gray-500 dark:text-gray-400">{t("workouts.countingType")}</Text>
+        <Controller
+          control={control}
+          name={`exercises.${exIndex}.counting_type`}
+          render={({ field: { onChange, value } }) => (
+            <>
+              {(["", "reps", "duration", "km"] as const)
+                .filter((c) => c !== defaultCountingType)
+                .map((c) => {
+                  const selected = value === c;
+                  return (
+                    <Pressable
+                      key={c || "default"}
+                      onPress={() => onChange(c)}
+                      accessibilityState={{ selected }}
+                      testID={`counting-type-${exIndex}-${c || "default"}`}
+                      className={`rounded-full border px-2.5 py-1 ${selected ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30" : "border-gray-300 dark:border-gray-600"}`}
+                    >
+                      <Text className={`text-xs ${selected ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400"}`}>
+                        {c === "" ? `${t("workouts.countingTypeDefault")} (${countingLabels[defaultCountingType]})` : countingLabels[c]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+            </>
+          )}
+        />
+      </View>
 
       <View className="mt-3 gap-2">
         {setFields.map((setField, setIndex) => (
