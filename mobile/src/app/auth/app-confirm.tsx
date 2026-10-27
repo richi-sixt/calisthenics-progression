@@ -17,28 +17,28 @@ export default function AppConfirmScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { token_hash, type } = useLocalSearchParams<{ token_hash?: string; type?: string }>();
-  const [failed, setFailed] = useState(false);
+  // Whether the link itself is usable is known at render time; only the
+  // result of the single-use verification arrives asynchronously.
+  const otpType = (type ?? "email") as EmailOtpType;
+  const invalidLink = !token_hash || !ALLOWED_TYPES.includes(otpType);
+  const [verifyFailed, setVerifyFailed] = useState(false);
+  const failed = invalidLink || verifyFailed;
   // The token is single-use: make sure it is verified exactly once.
   const started = useRef(false);
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current || invalidLink) return;
     started.current = true;
 
-    const otpType = (type ?? "email") as EmailOtpType;
-    if (!token_hash || !ALLOWED_TYPES.includes(otpType)) {
-      setFailed(true);
-      return;
-    }
-    supabase.auth.verifyOtp({ token_hash, type: otpType }).then(({ error }) => {
+    supabase.auth.verifyOtp({ token_hash: token_hash!, type: otpType }).then(({ error }) => {
       if (error) {
-        setFailed(true);
+        setVerifyFailed(true);
         return;
       }
       // The session now exists; the root layout switches to the signed-in area.
       router.replace("/");
     });
-  }, [token_hash, type, router]);
+  }, [invalidLink, token_hash, otpType, router]);
 
   if (!failed) {
     return (
