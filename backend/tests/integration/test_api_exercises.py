@@ -441,6 +441,66 @@ class TestApiDeleteExercise:
         resp = client.get("/api/v1/exercises", headers=api_headers)
         assert len(resp.get_json()["data"]) == 0
 
+    def test_unused_exercise_is_hard_deleted(
+        self, client, api_headers, exercise_definition, app
+    ):
+        from project import db
+        from project.models import ExerciseDefinition
+
+        eid = exercise_definition.id
+        usage = client.get(f"/api/v1/exercises/{eid}/usage", headers=api_headers)
+        assert usage.get_json()["data"] == {"in_use": False, "action": "delete"}
+
+        resp = client.delete(f"/api/v1/exercises/{eid}", headers=api_headers)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["action"] == "delete"
+        with app.app_context():
+            assert db.session.get(ExerciseDefinition, eid) is None
+
+        # Title is free again
+        resp = client.post(
+            "/api/v1/exercises",
+            headers=api_headers,
+            data=json.dumps({"title": exercise_definition.title}),
+        )
+        assert resp.status_code == 201
+
+    def test_used_exercise_is_archived(
+        self, client, api_headers, exercise_definition, app
+    ):
+        from project import db
+        from project.models import Exercise, ExerciseDefinition, Workout
+
+        eid = exercise_definition.id
+        with app.app_context():
+            workout = Workout(title="W", user_id=exercise_definition.user_id)
+            db.session.add(workout)
+            db.session.flush()
+            db.session.add(
+                Exercise(
+                    exercise_order=1,
+                    workout_id=workout.id,
+                    exercise_definition_id=eid,
+                )
+            )
+            db.session.commit()
+
+        usage = client.get(f"/api/v1/exercises/{eid}/usage", headers=api_headers)
+        assert usage.get_json()["data"] == {"in_use": True, "action": "archive"}
+
+        resp = client.delete(f"/api/v1/exercises/{eid}", headers=api_headers)
+        assert resp.status_code == 200
+        assert resp.get_json()["data"]["action"] == "archive"
+        with app.app_context():
+            assert db.session.get(ExerciseDefinition, eid).archived is True
+
+    def test_usage_forbidden(self, client, api_headers_second, exercise_definition):
+        resp = client.get(
+            f"/api/v1/exercises/{exercise_definition.id}/usage",
+            headers=api_headers_second,
+        )
+        assert resp.status_code == 403
+
     def test_delete_exercise_forbidden(
         self, client, api_headers_second, exercise_definition
     ):

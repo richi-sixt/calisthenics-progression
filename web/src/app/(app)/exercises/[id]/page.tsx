@@ -6,6 +6,7 @@ import {
   useExercise,
   useExerciseWorkouts,
   useDeleteExercise,
+  useExerciseUsage,
   useCopyExercise,
 } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
@@ -31,6 +32,7 @@ export default function ExerciseDetailPage({
   const deleteExercise = useDeleteExercise();
   const copyExercise = useCopyExercise();
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const usage = useExerciseUsage(exerciseId, showArchiveConfirm);
 
   if (isLoading) {
     return (
@@ -75,7 +77,7 @@ export default function ExerciseDetailPage({
                 onClick={() => setShowArchiveConfirm(true)}
                 className="rounded-md px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                {t("exercises.archive")}
+                {t("exercises.remove")}
               </button>
             </>
           ) : (
@@ -106,9 +108,9 @@ export default function ExerciseDetailPage({
             onSuccess: () => router.push(backHref),
           });
         }}
-        title={t("exercises.archiveConfirmTitle")}
-        message={t("exercises.archiveConfirmMessage")}
-        confirmLabel={t("exercises.archive")}
+        title={usage.data?.data.action === "delete" ? t("exercises.deleteConfirmTitle") : t("exercises.archiveConfirmTitle")}
+        message={usage.data?.data.action === "delete" ? t("exercises.deleteConfirmMessage") : t("exercises.archiveConfirmMessage")}
+        confirmLabel={usage.data?.data.action === "delete" ? t("exercises.delete") : t("exercises.archive")}
         variant="danger"
       />
 

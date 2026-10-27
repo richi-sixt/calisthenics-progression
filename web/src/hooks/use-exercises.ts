@@ -112,6 +112,18 @@ export function useUpdateExercise() {
   });
 }
 
+export function useExerciseUsage(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["exercise-usage", id],
+    queryFn: () =>
+      api.get<ApiResponse<{ in_use: boolean; action: "archive" | "delete" }>>(
+        `/exercises/${id}/usage`
+      ),
+    enabled,
+    gcTime: 0,
+  });
+}
+
 export function useDeleteExercise() {
   const qc = useQueryClient();
   return useMutation({

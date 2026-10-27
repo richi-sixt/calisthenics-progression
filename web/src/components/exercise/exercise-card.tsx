@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { ExerciseDefinition } from "@/types";
-import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
+import { useDeleteExercise, useExerciseUsage, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { useMemo } from "react";
@@ -24,6 +24,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
   const { data: catData } = useCategories();
   const isOwner = profile?.data?.id === exercise.user_id;
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const usage = useExerciseUsage(exercise.id, showArchiveDialog);
 
   // Map category_ids to names
   const descriptionPreview = useMemo(
@@ -174,7 +175,7 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
                   disabled={deleteExercise.isPending}
                   className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
-                  {t("exercises.archive")}
+                  {t("exercises.remove")}
                 </button>
               </>
             ) : (
@@ -200,9 +201,9 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseDefinitio
         open={showArchiveDialog}
         onClose={() => setShowArchiveDialog(false)}
         onConfirm={() => deleteExercise.mutate(exercise.id)}
-        title={t("exercises.archive")}
-        message={t("exercises.archiveConfirmMessage")}
-        confirmLabel={t("exercises.archive")}
+        title={usage.data?.data.action === "delete" ? t("exercises.deleteConfirmTitle") : t("exercises.archiveConfirmTitle")}
+        message={usage.data?.data.action === "delete" ? t("exercises.deleteConfirmMessage") : t("exercises.archiveConfirmMessage")}
+        confirmLabel={usage.data?.data.action === "delete" ? t("exercises.delete") : t("exercises.archive")}
         variant="danger"
       />
     </div>

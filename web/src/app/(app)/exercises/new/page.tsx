@@ -33,6 +33,11 @@ export default function NewExercisePage() {
             );
           }}
         />
+        {createExercise.isError && (
+          <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+            {createExercise.error.message}
+          </p>
+        )}
       </div>
     </div>
   );

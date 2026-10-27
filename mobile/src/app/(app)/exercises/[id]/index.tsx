@@ -1,6 +1,6 @@
-import { View, Text, Pressable, ActivityIndicator, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useExercise, useExerciseWorkouts, useDeleteExercise, useCopyExercise } from "@/hooks/use-exercises";
+import { useExercise, useExerciseWorkouts, useRemoveExercise, useCopyExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
 import { useTranslation } from "@/i18n";
@@ -14,7 +14,7 @@ export default function ExerciseDetailScreen() {
   const { data, isLoading, error } = useExercise(exerciseId);
   const { data: profile } = useProfile();
   const { data: workoutsData } = useExerciseWorkouts(exerciseId);
-  const deleteExercise = useDeleteExercise();
+  const removeExercise = useRemoveExercise();
   const copyExercise = useCopyExercise();
 
   if (isLoading) {
@@ -27,12 +27,7 @@ export default function ExerciseDetailScreen() {
   const exercise = data.data;
   const isOwner = profile?.data?.id === exercise.user_id;
 
-  const confirmArchive = () => {
-    Alert.alert(t("exercises.archiveConfirmTitle"), t("exercises.archiveConfirmMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("exercises.archive"), style: "destructive", onPress: () => deleteExercise.mutate(exerciseId, { onSuccess: () => router.back() }) },
-    ]);
-  };
+  const confirmArchive = () => removeExercise.remove(exerciseId, () => router.back());
 
   return (
     <ScrollView className="flex-1 bg-white dark:bg-gray-900" contentContainerStyle={{ padding: 16 }}>
@@ -48,7 +43,7 @@ export default function ExerciseDetailScreen() {
               <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.edit")}</Text>
             </Pressable>
             <Pressable onPress={confirmArchive} className="rounded-md px-4 py-2">
-              <Text className="text-sm font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>
+              <Text className="text-sm font-medium text-red-600 dark:text-red-400">{t("exercises.remove")}</Text>
             </Pressable>
           </>
         ) : (
