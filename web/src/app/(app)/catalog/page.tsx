@@ -18,6 +18,7 @@ import EmptyState from "@/components/ui/empty-state";
 import { useTranslation } from "@/i18n";
 import { CardListSkeleton, ExerciseCardSkeleton } from "@/components/ui/skeleton";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
+import { ownImageUrl } from "@/lib/uploaded-images";
 
 export default function CatalogPage() {
   const { t } = useTranslation();
@@ -106,11 +107,26 @@ export default function CatalogPage() {
                 </p>
               )}
               <ol className="mt-2 space-y-0.5 text-sm text-gray-600 dark:text-gray-400">
-                {skill.exercises.map((e, i) => (
-                  <li key={e.exercise_id}>
-                    {i + 1}. {e.title} ({formatSkillValue(e.counting_type, e.target_value)})
-                  </li>
-                ))}
+                {skill.exercises.map((e, i) => {
+                  const thumb = ownImageUrl(e.thumbnail_url);
+                  return (
+                    <li key={e.exercise_id} className="flex items-center gap-2">
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt=""
+                          loading="lazy"
+                          className="h-10 w-10 flex-shrink-0 rounded-md object-cover bg-gray-100 dark:bg-gray-700"
+                        />
+                      ) : (
+                        <span className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-100 dark:bg-gray-700" />
+                      )}
+                      <span>
+                        {i + 1}. {e.title} ({formatSkillValue(e.counting_type, e.target_value)})
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {skill.imported_skill_id !== null ? (
@@ -156,11 +172,25 @@ export default function CatalogPage() {
       )}
 
       <div className="mt-4 space-y-3">
-        {tab === "exercises" && exercises.map((ex) => (
+        {tab === "exercises" && exercises.map((ex) => {
+          const thumb = ownImageUrl(ex.thumbnail_url);
+          return (
           <div
             key={ex.id}
             className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
           >
+            <div className="flex min-w-0 gap-3">
+              {thumb && (
+                <Link href={`/exercises/${ex.id}`} className="flex-shrink-0">
+                  <img
+                    src={thumb}
+                    alt=""
+                    loading="lazy"
+                    className="h-16 w-16 rounded-md object-cover bg-gray-100 dark:bg-gray-700"
+                  />
+                </Link>
+              )}
+              <div className="min-w-0 flex-1">
             <Link
               href={`/exercises/${ex.id}`}
               className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600"
@@ -177,6 +207,8 @@ export default function CatalogPage() {
                 {t("exercises.progressions")} {ex.progressions.map((p) => p.title).join(" → ")}
               </p>
             )}
+              </div>
+            </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {ex.imported_exercise_id !== null ? (
                 <Link
@@ -209,7 +241,8 @@ export default function CatalogPage() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {tab === "exercises" && meta && <Pagination meta={meta} onPageChange={setPage} />}

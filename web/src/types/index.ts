@@ -52,6 +52,8 @@ export interface Exercise {
   exercise_definition_id: number | null;
   exercise_definition_title: string | null;
   counting_type: "reps" | "duration" | "km";
+  /** The exercise definition's counting type (counting_type may override it per workout). */
+  default_counting_type?: "reps" | "duration" | "km";
   notes: string | null;
   sets?: WorkoutSet[];
 }

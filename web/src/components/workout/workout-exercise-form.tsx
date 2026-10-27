@@ -38,8 +38,12 @@ interface SetData {
   distance_km: string;
 }
 
+type CountingType = "reps" | "duration" | "km";
+
 interface ExerciseData {
   exercise_definition_id: string;
+  /** "" = use the exercise definition's counting type. */
+  counting_type: "" | CountingType;
   notes: string;
   sets: SetData[];
 }
@@ -100,6 +104,10 @@ export default function WorkoutExerciseForm({
       exercises:
         defaultValues?.exercises?.map((ex) => ({
           exercise_definition_id: String(ex.exercise_definition_id ?? ""),
+          counting_type:
+            ex.default_counting_type && ex.counting_type !== ex.default_counting_type
+              ? ex.counting_type
+              : "",
           notes: ex.notes ?? "",
           sets:
             ex.sets?.map((s) => ({
@@ -111,6 +119,7 @@ export default function WorkoutExerciseForm({
         })) ?? [
           {
             exercise_definition_id: "",
+            counting_type: "",
             notes: "",
             sets: [{ progression: "", reps: "", duration: "", distance_km: "" }],
           },
@@ -179,16 +188,25 @@ export default function WorkoutExerciseForm({
       visibility: data.visibility,
       planned_date: data.planned_date,
       notes: data.notes.trim() || null,
-      exercises: data.exercises.map((ex) => ({
-        exercise_definition_id: Number(ex.exercise_definition_id),
-        notes: ex.notes.trim() || null,
-        sets: ex.sets.map((s) => ({
+      exercises: data.exercises.map((ex) => {
+        const type: CountingType =
+          ex.counting_type ||
+          exerciseDefMap.get(Number(ex.exercise_definition_id))?.counting_type ||
+          "reps";
+        // Only send the fields that belong to the effective counting type, so values
+        // typed before switching the type don't linger in the saved sets.
+        return {
+          exercise_definition_id: Number(ex.exercise_definition_id),
+          counting_type: ex.counting_type || undefined,
+          notes: ex.notes.trim() || null,
+          sets: ex.sets.map((s) => ({
             progression: s.progression || null,
-            reps: s.reps ? Number(s.reps) : null,
-            duration: s.duration ? mmssToSeconds(s.duration) : null,
-            distance_km: s.distance_km ? Number(s.distance_km) : null,
+            reps: type === "reps" && s.reps ? Number(s.reps) : null,
+            duration: type !== "reps" && s.duration ? mmssToSeconds(s.duration) : null,
+            distance_km: type === "km" && s.distance_km ? Number(s.distance_km) : null,
           })),
-      })),
+        };
+      }),
     });
   };
 
@@ -292,6 +310,7 @@ export default function WorkoutExerciseForm({
           onClick={() =>
             appendExercise({
               exercise_definition_id: "",
+              counting_type: "",
               notes: "",
               sets: [{ progression: "", reps: "", duration: "", distance_km: "" }],
             })
@@ -364,7 +383,17 @@ function ExerciseBlock({
   });
 
   const selectedDef = selectedDefId ? exerciseDefMap.get(Number(selectedDefId)) : undefined;
-  const countingType = selectedDef?.counting_type ?? "reps";
+  const countingOverride = useWatch({
+    control,
+    name: `exercises.${exIndex}.counting_type`,
+  });
+  const defaultCountingType: CountingType = selectedDef?.counting_type ?? "reps";
+  const countingType: CountingType = countingOverride || defaultCountingType;
+  const countingLabels: Record<CountingType, string> = {
+    reps: t("exerciseForm.reps"),
+    duration: t("exerciseForm.duration"),
+    km: t("exerciseForm.km"),
+  };
   const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
@@ -399,6 +428,25 @@ function ExerciseBlock({
         exerciseId={previewOpen && selectedDef ? selectedDef.id : null}
         onClose={() => setPreviewOpen(false)}
       />
+
+      <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        {t("workouts.countingType")}
+        <select
+          {...register(`exercises.${exIndex}.counting_type`)}
+          className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">
+            {t("workouts.countingTypeDefault")} ({countingLabels[defaultCountingType]})
+          </option>
+          {(Object.keys(countingLabels) as CountingType[])
+            .filter((c) => c !== defaultCountingType)
+            .map((c) => (
+              <option key={c} value={c}>
+                {countingLabels[c]}
+              </option>
+            ))}
+        </select>
+      </label>
 
       <div className="mt-3 space-y-2">
         {/* Column headers -- desktop only */}

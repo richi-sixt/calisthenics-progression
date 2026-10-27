@@ -17,6 +17,7 @@ from typing import Any
 
 from flask import g, jsonify, request
 from flask.typing import ResponseReturnValue
+from sqlalchemy import or_
 
 from project import db
 from project.api import bp
@@ -125,6 +126,11 @@ def api_exercise_stats(exercise_id: int) -> ResponseReturnValue:
         .join(Workout, Exercise.workout_id == Workout.id)
         .filter(
             Exercise.exercise_definition_id == exercise_id,
+            # Sets logged with an overridden counting type are not comparable.
+            or_(
+                Exercise.counting_type.is_(None),
+                Exercise.counting_type == exercise_def.counting_type,
+            ),
             Workout.user_id == g.current_api_user.id,
             Workout.is_template == False,  # noqa: E712
             Workout.is_done == True,  # noqa: E712

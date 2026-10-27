@@ -4,6 +4,7 @@ from typing import Any
 
 from flask import g, jsonify, request
 from flask.typing import ResponseReturnValue
+from sqlalchemy import or_
 
 from project import db
 from project.api import bp
@@ -47,8 +48,17 @@ def _progress(exercise_ids: list[int]) -> dict[int, dict[str, Any]]:
         )
         .join(Exercise, Set.exercise_id == Exercise.id)
         .join(Workout, Exercise.workout_id == Workout.id)
+        .join(
+            ExerciseDefinition,
+            Exercise.exercise_definition_id == ExerciseDefinition.id,
+        )
         .where(
             Exercise.exercise_definition_id.in_(exercise_ids),
+            # Overridden counting types don't count towards the skill target.
+            or_(
+                Exercise.counting_type.is_(None),
+                Exercise.counting_type == ExerciseDefinition.counting_type,
+            ),
             Workout.user_id == g.current_api_user.id,
             Workout.is_template.is_(False),
             Workout.is_done.is_(True),

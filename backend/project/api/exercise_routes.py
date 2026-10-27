@@ -15,6 +15,7 @@ from project.models import (
     ExerciseCategory,
     ExerciseDefinition,
     ExerciseProgression,
+    ProgressionLevel,
     Skill,
     SkillExercise,
     UploadedImage,
@@ -147,6 +148,15 @@ def _usage_counts(user_id: int, exercise_ids: list[int]) -> dict[int, int]:
         .group_by(Exercise.exercise_definition_id)
     ).all()
     return {row[0]: row[1] for row in rows}
+
+
+def _duplicate_title_error(existing: ExerciseDefinition) -> str:
+    if existing.archived:
+        return (
+            "You already have an archived exercise with this title. "
+            "Please choose a different title."
+        )
+    return "You already have an exercise with this title."
 
 
 @bp.route("/exercises", methods=["GET"])
@@ -284,7 +294,7 @@ def api_create_exercise() -> ResponseReturnValue:
         .first()
     )
     if existing:
-        return jsonify({"error": "You already have an exercise with this title."}), 409
+        return jsonify({"error": _duplicate_title_error(existing)}), 409
 
     exercise = ExerciseDefinition(
         title=title,
@@ -416,10 +426,7 @@ def api_update_exercise(exercise_id: int) -> ResponseReturnValue:
                 .first()
             )
             if existing and existing.id != exercise.id:
-                return (
-                    jsonify({"error": "You already have an exercise with this title."}),
-                    409,
-                )
+                return jsonify({"error": _duplicate_title_error(existing)}), 409
             exercise.title = new_title
 
     if "description" in data:
@@ -499,19 +506,70 @@ def api_set_exercise_progressions(exercise_id: int) -> ResponseReturnValue:
     return jsonify({"data": exercise.to_dict(viewer=g.current_api_user)})
 
 
-@bp.route("/exercises/<int:exercise_id>", methods=["DELETE"])
+def _exercise_in_use(exercise: ExerciseDefinition) -> bool:
+    """True if anything references the exercise (history, skills, progressions, copies)."""
+    eid = exercise.id
+    checks = (
+        db.select(Exercise.id).where(Exercise.exercise_definition_id == eid),
+        db.select(ExerciseProgression.id).where(
+            or_(
+                ExerciseProgression.parent_id == eid,
+                ExerciseProgression.child_id == eid,
+            )
+        ),
+        db.select(SkillExercise.id).where(SkillExercise.exercise_id == eid),
+        db.select(ExerciseDefinition.id).where(
+            ExerciseDefinition.copied_from_id == eid
+        ),
+    )
+    return any(db.session.execute(q.limit(1)).first() for q in checks)
+
+
+@bp.route("/exercises/<int:exercise_id>/usage", methods=["GET"])
 @api_login_required
 @api_check_confirmed
-def api_delete_exercise(exercise_id: int) -> ResponseReturnValue:
-    """Archive (soft-delete) an exercise definition."""
+def api_exercise_usage(exercise_id: int) -> ResponseReturnValue:
+    """Tell the client whether removing the exercise deletes or archives it."""
     exercise = db.session.get(ExerciseDefinition, exercise_id)
     if exercise is None:
         return jsonify({"error": "Exercise not found."}), 404
     if exercise.user_id != g.current_api_user.id:
         return jsonify({"error": "Forbidden."}), 403
-    exercise.archived = True
+    in_use = _exercise_in_use(exercise)
+    return (
+        jsonify(
+            {"data": {"in_use": in_use, "action": "archive" if in_use else "delete"}}
+        ),
+        200,
+    )
+
+
+@bp.route("/exercises/<int:exercise_id>", methods=["DELETE"])
+@api_login_required
+@api_check_confirmed
+def api_delete_exercise(exercise_id: int) -> ResponseReturnValue:
+    """Delete an unused exercise definition, archive (soft-delete) a used one."""
+    exercise = db.session.get(ExerciseDefinition, exercise_id)
+    if exercise is None:
+        return jsonify({"error": "Exercise not found."}), 404
+    if exercise.user_id != g.current_api_user.id:
+        return jsonify({"error": "Forbidden."}), 403
+    if _exercise_in_use(exercise):
+        exercise.archived = True
+        db.session.commit()
+        return (
+            jsonify({"data": {"message": "Exercise archived.", "action": "archive"}}),
+            200,
+        )
+    # Legacy per-exercise levels have no cascade and would block the delete.
+    db.session.execute(
+        db.delete(ProgressionLevel).where(
+            ProgressionLevel.exercise_definition_id == exercise.id
+        )
+    )
+    db.session.delete(exercise)
     db.session.commit()
-    return jsonify({"data": {"message": "Exercise archived."}}), 200
+    return jsonify({"data": {"message": "Exercise deleted.", "action": "delete"}}), 200
 
 
 @bp.route("/exercises/<int:exercise_id>/copy", methods=["POST"])

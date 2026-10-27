@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { View, Text, Pressable, Image, Alert } from "react-native";
+import { View, Text, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import type { ExerciseDefinition } from "@/types";
-import { useDeleteExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
+import { useRemoveExercise, useCopyExercise, useUpdateExercise } from "@/hooks/use-exercises";
 import { useProfile } from "@/hooks/use-profile";
 import { useCategories } from "@/hooks/use-categories";
 import { ReportBlockMenu } from "@/components/social/ReportBlockMenu";
@@ -15,7 +15,7 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL!.replace(/\/api\/v1$/, "");
 export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
   const router = useRouter();
   const { t } = useTranslation();
-  const deleteExercise = useDeleteExercise();
+  const removeExercise = useRemoveExercise();
   const copyExercise = useCopyExercise();
   const updateExercise = useUpdateExercise();
   const { data: profile } = useProfile();
@@ -38,12 +38,7 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
 
   const thumbnailUrl = ownImageUrl(exercise.thumbnail_url);
 
-  const confirmArchive = () => {
-    Alert.alert(t("exercises.archiveConfirmTitle"), t("exercises.archiveConfirmMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("exercises.archive"), style: "destructive", onPress: () => deleteExercise.mutate(exercise.id) },
-    ]);
-  };
+  const confirmArchive = () => removeExercise.remove(exercise.id);
 
   return (
     <View className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
@@ -164,8 +159,8 @@ export function ExerciseCard({ exercise }: { exercise: ExerciseDefinition }) {
                 </Pressable>
               ))}
             </View>
-            <Pressable onPress={confirmArchive} disabled={deleteExercise.isPending} className="rounded-md px-3 py-1.5">
-              <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("exercises.archive")}</Text>
+            <Pressable onPress={confirmArchive} disabled={removeExercise.isPending} className="rounded-md px-3 py-1.5">
+              <Text className="text-xs font-medium text-red-600 dark:text-red-400">{t("exercises.remove")}</Text>
             </Pressable>
           </>
         ) : (

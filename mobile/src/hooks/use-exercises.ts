@@ -1,5 +1,7 @@
 import { keepPreviousData, useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Alert } from "react-native";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/i18n";
 import type { ExerciseDefinition, ExerciseWorkoutRef, PaginatedResponse, ApiResponse, Visibility } from "@/types";
 
 export function useExercises(
@@ -84,12 +86,59 @@ export function useUpdateExercise() {
   });
 }
 
+export function useExerciseUsage(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["exercise-usage", id],
+    queryFn: () =>
+      api.get<ApiResponse<{ in_use: boolean; action: "archive" | "delete" }>>(`/exercises/${id}/usage`),
+    enabled,
+    gcTime: 0,
+  });
+}
+
 export function useDeleteExercise() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.delete<ApiResponse<{ message: string }>>(`/exercises/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
   });
+}
+
+/** Asks the server whether the exercise gets deleted or archived, tells the user, then removes it. */
+export function useRemoveExercise() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const deleteExercise = useDeleteExercise();
+
+  const remove = async (id: number, onDone?: () => void) => {
+    let action: "archive" | "delete" = "archive";
+    try {
+      const res = await qc.fetchQuery({
+        queryKey: ["exercise-usage", id],
+        queryFn: () =>
+          api.get<ApiResponse<{ in_use: boolean; action: "archive" | "delete" }>>(`/exercises/${id}/usage`),
+        staleTime: 0,
+      });
+      action = res.data.action;
+    } catch {
+      // Server decides on DELETE anyway; fall back to the safer wording.
+    }
+    const isDelete = action === "delete";
+    Alert.alert(
+      t(isDelete ? "exercises.deleteConfirmTitle" : "exercises.archiveConfirmTitle"),
+      t(isDelete ? "exercises.deleteConfirmMessage" : "exercises.archiveConfirmMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t(isDelete ? "exercises.delete" : "exercises.archive"),
+          style: "destructive",
+          onPress: () => deleteExercise.mutate(id, { onSuccess: onDone }),
+        },
+      ]
+    );
+  };
+
+  return { remove, isPending: deleteExercise.isPending };
 }
 
 export function useCopyExercise() {
