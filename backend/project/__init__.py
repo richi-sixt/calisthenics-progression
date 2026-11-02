@@ -74,13 +74,33 @@ def create_app(config_class: Type[Config] = Config) -> Flask:
 
     register_commands(app)
 
-    # Enable CORS for API routes only
+    # Enable CORS for API routes only, restricted to known front-end origins
+    # (see Config.CORS_ORIGINS) instead of reflecting any Origin.
     CORS(
         app,
-        resources={r"/api/*": {"origins": "*"}},
+        resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}},
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )
+
+    @app.after_request
+    def _set_security_headers(response):
+        """Baseline security headers for every response.
+
+        The API has no inline scripts/styles of its own, so a strict CSP is
+        safe; browsers rendering JSON error pages or the Flask debug page
+        still benefit from the clickjacking/MIME-sniffing protections.
+        """
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+        )
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault(
+            "Referrer-Policy", "strict-origin-when-cross-origin"
+        )
+        response.headers.setdefault("Content-Security-Policy", "default-src 'none'")
+        return response
 
     # Configure logging (production only)
     if not app.debug and not app.testing:

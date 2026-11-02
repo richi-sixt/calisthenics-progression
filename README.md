@@ -112,6 +112,10 @@ SUPABASE_JWT_SECRET="your-supabase-jwt-secret"
 # Database — SQLite is used automatically if DATABASE_URL is not set
 # DATABASE_URL="postgresql://localhost/calisthenics_dev"
 
+# Browser origins allowed to call the API (comma-separated). Defaults to
+# the production web app + http://localhost:3000 if unset.
+# CORS_ORIGINS="https://calisthenics-progression.sixt.services,http://localhost:3000"
+
 # Email (optional — new-user and report notifications to admins)
 # MAIL_SERVER="smtp.yourmailprovider.com"
 # MAIL_PORT="587"

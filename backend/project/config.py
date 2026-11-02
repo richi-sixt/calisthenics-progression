@@ -35,6 +35,22 @@ class Config(object):
     SUPABASE_URL = os.environ.get("SUPABASE_URL")
     SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
     FLASK_ENV = os.environ.get("FLASK_ENV")
+
+    # CORS. Comma-separated list of allowed browser origins (no trailing
+    # slash). Defaults to the production web app + the local Next.js dev
+    # server, so CORS stays locked down even if CORS_ORIGINS is never set in
+    # a given environment. Auth is Bearer-JWT only (no cookies), so a
+    # same-site CSRF concern doesn't apply here, but a wildcard/reflected
+    # origin is still unnecessary exposure if a future change ever adds
+    # cookie-based auth.
+    CORS_ORIGINS = [
+        origin.strip()
+        for origin in (
+            os.environ.get("CORS_ORIGINS")
+            or "https://calisthenics-progression.sixt.services,http://localhost:3000"
+        ).split(",")
+        if origin.strip()
+    ]
     LOG_TO_STDOUT = os.environ.get("LOG_TO_STDOUT")
     ADMINS = os.environ.get("ADMINS")
 
